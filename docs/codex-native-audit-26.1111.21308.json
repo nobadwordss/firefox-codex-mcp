@@ -1,0 +1,84 @@
+{
+  "scope": "Read-only installed-bundle replay with synthetic I/O; NOT desktop UI or browser E2E.",
+  "app": {
+    "name": "openai-codex-electron",
+    "version": "26.1111.21308",
+    "archiveHeaderSha256": "dfc7554b63ea645356acdb4bf1ead251e55897dc683df80875d02c5b1a5118c1"
+  },
+  "sourceAvailability": {
+    "archiveFileCount": 20220,
+    "sourceMapCount": 0,
+    "appTypeScriptOrRustCount": 0
+  },
+  "families": [
+    "chrome",
+    "edge",
+    "brave",
+    "opera",
+    "vivaldi"
+  ],
+  "acceptedFamily": {
+    "chrome": true,
+    "edge": true,
+    "brave": true,
+    "opera": true,
+    "vivaldi": true,
+    "firefox": false,
+    "zen": false
+  },
+  "productionExtensionIds": [
+    "hehggadaopoacecdllhhajmbjkdcmajg",
+    "odlomjlbamekndcpllcnffbgeohgkmjh"
+  ],
+  "nativeDiscoveryReplay": [
+    {
+      "name": "reference_chrome",
+      "accepted": true,
+      "rejectedConnectionClosed": false
+    },
+    {
+      "name": "firefox_own_id",
+      "accepted": false,
+      "rejectedConnectionClosed": true
+    },
+    {
+      "name": "firefox_reference_id",
+      "accepted": false,
+      "rejectedConnectionClosed": true
+    },
+    {
+      "name": "chrome_gecko_id",
+      "accepted": false,
+      "rejectedConnectionClosed": true
+    },
+    {
+      "name": "reference_wrong_channel",
+      "accepted": false,
+      "rejectedConnectionClosed": true
+    }
+  ],
+  "additionalGeckoId": {
+    "accepted": false,
+    "error": "Invalid Chromium extension ID \"firefox-codex-mcp@local.invalid\"."
+  },
+  "settings": {
+    "enumeratesFixedCatalog": true,
+    "catalogByteOffset": 72926
+  },
+  "controlService": {
+    "cdpMethods": [
+      "Page.captureScreenshot",
+      "Accessibility.getFullAXTree",
+      "DOM.getFrameOwner",
+      "Input.dispatchMouseEvent"
+    ],
+    "sha256": "0a1a265a6d57e53e6dd098e6d29514703a57baa11da4b063e549d3d6c13ff891"
+  },
+  "verifiedBundleSha256": {
+    ".vite/build/early-bootstrap.js": "978e3858adec26fd8a7370cad2206a43a81b0be8799d17f4d53f833343a90e60",
+    ".vite/build/early-bootstrap-226-2f6bd181558008cf.js": "97adba36c0c0e9e145ab364c82eb3433abe3675ab7c6e3ab282035b67a4d60bb",
+    ".vite/build/early-bootstrap-631-0e6c54222e68c8ef.js": "67df539aae3e7e579da590bbefd074c70b537f977559168f273c875b21f13c55",
+    "webview/assets/async/28918.48c9cffd9d.js": "17fbfa26256b8807539fb2762f9a636d02091999fc824c1904074354f8d31ca1"
+  },
+  "conclusion": "This build rejects a distinct Firefox provider. MCP/dynamicTools registration does not add a Settings family. App changes plus a compatible control backend are required."
+}

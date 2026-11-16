@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Firefox MCP E2E fixture</title>
+<style>
+body { font: 18px sans-serif; margin: 24px; }
+button, input { font: inherit; margin: 8px; }
+.spacer { height: 1800px; }
+#ticker { position: fixed; right: 20px; top: 20px; }
+.clipbox { position: fixed; left: 900px; top: 300px; width: 100px; height: 18px; overflow: hidden; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+</style>
+<h1>Firefox MCP E2E fixture</h1>
+<p id="body-copy">Rendered body observation is available independently of buttons.</p>
+<p id="observation-code"></p>
+<aside id="ticker">Clock tick 0</aside>
+<section id="panel">
+  <form id="test-form" action="/submit">
+    <p id="context-note">This is a disposable test form.</p>
+    <button type="button" id="count" onclick="this.textContent = 'Count ' + (++window.clickCount); document.documentElement.dataset.clicks = window.clickCount; document.querySelector('#state').textContent = 'Count updated to ' + window.clickCount;">Count 0</button>
+    <label>Message <input id="message" type="text" aria-label="Message" value="PRIVATE_INPUT_BUFFER"></label>
+  </form>
+  <a id="next" href="/next">Navigate to next document</a>
+  <a id="new-tab" href="/child" target="_blank" rel="opener">Open child work tab</a>
+</section>
+<p id="state" role="status" aria-live="polite">Ready</p>
+<section id="control-states">
+  <button disabled>Disabled action</button>
+  <button aria-expanded="false" aria-pressed="true">Toggle details</button>
+  <input aria-label="Read only field" readonly value="PRIVATE_READONLY_VALUE">
+</section>
+<div id="excluded-fields">
+  <input type="password" value="PRIVATE_PASSWORD_VALUE">
+  <textarea aria-label="Draft textarea">PRIVATE_TEXTAREA_DRAFT</textarea>
+  <div contenteditable="true">PRIVATE_EDIT_DRAFT</div>
+  <div role="textbox">PRIVATE_ARIA_DRAFT</div>
+  <select aria-label="Choice"><option>PRIVATE_SELECTED_VALUE</option></select>
+</div>
+<p hidden>HIDDEN_ATTRIBUTE_SECRET</p>
+<p style="display:none">HIDDEN_DISPLAY_SECRET</p>
+<p style="opacity:0">HIDDEN_OPACITY_SECRET</p>
+<p aria-hidden="true">HIDDEN_ARIA_SECRET</p>
+<span class="sr-only">HIDDEN_CLIPPED_SECRET</span>
+<div class="clipbox"><div style="margin-top:40px">HIDDEN_OVERFLOW_SECRET</div></div>
+<div style="position:fixed;left:900px;top:420px;width:360px;height:24px;overflow:hidden;white-space:pre">Visible clipped line
+HIDDEN_SAME_NODE_TAIL</div>
+<div style="position:fixed;left:900px;top:460px;width:150px;overflow:hidden;white-space:pre;font-family:monospace">Visible prefix                       HIDDEN_HORIZONTAL_TAIL</div>
+<p style="position:fixed;left:900px;top:520px;width:330px;font:18px/40px monospace">Prefix: <a id="wrapped" href="/unused" onclick="event.preventDefault();this.dataset.clicked='yes'">A wrapped link label that takes two lines.</a></p>
+<div class="spacer"></div>
+<p>OUTSIDE_VIEWPORT_TEXT</p>
+<button id="bottom">Bottom marker</button>
+<script>
+window.clickCount = 0;
+document.documentElement.dataset.clicks = '0';
+document.querySelector('#observation-code').textContent = 'Observation code: ' + crypto.randomUUID().slice(0,8);
+let ticks = 0;
+setInterval(() => {document.querySelector('#ticker').textContent = 'Clock tick ' + (++ticks); document.documentElement.dataset.tick = ticks;}, 25);
+</script>
+</html>

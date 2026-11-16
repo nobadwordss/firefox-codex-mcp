@@ -1,0 +1,48 @@
+name: Linux distribution
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install official Codex CLI for isolated setup test
+        run: npm install --global @openai/codex
+      - run: cargo build --release --locked
+      - run: cargo fetch --locked
+      - name: First-user install, update, removal and preserved edits
+        run: FIREFOX_SETUP_CODEX_BINARY="$(command -v codex)" cargo test --release --test install_e2e --locked -- --ignored
+      - name: Build archive, license notices and SBOM
+        run: cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist
+      - name: Verify extracted distribution on Ubuntu 22.04
+        run: |
+          cd dist
+          sha256sum --check SHA256SUMS
+          mkdir extracted
+          tar -xzf firefox-codex-mcp-*-linux-x86_64.tar.gz -C extracted
+          extracted/*/firefox-codex-mcp --version
+          extracted/*/install.sh --help
+      - name: Install and remove the extracted package outside the repository
+        run: FIREFOX_SETUP_SERVER_BINARY="$(realpath dist/extracted/*/firefox-codex-mcp)" FIREFOX_SETUP_CODEX_BINARY="$(command -v codex)" cargo test --release --test install_e2e --locked -- --ignored
+      # Private-repository attestations depend on the GitHub plan.
+      - uses: actions/attest-build-provenance@v2
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-path: dist/*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firefox-codex-mcp-linux-x86_64
+          path: |
+            dist/*.tar.gz
+            dist/SHA256SUMS

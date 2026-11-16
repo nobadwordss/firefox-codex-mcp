@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-16",
+  "threadId": "01a1e44d-d7fd-7e11-b369-d4f7542f642f",
+  "scope": "projectless local Codex desktop chat",
+  "firefoxNamedInPrompt": false,
+  "mcpNamedInPrompt": false,
+  "skillAutomaticallySelected": true,
+  "firefoxToolsDiscovered": true,
+  "automaticBrowserSelection": true,
+  "initialControlSucceeded": false,
+  "initialError": "Maximum number of active sessions",
+  "brokerTerminationFixTested": true,
+  "currentProfileRestartPending": false,
+  "graphicalInstallerTested": false,
+  "publicReleasePublished": false,
+  "externalWebsiteAutomaticSelectionTested": true,
+  "automaticSelectionEvidence": "Two fresh projectless chats independently selected Firefox for local page interaction and public website link navigation. Neither prompt named Firefox or MCP. This does not guarantee every model or website routing decision.",
+  "currentProfileRestartCompleted": true,
+  "retestThreads": {
+    "local": "01a1e456-42f6-76e1-95fa-039dd1eec843",
+    "publicWebsite": "01a1e456-521a-7353-8703-65ad50a73482"
+  },
+  "retestToolCounts": {
+    "firefox_open_tab": 2,
+    "firefox_snapshot": 7,
+    "firefox_click": 2,
+    "firefox_type": 1,
+    "firefox_revoke": 2,
+    "firefox_status": 2
+  },
+  "retestToolCalls": 16,
+  "retestSuccessfulCalls": 14,
+  "retestExpectedDenials": 2,
+  "retestUnexpectedErrors": 0,
+  "localResult": {
+    "code": "009c28fb",
+    "count": 1,
+    "status": "Count updated to 1",
+    "typeResult": true,
+    "independentInputReadback": false
+  },
+  "publicWebsiteResult": {
+    "initialUrl": "https://example.com/",
+    "link": "Learn more",
+    "finalUrl": "https://www.iana.org/help/example-domains",
+    "title": "Example Domains"
+  },
+  "afterRevoke": {
+    "bothConnected": true,
+    "bothOwnedTabs": 0,
+    "bothSnapshotsDenied": true
+  },
+  "testTabsLeftOpen": true,
+  "cleanup": {
+    "dedicatedTestMcpProcessesStopped": true,
+    "testFixtureStopped": true,
+    "brokerExitedNormallyAfterLastClient": true,
+    "userFirefoxStillRunning": true,
+    "newSessionReadyAfterCleanup": true
+  }
+}

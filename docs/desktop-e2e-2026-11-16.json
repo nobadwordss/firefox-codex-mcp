@@ -1,0 +1,140 @@
+{
+  "date": "2026-11-16",
+  "environment": {
+    "os": "Fedora 45",
+    "desktop": "26.1111.21308",
+    "firefox": "160.0",
+    "geckodriver": "0.37.1"
+  },
+  "scope": "Actual Codex desktop chat -> project-scoped stdio MCP -> temporary Firefox profile -> localhost fixture",
+  "threadId": "01a1e3c9-5394-74c0-9ed4-01958404f160",
+  "phaseCount": 10,
+  "mcpToolCalls": {
+    "firefox_status": 9,
+    "firefox_snapshot": 19,
+    "firefox_click": 4,
+    "firefox_type": 3,
+    "firefox_scroll": 5
+  },
+  "totalToolCalls": 40,
+  "successfulCalls": 31,
+  "expectedRejectedCalls": 9,
+  "initialActions": {
+    "code": "Observation code: ea70715c",
+    "count": "Count 1",
+    "message": "ea70715c",
+    "scrollY": 600,
+    "status": "Count updated to 1",
+    "url": "http://localhost:41821/"
+  },
+  "afterReconnect": {
+    "code": "Observation code: ea70715c",
+    "count": "Count 2",
+    "message": "ea70715c-reconnected",
+    "scrollY": 0,
+    "status": "Count updated to 2",
+    "url": "http://localhost:41821/"
+  },
+  "afterNavigationAndRegrant": {
+    "code": "Observation code: c8c5d79c",
+    "count": "Count 1",
+    "message": "c8c5d79c",
+    "scrollY": 0,
+    "status": "Count updated to 1",
+    "url": "http://localhost:41821/next"
+  },
+  "checks": {
+    "connectedWithoutGrantDenied": true,
+    "revokeKeepsConnection": true,
+    "revokedReadAndActionDenied": true,
+    "staleSnapshotDeniedAfterRegrant": true,
+    "reconnectionDoesNotRestoreGrant": true,
+    "connectionAndGrantIdsChanged": true,
+    "documentIdStableAcrossReconnect": true,
+    "navigationRevokesGrant": true,
+    "newDocumentIdAfterNavigation": true,
+    "independentDomValuesMatch": true,
+    "fixturePrivateBuffersAndHiddenMarkersNotInMcpTrace": true
+  },
+  "singleServerLimit": {
+    "second_server_exit": 1,
+    "stderr": "Error: Cannot bind 127.0.0.1:8765; only one MCP instance can run\n\nCaused by:\n    Address already in use (os error 98)"
+  },
+  "automatedChecks": {
+    "rustTests": 6,
+    "javascriptTests": 43,
+    "fmt": "passed",
+    "clippy": "passed",
+    "realFirefoxRegressionSeconds": 5.81,
+    "desktopFixtureSeconds": 623.68
+  },
+  "cleanup": {
+    "test_driver_stopped": true,
+    "desktop_test_server_stopped": true,
+    "ports_closed": {
+      "4444": true,
+      "8765": true
+    }
+  },
+  "artifacts": "/tmp/firefox-codex-desktop-e2e",
+  "binarySha256": "677dddfb9ca58088e98eb0fd0fbf9f3ce3c63a296c72e286a1a01f5c6a630907",
+  "limitations": [
+    "Single MCP instance; concurrent chats can fail to start it.",
+    "No native Computer Use list registration.",
+    "Headless temporary Firefox 160 and localhost fixture only; no app restart or normal-profile deployment test.",
+    "No MCP screenshot, iframe/shadow DOM, signed extension distribution.",
+    "Revocation cannot undo a previously dispatched action."
+  ],
+  "phases": [
+    {
+      "phase": 1,
+      "turnId": "01a1e3c9-5441-76a3-afe9-815626b4774f",
+      "callCount": 2
+    },
+    {
+      "phase": 2,
+      "turnId": "01a1e3c9-e957-7260-8558-62578d011bf2",
+      "callCount": 2
+    },
+    {
+      "phase": 3,
+      "turnId": "01a1e3ca-c838-78b0-b1bc-7b91f69a55fe",
+      "callCount": 8
+    },
+    {
+      "phase": 4,
+      "turnId": "01a1e3cc-5b98-77c0-8069-92e2fe68b9fa",
+      "callCount": 3
+    },
+    {
+      "phase": 5,
+      "turnId": "01a1e3cd-45ad-7170-a0b8-b7b5780ec445",
+      "callCount": 4
+    },
+    {
+      "phase": 6,
+      "turnId": "01a1e3cd-eaad-7e21-8b5b-69a6d7a6dbe5",
+      "callCount": 2
+    },
+    {
+      "phase": 7,
+      "turnId": "01a1e3ce-8c71-74c3-bfb3-a08a9a33ef01",
+      "callCount": 2
+    },
+    {
+      "phase": 8,
+      "turnId": "01a1e3cf-35e6-78a3-b782-3468c9066f7c",
+      "callCount": 7
+    },
+    {
+      "phase": 9,
+      "turnId": "01a1e3d0-8da2-7522-9831-512b15bb4094",
+      "callCount": 4
+    },
+    {
+      "phase": 10,
+      "turnId": "01a1e3d1-674e-7202-962d-818e4341011b",
+      "callCount": 6
+    }
+  ]
+}

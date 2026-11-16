@@ -4,12 +4,22 @@
 <body>
 <h1>Firefox Codex MCP</h1>
 <p>Only enable a tab you want Codex to read and control. Clicks can submit forms or make purchases. Do not enable sensitive pages.</p>
+<label for="connection">Connection code from this chat's firefox_status</label>
+<input id="connection" type="text" autocomplete="off" spellcheck="false" placeholder="port:chat-session-id">
+<p>You can close this popup to copy your token; the connection code will be kept.</p>
 <label for="token">Local bridge token (64 hex characters)</label>
 <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Leave blank to reuse saved token">
 <button id="connect">Connect</button>
-<button id="enable">Enable current tab</button>
-<button id="disconnect">Disconnect and revoke access</button>
+<label for="clients">Selected chat connection</label>
+<select id="clients"><option value="">Select a chat</option></select>
+<p id="identity"></p>
+<button id="enable" disabled>Enable current tab for selected chat</button>
+<button id="revoke" disabled>Revoke selected chat's tab access</button>
+<button id="disconnect" disabled>Disconnect selected chat</button>
+<button id="forget" disabled>Remove selected connection</button>
+<button id="disconnectAll">Disconnect all chats</button>
 <p id="status" role="status">Loading…</p>
-<p>Navigation or connection loss revokes tab access. Re-enable manually after reconnecting.</p>
+<p id="hint"></p>
+<p>Each tab belongs to one chat. Navigation or connection loss revokes that chat's tab access. Re-enable manually after reconnecting.</p>
 <script src="popup.js"></script>
 </body></html>

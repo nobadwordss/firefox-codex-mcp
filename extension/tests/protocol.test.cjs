@@ -6,6 +6,18 @@ test('tokens must be 32 bytes of hex', () => {
   assert.equal(p.validToken('a'.repeat(64)), true);
   for (const token of ['', 'a'.repeat(63), 'z'.repeat(64), null, 17]) assert.equal(p.validToken(token), false);
 });
+test('pairing codes accept only a bounded loopback port and full instance ID', () => {
+  assert.equal(p.connectionIdentity(`45001:${'a'.repeat(32)}`).port,45001);
+  for (const code of ['ws://evil.test:45001',`80:${'a'.repeat(32)}`,`65536:${'a'.repeat(32)}`,`45001:${'a'.repeat(31)}`,`45001:${'a'.repeat(32)}/path`]) assert.throws(()=>p.connectionIdentity(code));
+});
+test('mutual authentication proofs bind role, client and fresh challenge', async () => {
+  const token='a'.repeat(64), id='b'.repeat(32), nonce='c'.repeat(64);
+  const proof=await p.authProof(token,id,nonce,'extension');
+  assert.equal(await p.verifyProof(token,id,nonce,'extension',proof),true);
+  assert.equal(await p.verifyProof(token,id,nonce,'server',proof),false);
+  assert.equal(await p.verifyProof(token,'d'.repeat(32),nonce,'extension',proof),false);
+  assert.equal(await p.verifyProof(token,id,'e'.repeat(64),'extension',proof),false);
+});
 test('page scheme allowlist excludes privileged and executable URLs', () => {
   assert.equal(p.safePage('https://example.org'), true);
   assert.equal(p.safePage('http://localhost'), true);

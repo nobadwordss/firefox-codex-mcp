@@ -1,0 +1,622 @@
+{
+  "date": "2026-11-16",
+  "scope": "Actual Codex desktop chats via stdio MCP, disposable Firefox profile; native Computer Use list remains deferred",
+  "environment": {
+    "codexDesktop": "26.1111.21308",
+    "firefox": "160.0",
+    "geckodriver": "0.37.1",
+    "os": "Fedora 45"
+  },
+  "clients": {
+    "A": {
+      "threadId": "01a1e3df-da65-7480-9754-a96d339bdbf9",
+      "turns": 5,
+      "mcpCalls": 15,
+      "tools": {
+        "firefox_status": 3,
+        "firefox_snapshot": 7,
+        "firefox_scroll": 3,
+        "firefox_click": 1,
+        "firefox_type": 1
+      },
+      "outcomes": {
+        "completed": 10,
+        "failed": 5
+      },
+      "rawExecCalls": 15,
+      "connectionCode": "33163:088383b6596c7f68e4ff429fb94d6cdd",
+      "pid": 279148
+    },
+    "B": {
+      "threadId": "01a1e3df-e6d5-7070-830e-e0ee6b7d56d0",
+      "turns": 8,
+      "mcpCalls": 23,
+      "tools": {
+        "firefox_status": 6,
+        "firefox_snapshot": 12,
+        "firefox_scroll": 1,
+        "firefox_click": 3,
+        "firefox_type": 1
+      },
+      "outcomes": {
+        "completed": 19,
+        "failed": 4
+      },
+      "rawExecCalls": 23,
+      "connectionCode": "41903:7724cfff8b8dd1a8ecd7f6448c05c16e",
+      "pid": 279458
+    },
+    "C": {
+      "threadId": "01a1e3ec-dab8-7150-9dc4-84254fcbec34",
+      "turns": 5,
+      "mcpCalls": 16,
+      "tools": {
+        "firefox_status": 5,
+        "firefox_snapshot": 8,
+        "firefox_click": 2,
+        "firefox_type": 1
+      },
+      "outcomes": {
+        "completed": 13,
+        "failed": 3
+      },
+      "rawExecCalls": 16,
+      "connectionCode": "36969:9cb08ca0f12816ca994330dd0dc2b14e",
+      "pid": 291310
+    }
+  },
+  "total": {
+    "desktopTurns": 18,
+    "mcpCalls": 54,
+    "successfulCalls": 42,
+    "expectedDenials": 12,
+    "unexpectedMcpErrors": 0,
+    "toolCounts": {
+      "firefox_status": 14,
+      "firefox_snapshot": 27,
+      "firefox_scroll": 4,
+      "firefox_click": 6,
+      "firefox_type": 3
+    }
+  },
+  "verification": [
+    {
+      "name": "Concurrent startup",
+      "result": "A and B have distinct process IDs, dynamic loopback ports and client IDs; both stdio MCP servers initialize"
+    },
+    {
+      "name": "Exclusive tab ownership",
+      "evidenceStep": 4,
+      "result": "Enabling B on A-owned tab rejected in real extension popup; A grant remains usable"
+    },
+    {
+      "name": "Concurrent desktop control",
+      "turns": [
+        "01a1e3e4-c2f9-71d1-ad11-83768bf14ba1",
+        "01a1e3e4-cf05-7ee0-9ccc-e639c40c81f3"
+      ],
+      "evidenceStep": 6,
+      "result": "Overlapping A/B model turns read their own random body codes, click once and type A:/B: values into only their own tabs",
+      "overlapSeconds": 27
+    },
+    {
+      "name": "Cross snapshot rejection",
+      "snapshotId": "2ddf5944-3858-4441-a202-16d6ae7d56fd",
+      "foreignSnapshotAgeSeconds": 10.851,
+      "result": "A scroll(y:0) with B snapshot rejected as Stale snapshot; A then observes own /a unchanged. Both directions with fresh local snapshots are also covered by JS regression. B declined an earlier foreign-reference test before dispatch; that refusal is not counted as a server rejection"
+    },
+    {
+      "name": "Independent A revoke",
+      "evidenceStep": 8,
+      "result": "A remains connected, reads and actions denied; B retains /b grant and clicks from Count 1 to 2"
+    },
+    {
+      "name": "Server death and replacement identity",
+      "evidenceSteps": [
+        9,
+        10,
+        11
+      ],
+      "result": "After A regrant, only A PID terminated. C starts with distinct identity and no connection/grant. C Connect alone denies snapshot. B continues from Count 2 to 3. Only explicit C Enable permits taking over released /a tab"
+    },
+    {
+      "name": "C control and reverse B revoke",
+      "evidenceSteps": [
+        12,
+        13
+      ],
+      "result": "C reads /a code, clicks to 2 and types C: code. B revoke denies B read/scroll while C still clicks /a to 3"
+    },
+    {
+      "name": "Disconnect all",
+      "evidenceStep": 13,
+      "result": "B and C status disconnected and no tab; both snapshots rejected"
+    }
+  ],
+  "uiAndDomEvidence": [
+    {
+      "action": "connect",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 0",
+        "message": "PRIVATE_INPUT_BUFFER",
+        "scrollY": 0,
+        "status": "Ready",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. No tab enabled.",
+      "seq": 1
+    },
+    {
+      "action": "enable",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 0",
+        "message": "PRIVATE_INPUT_BUFFER",
+        "scrollY": 0,
+        "status": "Ready",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. Enabled tab: 1.",
+      "seq": 2
+    },
+    {
+      "action": "connect",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 66faa6c4",
+        "count": "Count 0",
+        "message": "PRIVATE_INPUT_BUFFER",
+        "scrollY": 0,
+        "status": "Ready",
+        "url": "http://localhost:35237/b"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. No tab enabled.",
+      "seq": 3
+    },
+    {
+      "action": "conflict",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 0",
+        "message": "PRIVATE_INPUT_BUFFER",
+        "scrollY": 0,
+        "status": "Ready",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "This tab belongs to another chat. Revoke that chat's tab access first.",
+      "seq": 4
+    },
+    {
+      "action": "enable",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 66faa6c4",
+        "count": "Count 0",
+        "message": "PRIVATE_INPUT_BUFFER",
+        "scrollY": 0,
+        "status": "Ready",
+        "url": "http://localhost:35237/b"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 0",
+          "message": "PRIVATE_INPUT_BUFFER",
+          "scrollY": 0,
+          "status": "Ready",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. Enabled tab: 2.",
+      "seq": 5
+    },
+    {
+      "action": "inspect",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 1",
+        "message": "A:56159f95",
+        "scrollY": 0,
+        "status": "Count updated to 1",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 1",
+          "message": "A:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 1",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": null,
+      "seq": 6
+    },
+    {
+      "action": "revoke",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 1",
+        "message": "A:56159f95",
+        "scrollY": 0,
+        "status": "Count updated to 1",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 1",
+          "message": "A:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 1",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. No tab enabled.",
+      "seq": 7
+    },
+    {
+      "action": "inspect",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 1",
+        "message": "A:56159f95",
+        "scrollY": 0,
+        "status": "Count updated to 1",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 1",
+          "message": "A:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 2",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 2",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": null,
+      "seq": 8
+    },
+    {
+      "action": "enable",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 1",
+        "message": "A:56159f95",
+        "scrollY": 0,
+        "status": "Count updated to 1",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 1",
+          "message": "A:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 2",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 2",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. Enabled tab: 1.",
+      "seq": 9
+    },
+    {
+      "action": "connect",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 1",
+        "message": "A:56159f95",
+        "scrollY": 0,
+        "status": "Count updated to 1",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 1",
+          "message": "A:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 2",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 2",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. No tab enabled.",
+      "seq": 10
+    },
+    {
+      "action": "enable",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 1",
+        "message": "A:56159f95",
+        "scrollY": 0,
+        "status": "Count updated to 1",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 1",
+          "message": "A:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 1",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 3",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 3",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. Enabled tab: 1.",
+      "seq": 11
+    },
+    {
+      "action": "revoke",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 66faa6c4",
+        "count": "Count 3",
+        "message": "B:66faa6c4",
+        "scrollY": 0,
+        "status": "Count updated to 3",
+        "url": "http://localhost:35237/b"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 2",
+          "message": "C:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 2",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 3",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 3",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Connected. No tab enabled.",
+      "seq": 12
+    },
+    {
+      "action": "disconnectAll",
+      "ok": true,
+      "page": {
+        "code": "Observation code: 56159f95",
+        "count": "Count 3",
+        "message": "C:56159f95",
+        "scrollY": 0,
+        "status": "Count updated to 3",
+        "url": "http://localhost:35237/a"
+      },
+      "pages": {
+        "A": {
+          "code": "Observation code: 56159f95",
+          "count": "Count 3",
+          "message": "C:56159f95",
+          "scrollY": 0,
+          "status": "Count updated to 3",
+          "url": "http://localhost:35237/a"
+        },
+        "B": {
+          "code": "Observation code: 66faa6c4",
+          "count": "Count 3",
+          "message": "B:66faa6c4",
+          "scrollY": 0,
+          "status": "Count updated to 3",
+          "url": "http://localhost:35237/b"
+        }
+      },
+      "popupStatus": "Disconnected. No tab enabled.",
+      "seq": 13
+    }
+  ],
+  "privacy": {
+    "bridgeTokenAbsentFromMcpTrace": true,
+    "excludedFixtureMarkersAbsent": [
+      "HIDDEN_ARIA_SECRET",
+      "HIDDEN_ATTRIBUTE_SECRET",
+      "HIDDEN_CLIPPED_SECRET",
+      "HIDDEN_DISPLAY_SECRET",
+      "HIDDEN_HORIZONTAL_TAIL",
+      "HIDDEN_OPACITY_SECRET",
+      "HIDDEN_OVERFLOW_SECRET",
+      "HIDDEN_SAME_NODE_TAIL",
+      "PRIVATE_ARIA_DRAFT",
+      "PRIVATE_EDIT_DRAFT",
+      "PRIVATE_INPUT_BUFFER",
+      "PRIVATE_PASSWORD_VALUE",
+      "PRIVATE_READONLY_VALUE",
+      "PRIVATE_SELECTED_VALUE",
+      "PRIVATE_TEXTAREA_DRAFT"
+    ]
+  },
+  "supportingTests": {
+    "rustUnit": 7,
+    "rustConcurrentProcesses": 1,
+    "javascript": 50,
+    "fmt": "passed",
+    "clippyAllTargets": "passed",
+    "realFirefoxAndCodexCli": {
+      "passed": true,
+      "seconds": 36.41,
+      "artifactDirectory": "/tmp/firefox-codex-multi-regression",
+      "successfulToolCalls": 9,
+      "expectedInitialSnapshotDenial": 1,
+      "note": "Initial invocation used an incorrect CLI executable path and stopped after the Firefox assertions passed; rerun with discovered installed path passed"
+    }
+  },
+  "desktopFixtureDurationSeconds": 821.48,
+  "artifacts": "/tmp/firefox-codex-multi-e2e",
+  "sourceAtReportSha256": {
+    "server/src/main.rs": "e52250477fde2ac25cc9eb47127b41f9783f88f82e3a3379ab10abb3c16599f6",
+    "extension/background.js": "27bf333eec29f550b98a2e3a032fb47fef5bec4c602ea5b306f5f91cd53b24f4",
+    "extension/content.js": "7ab8343c23a74cfcca0193357c39f3e37280d53afa8351fa1d235906037aa008",
+    "extension/protocol.js": "69b2757027c264d9b095b17665a97651b23fc28fbe7c574fe495020e4d81eece",
+    "extension/popup.js": "f6e38a2937508d9eaafc37017a946587ee51f84dce878c3ae654cdc0af3d1fa6"
+  },
+  "limitations": [
+    "Isolation boundary is stdio MCP session; chat-to-process mapping was measured in this desktop version, not a future client contract",
+    "activeTab is extension-wide; per-client ownership is enforced by extension/server code, not an OS sandbox",
+    "One enabled tab per client, up to 16 in-memory connections, manual pairing and regrant required",
+    "Page side effects already dispatched cannot be undone by revoke",
+    "Disposable localhost fixture only; heavy sites, background throttling and malicious local availability attacks are not covered"
+  ],
+  "cleanup": {
+    "driverPid": 283367,
+    "noActiveWebDriverSessionBeforeStop": true,
+    "closedPorts": {
+      "4444": true,
+      "33163": true,
+      "41903": true,
+      "36969": true,
+      "35237": true
+    },
+    "desktopTemporaryProfileDeleted": true,
+    "testMcpPidsTerminated": [
+      279148,
+      279458,
+      291310
+    ]
+  }
+}
