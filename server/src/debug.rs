@@ -632,6 +632,23 @@ pub async fn stdio() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn old_broker_is_rejected_before_dispatching_browser_actions() {
+        let (client, server) = UnixStream::pair().unwrap();
+        let old = tokio::spawn(async move {
+            let mut server = BufReader::new(server);
+            let first = read_line(&mut server).await.unwrap().unwrap();
+            assert!(first.get("name").is_none());
+            server
+                .get_mut()
+                .write_all(b"{\"ok\":false,\"error\":\"Invalid broker request\"}\n")
+                .await
+                .unwrap();
+        });
+        let error = handshake(client).await.err().unwrap();
+        assert!(error.to_string().contains("업데이트 전의 연결"));
+        old.await.unwrap();
+    }
     #[test]
     fn ownership_cannot_be_selected_or_reclaimed_by_another_chat() {
         let mut a = Owner::default();

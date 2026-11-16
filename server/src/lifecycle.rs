@@ -144,11 +144,16 @@ fn put(path: &Path, value: &Option<Snapshot>) -> Result<()> {
         }
         None => {
             if path.exists() {
-                fs::remove_file(path)?;
+                remove_durable(path)?;
             }
             Ok(())
         }
     }
+}
+fn remove_durable(path: &Path) -> Result<()> {
+    fs::remove_file(path)?;
+    File::open(path.parent().context("Missing parent")?)?.sync_all()?;
+    Ok(())
 }
 fn restore(changes: &[Change]) -> Result<()> {
     for change in changes.iter().rev() {
@@ -170,7 +175,7 @@ fn recover(layout: &Layout) -> Result<()> {
         if !completed {
             restore(&changes)?;
         }
-        fs::remove_file(&layout.pending)?;
+        remove_durable(&layout.pending)?;
     }
     Ok(())
 }
@@ -195,11 +200,11 @@ fn transact(layout: &Layout, changes: Vec<Change>) -> Result<()> {
         if let Err(error) = write {
             restore(&changes)
                 .context("설치 실패 후 복구를 완료하지 못했습니다. --repair를 실행하세요")?;
-            fs::remove_file(&layout.pending)?;
+            remove_durable(&layout.pending)?;
             return Err(error);
         }
     }
-    fs::remove_file(&layout.pending)?;
+    remove_durable(&layout.pending)?;
     Ok(())
 }
 fn text(value: &Option<Snapshot>) -> Result<String> {

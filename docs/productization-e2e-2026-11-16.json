@@ -37,11 +37,14 @@
     "symlink rejection",
     "anonymous and cross-origin manager API denied"
   ],
-  "rustUnitTests": 16,
+  "rustUnitTests": 17,
   "rustProcessTests": 1,
   "jsTests": 53,
   "clippy": "passed",
   "license": "MIT",
   "scopeNote": "Manager UI plus actual Firefox/stdin MCP harness and official Codex CLI. Prior desktop model tool-selection evidence is recorded separately.",
-  "remoteCI": "pending push"
+  "remoteCI": "See Linux distribution and checks runs on codex/productize-firefox-mcp; CI evidence is linked in the delivery message.",
+  "extractedPackageInstallUpdateRemove": "passed",
+  "legacyDevelopmentVersionUpgradeAndRemove": "passed",
+  "brokerProtocolMismatch": "rejected before browser action dispatch"
 }

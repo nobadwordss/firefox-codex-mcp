@@ -2,7 +2,9 @@
 use anyhow::{ensure, Context, Result};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{collections::HashSet, env, fs, path::Path, process::Command};
+use std::{
+    collections::HashSet, env, fs, os::unix::fs::PermissionsExt, path::Path, process::Command,
+};
 
 fn run(command: &mut Command) -> Result<()> {
     ensure!(command.status()?.success(), "Packaging command failed");
@@ -30,6 +32,10 @@ fn main() -> Result<()> {
     ] {
         fs::copy(source, stage.join(target))
             .with_context(|| format!("Required package file: {source}"))?;
+    }
+    // Archives retain executable bits even if the source checkout lost them.
+    for file in ["firefox-codex-mcp", "install.sh"] {
+        fs::set_permissions(stage.join(file), fs::Permissions::from_mode(0o755))?;
     }
     let metadata = Command::new(env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
         .args([
