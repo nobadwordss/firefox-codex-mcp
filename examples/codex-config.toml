@@ -1,9 +1,6 @@
-# Merge into your Codex config. Use actual absolute paths.
+# Default extension connection. The installer registers this automatically.
 [mcp_servers.firefox]
 command = "/home/USER/.local/lib/firefox-codex-mcp/firefox-codex-mcp"
-args = ["--bidi"]
+args = ["--extension"]
 startup_timeout_sec = 20
 tool_timeout_sec = 70
-
-[mcp_servers.firefox.env]
-FIREFOX_MCP_PROFILE = "/absolute/path/to/current-firefox-profile"

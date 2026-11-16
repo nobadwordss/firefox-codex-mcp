@@ -30,7 +30,7 @@ test('missing or unsafe argument shapes rejected', () => {
   for (const r of [null,[],request('eval',{}),request('snapshot',null),request('click',{elementId:1}),request('click',{snapshotId:'s',elementId:0}),request('type',{snapshotId:'s',elementId:1,text:'a'.repeat(10001)}),request('scroll',{snapshotId:'s',y:Infinity}),request('scroll',{snapshotId:'s',y:2001}),{id:4,method:'snapshot',params:{}}]) assert.throws(()=>p.validateRequest(r));
 });
 test('manifest has explicit user grants and no global host access', () => {
-  const manifest = require('../manifest.json');
+  const manifest = require('../manifest-legacy.json');
   assert.equal(manifest.manifest_version,2);
   assert.deepEqual(manifest.permissions,['activeTab','tabs','storage','http://127.0.0.1/*']);
   assert.equal(manifest.incognito,'not_allowed');

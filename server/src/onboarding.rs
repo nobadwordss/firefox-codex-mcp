@@ -179,7 +179,8 @@ pub fn doctor() -> Result<Value> {
     let executable = home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp");
     let registration = configured.as_ref().is_some_and(|v| {
         v["transport"]["command"].as_str() == executable.to_str()
-            && v["transport"]["args"] == json!(["--bidi"])
+            && (v["transport"]["args"] == json!(["--bidi"])
+                || v["transport"]["args"] == json!(["--extension"]))
             && v["enabled"] == true
     });
     let mut reachable = false;
@@ -202,7 +203,7 @@ pub fn doctor() -> Result<Value> {
         }
     }
     Ok(
-        json!({"globalMcpRegistered":registration,"binaryInstalled":executable.is_file(),
+        json!({"globalMcpRegistered":registration,"mode":if profile.is_some(){"bidi"}else{"extension"},"nativeHostRegistered":home.join(".mozilla/native-messaging-hosts/firefox_codex_mcp.json").is_file(),"binaryInstalled":executable.is_file(),
         "skillInstalled":read_optional(&root.join("skills/firefox-browser/SKILL.md"))? == SKILL,
         "automaticBrowserGuidance":read_optional(&root.join("AGENTS.md"))?.contains(GUIDANCE),
         "profile":profile,"firefoxRunning":profile.as_deref().is_some_and(setup::running),

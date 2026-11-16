@@ -1,55 +1,43 @@
-Firefox Codex MCP 0.2.0 — Linux x86_64
+Firefox Codex MCP 0.3.0 — Linux x86_64
 
-필요한 것: 일반 Linux Firefox, 로컬 Codex 앱 또는 CLI.
-사용자는 Rust, Node.js, 확장 프로그램, 토큰을 설치하거나 입력할 필요가 없습니다.
-배포 CI 패키지: Ubuntu 22.04(glibc 2.35) 이상. Windows/macOS 미지원.
-Snap/Flatpak 프로필은 탐지하지만 샌드박스 실행은 아직 지원 검증하지 않았습니다.
+필요한 것: 일반 Linux Firefox 140+와 로컬 Codex 앱 또는 CLI.
+Rust/Node, 연결 코드/토큰/프로필 경로 입력은 필요 없습니다.
+Windows/macOS, Snap/Flatpak, Android는 지원 검증하지 않았습니다.
 
 처음 설치
-1. 압축을 풀고 install.sh 실행. 파일 관리자가 실행하지 않으면 그 폴더에서
-   터미널을 열어 ./install.sh 입력. 관리자 권한/sudo는 사용하지 않습니다.
-2. 관리 화면에서 Firefox 프로필 확인 → 설치 → 진행.
-3. 일반 모드 Firefox가 켜져 있다면 작업을 저장한 후 종료하고, 앱 메뉴의
-   Firefox (Codex 연결)로 한 번 다시 엽니다. 새 Codex 채팅에서 웹 작업을 요청하세요.
-   도구가 안 보이면 Codex 앱을 다시 여세요. 기존 탭/로그인은 유지됩니다.
+1. 압축을 풀고 install.sh 실행 → 설치 → 진행. 관리자 권한은 필요 없습니다.
+2. 같은 화면의 “Firefox에 Codex Work Tabs 확장 추가”를 누릅니다.
+   Firefox에서 설치 계속 → 추가를 눌러 권한 안내를 확인합니다.
+   Mozilla 서명된 codex-work-tabs-0.3.0.xpi가 포함되어 있습니다.
+   *-unsigned.xpi는 개발/심사 전용입니다. SIGNING.md 참고.
+3. 새 Codex 채팅에서 웹 작업을 요청합니다. AI가 새 작업 탭을 직접 엽니다.
 
-다음 사용: Firefox가 꺼져 있으면 AI가 작업 요청 시 자동 실행합니다.
-평소에는 Firefox (Codex 연결) 실행기를 사용하세요.
-일반 Firefox 실행기로 먼저 켰다면 다시 시작이 필요합니다.
+확장은 실행 중인 Firefox 프로필에서 자동 연결합니다. 여러 프로필이면 원하는
+Firefox 확장에서 ‘이 Firefox 사용’을 한 번 누릅니다. 선택한 프로필이 꺼지면
+다른 프로필로 전환하지 않습니다. Firefox가 모두 꺼졌을 때 일반 실행을 시도하지만,
+다른 프로필이 기본값이면 원하는 Firefox를 직접 열어야 합니다.
 
-업데이트
-새 배포 패키지를 내려받아 풀고 install.sh → 업데이트 → 진행.
-실행 중인 Firefox/채팅은 종료하지 않습니다. 기존 채팅은 이전 코드로 남으므로
-Firefox 도구를 쓰던 채팅을 종료하고 10초 뒤 새 채팅에서 작업하세요.
-이전 패키지로 되돌릴 때도 같은 방법입니다. 먼저 작업 중인 채팅을 종료하세요.
+업데이트: 새 패키지의 install.sh → 업데이트. Firefox를 종료하지 않습니다.
+이전 작업 탭 접근을 해제하고 연결 프로그램을 다시 연결합니다. 새 채팅에서 시작하세요.
+확장 업데이트는 Firefox 부가 기능 관리자에서 새 서명 XPI를 설치합니다.
+직접 배포 XPI에는 자동 업데이트 채널이 없습니다. AMO 목록 배포는 별도 단계입니다.
 
-연결 진단 / 제거
-앱 메뉴의 Firefox Codex 관리에서 연결 진단 또는 제거를 선택하세요.
-제거는 이 도구의 전역 MCP·지침·스킬·실행기·설정 블록만 대상으로 합니다.
-사용자가 수정한 파일, Firefox 프로필·로그인·기존 탭은 보존합니다.
-이미 실행 중인 채팅은 직접 종료해야 기존 연결도 끝납니다.
-Firefox 디버깅 옵션은 브라우저를 정상 종료하고 일반 실행기로 다시 열 때 해제됩니다.
-remote.prefs.recommended=false 값이 prefs.js에 남을 수 있습니다. 이는 자동화의
-권장 테스트 설정 적용을 막는 값이며, 제거 시 prefs.js 전체를 덮어쓰지 않습니다.
+제거: Firefox Codex 관리 → 제거. 확장은 Firefox 부가 기능 관리자에서 별도로 제거.
+Firefox 프로필·로그인·결과 탭과 사용자가 수정한 파일은 보존됩니다.
+기존 Codex 채팅을 종료하면 이전 도구 연결도 끝납니다.
 
-명령행 사용
-./install.sh --install [프로필 절대 경로]
+./install.sh --install
 ./install.sh --update
 ./install.sh --doctor
 ./install.sh --uninstall
 ./install.sh --repair
 
-설치 장부/복구 정보: ~/.local/state/firefox-codex-mcp/
-설정 충돌 또는 중단된 설치: --repair. 외부에서 바뀐 파일은 자동 덮어쓰지 않습니다.
-복구가 실패하면 transaction.json을 보존하고 충돌 파일을 확인하세요.
-이전 개발 설치는 새 패키지를 한 번 설치한 뒤 제거할 수 있습니다.
+고급 BiDi: ./install.sh --install-bidi [프로필 절대 경로]
+이 경우에만 작업 저장 후 Firefox (Codex 연결) 실행기로 다시 여세요.
+디버깅 옵션은 다음 일반 Firefox 재시작 때 해제됩니다.
 
-주의: 이는 같은 사용자 권한의 도구입니다. 기존 로그인으로 새 탭을 열 수 있습니다.
-채팅 간 탭 분리는 MCP 도구의 논리적 경계이며 OS 보안 격리가 아닙니다.
-프로젝트/관리자 설정이 전역 등록을 덮어쓸 수 있습니다. 클라우드 채팅에는 적용 안 됩니다.
-브로커 강제 종료(SIGKILL) 후 세션 점유 오류가 남으면 Firefox 작업 저장 후 다시 여세요.
-iframe, 파일 업로드, 네이티브 입력 등은 아직 지원하지 않습니다.
-
-SHA256SUMS는 전송 손상 확인용이며 배포자 서명이 아닙니다.
-공개 GitHub CI에서 생성된 증명이 있는 패키지는 gh attestation verify로 별도 확인하세요.
-소스 재사용 라이선스 상태는 LICENSE를 확인하세요.
+설치 장부/복구: ~/.local/state/firefox-codex-mcp/
+중단된 설치는 --repair. 바뀐 파일은 자동 덮어쓰지 않습니다.
+모든 로컬 Codex 채팅은 해당 프로필의 로그인된 사이트를 새 탭에서 사용할 수 있습니다.
+기존 탭·다른 채팅의 탭은 인수하지 않습니다. 개인정보 흐름은 PRIVACY.md 참고.
+SHA256SUMS는 전송 손상 확인용입니다. LICENSE와 배포 증명도 확인하세요.

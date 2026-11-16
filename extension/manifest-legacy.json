@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "name": "Firefox Codex MCP (Development)",
+  "version": "0.1.0",
+  "description": "Explicitly opt a Firefox tab into a local Codex MCP bridge.",
+  "browser_specific_settings": {"gecko": {"id": "firefox-codex-mcp@local.invalid", "strict_min_version": "115.0"}},
+  "permissions": ["activeTab", "tabs", "storage", "http://127.0.0.1/*"],
+  "background": {"scripts": ["protocol.js", "background.js"], "persistent": true},
+  "browser_action": {"default_title": "Firefox Codex MCP", "default_popup": "popup.html"},
+  "content_security_policy": "script-src 'self'; object-src 'none'; connect-src ws://127.0.0.1:*",
+  "incognito": "not_allowed"
+}

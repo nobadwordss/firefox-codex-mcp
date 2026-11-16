@@ -29,14 +29,72 @@ fn main() -> Result<()> {
         ("packaging/INSTALL.txt", "INSTALL.txt"),
         ("LICENSE", "LICENSE"),
         ("README.md", "README.md"),
+        ("packaging/SIGNING.md", "SIGNING.md"),
+        ("PRIVACY.md", "PRIVACY.md"),
     ] {
         fs::copy(source, stage.join(target))
             .with_context(|| format!("Required package file: {source}"))?;
     }
+    let signed_name = "codex-work-tabs-0.3.0.xpi";
+    let signed = Path::new("packaging/signed").join(signed_name);
+    let expected_manifest: Value = serde_json::from_slice(&fs::read("extension/manifest.json")?)?;
+    for file in [
+        "manifest.json",
+        "protocol.js",
+        "observation.js",
+        "page.js",
+        "content.js",
+        "native/background.js",
+        "native/popup.html",
+        "native/popup.css",
+        "native/popup.js",
+    ] {
+        let output = Command::new("unzip")
+            .args(["-p"])
+            .arg(&signed)
+            .arg(file)
+            .output()?;
+        ensure!(output.status.success(), "Cannot inspect signed XPI");
+        if file == "manifest.json" {
+            ensure!(
+                serde_json::from_slice::<Value>(&output.stdout)? == expected_manifest,
+                "Signed manifest differs from source"
+            );
+        } else {
+            ensure!(
+                output.stdout == fs::read(Path::new("extension").join(file))?,
+                "Signed extension source mismatch: {file}"
+            );
+        }
+    }
+    fs::copy(&signed, stage.join(signed_name))?;
+    fs::copy(&signed, out.join(signed_name))?;
     // Archives retain executable bits even if the source checkout lost them.
     for file in ["firefox-codex-mcp", "install.sh"] {
         fs::set_permissions(stage.join(file), fs::Permissions::from_mode(0o755))?;
     }
+    // Only runtime files: never ship old pairing UI, tests or local credentials.
+    let xpi_name = format!(
+        "firefox-codex-mcp-{}-unsigned.xpi",
+        env!("CARGO_PKG_VERSION")
+    );
+    let xpi = out.canonicalize()?.join(&xpi_name);
+    run(Command::new("zip")
+        .current_dir("extension")
+        .args(["-q", "-X"])
+        .arg(&xpi)
+        .args([
+            "manifest.json",
+            "protocol.js",
+            "observation.js",
+            "page.js",
+            "content.js",
+            "native/background.js",
+            "native/popup.html",
+            "native/popup.css",
+            "native/popup.js",
+        ]))?;
+    fs::copy(&xpi, stage.join(&xpi_name))?;
     let metadata = Command::new(env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
         .args([
             "metadata",
@@ -156,7 +214,12 @@ fn main() -> Result<()> {
     let archive = fs::read(out.join(format!("{name}.tar.gz")))?;
     fs::write(
         out.join("SHA256SUMS"),
-        format!("{:x}  {name}.tar.gz\n", Sha256::digest(&archive)),
+        format!(
+            "{:x}  {name}.tar.gz\n{:x}  {xpi_name}\n{:x}  {signed_name}\n",
+            Sha256::digest(&archive),
+            Sha256::digest(fs::read(xpi)?),
+            Sha256::digest(fs::read(signed)?)
+        ),
     )?;
     println!("{}", out.join(format!("{name}.tar.gz")).display());
     Ok(())

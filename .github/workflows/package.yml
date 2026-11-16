@@ -45,4 +45,5 @@ jobs:
           name: firefox-codex-mcp-linux-x86_64
           path: |
             dist/*.tar.gz
+            dist/*.xpi
             dist/SHA256SUMS

@@ -15,9 +15,9 @@ fn state() -> Result<Value> {
     let selected = lifecycle::installed_profile().or_else(|| o::choose(&profiles).ok());
     let codex = o::codex().is_ok();
     Ok(
-        json!({"version":env!("CARGO_PKG_VERSION"),"installedVersion":lifecycle::installed_version(),"codexAvailable":codex,
+        json!({"version":env!("CARGO_PKG_VERSION"),"installedVersion":lifecycle::installed_version(),"installedMode":lifecycle::installed_mode(),"codexAvailable":codex,
         "profiles":profiles.iter().map(|(p,_)|json!({"id":p,"name":p.file_name().map(|v|v.to_string_lossy()),"path":p,"selected":Some(p)==selected.as_ref()})).collect::<Vec<_>>(),
-        "ready":codex && !profiles.is_empty()}),
+        "ready":codex}),
     )
 }
 fn action(request: Value) -> Result<Value> {
@@ -26,11 +26,14 @@ fn action(request: Value) -> Result<Value> {
         "doctor" => o::doctor(),
         "repair" => lifecycle::repair(),
         "install" | "update" => {
+            if request["mode"] != "bidi" {
+                return lifecycle::install(None, false);
+            }
             let list = o::profiles(&o::home()?)?;
             let selected = request["profile"]
                 .as_str()
                 .and_then(|path| list.iter().find(|(p, _)| p.to_str() == Some(path)))
-                .context("사용할 Firefox 프로필을 선택하세요")?;
+                .context("고급 BiDi 방식에 사용할 Firefox 프로필을 선택하세요")?;
             lifecycle::install(
                 Some(&selected.0.to_string_lossy()),
                 request["action"] == "update",
@@ -41,9 +44,17 @@ fn action(request: Value) -> Result<Value> {
     }
 }
 async fn respond(stream: &mut TcpStream, status: &str, mime: &str, body: &str) -> Result<()> {
+    respond_bytes(stream, status, mime, body.as_bytes()).await
+}
+async fn respond_bytes(
+    stream: &mut TcpStream,
+    status: &str,
+    mime: &str,
+    body: &[u8],
+) -> Result<()> {
     let headers=format!("HTTP/1.1 {status}\r\nContent-Type: {mime}; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'\r\n\r\n",body.len());
     stream.write_all(headers.as_bytes()).await?;
-    stream.write_all(body.as_bytes()).await?;
+    stream.write_all(body).await?;
     Ok(())
 }
 async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> {
@@ -83,6 +94,16 @@ async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> 
             .is_none_or(|v| v == "same-origin" || v == "none");
     if !allowed {
         respond(&mut stream, "403 Forbidden", "text/plain", "Forbidden").await?;
+        return Ok(false);
+    }
+    if method == "GET" && path == "/extension.xpi" {
+        respond_bytes(
+            &mut stream,
+            "200 OK",
+            "application/x-xpinstall",
+            include_bytes!("../../packaging/signed/codex-work-tabs-0.3.0.xpi"),
+        )
+        .await?;
         return Ok(false);
     }
     if method == "GET" && path == "/" {
@@ -141,12 +162,14 @@ pub async fn serve(no_open: bool) -> Result<()> {
     let url = format!("http://{host}/#{token}");
     println!("Firefox Codex 관리: {url}");
     if !no_open {
-        let _ = std::process::Command::new("xdg-open")
-            .arg(&url)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn();
+        let _ = std::process::Command::new(
+            std::env::var_os("FIREFOX_BINARY").unwrap_or_else(|| "/usr/bin/firefox".into()),
+        )
+        .arg(&url)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
     }
     let deadline = tokio::time::Instant::now() + Duration::from_secs(1200);
     while let Ok(Ok((stream, _))) = tokio::time::timeout_at(deadline, listener.accept()).await {

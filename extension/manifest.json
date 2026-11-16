@@ -1,12 +1,32 @@
 {
-  "manifest_version": 2,
-  "name": "Firefox Codex MCP (Development)",
-  "version": "0.1.0",
-  "description": "Explicitly opt a Firefox tab into a local Codex MCP bridge.",
-  "browser_specific_settings": {"gecko": {"id": "firefox-codex-mcp@local.invalid", "strict_min_version": "115.0"}},
-  "permissions": ["activeTab", "tabs", "storage", "http://127.0.0.1/*"],
-  "background": {"scripts": ["protocol.js", "background.js"], "persistent": true},
-  "browser_action": {"default_title": "Firefox Codex MCP", "default_popup": "popup.html"},
-  "content_security_policy": "script-src 'self'; object-src 'none'; connect-src ws://127.0.0.1:*",
+  "manifest_version": 3,
+  "name": "Codex Work Tabs",
+  "version": "0.3.0",
+  "description": "Unofficial local bridge for Codex work tabs. No codes, tokens or profile paths.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{a171de16-96b6-4e50-94b7-e0b54d94436a}",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["websiteContent", "websiteActivity"]
+      }
+    }
+  },
+  "permissions": ["nativeMessaging", "scripting", "storage", "tabs", "alarms"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "scripts": ["protocol.js", "native/background.js"]
+  },
+  "action": {
+    "default_title": "Codex Work Tabs",
+    "default_popup": "native/popup.html"
+  },
+  "options_ui": {
+    "page": "native/popup.html",
+    "open_in_tab": true
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'"
+  },
   "incognito": "not_allowed"
 }

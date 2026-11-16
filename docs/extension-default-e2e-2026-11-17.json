@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-17",
+  "version": "0.3.0",
+  "platform": "Linux x86_64, native Firefox 160.0",
+  "scope": "Disposable HOME and Firefox profiles. No personal browser profile modified.",
+  "signedExtension": {
+    "name": "Codex Work Tabs",
+    "id": "{a171de16-96b6-4e50-94b7-e0b54d94436a}",
+    "version": "0.3.0",
+    "amoVersionId": 6719847,
+    "amoFileId": 5263930,
+    "channel": "unlisted",
+    "sha256": "c5b33190fbacb1b05776156c0f8064624e4a53390089674b2ce3a853bad8a188"
+  },
+  "firefoxE2E": {
+    "firstInstall": true,
+    "multiProfile": true,
+    "offlineNoFallback": true,
+    "permanentSignedRestartVerified": true,
+    "restartReconnect": true,
+    "signedInstallUi": true,
+    "temporaryAddonReloaded": false,
+    "twoChats": true
+  },
+  "checks": [
+    "Management UI installs native helper with no profile input",
+    "Management UI serves bundled signed XPI with application/x-xpinstall",
+    "Standard Firefox installation and permission notifications; test invokes their enabled buttons through headless chrome DOM",
+    "First profile automatically connects; no manual pairing",
+    "Two MCP stdio chats own different tabs; foreign selection denied",
+    "Read, click, type with independent DOM readback; existing user tab unchanged",
+    "Navigation invalidates old snapshot; next snapshot recovers",
+    "Actual extension popup pause/resume revokes both chats",
+    "Helper update with live Firefox reconnects and clears old ownership",
+    "Second profile selected explicitly; first profile access revoked",
+    "Offline selected profile never falls back",
+    "Permanent signed extension survives selected-profile restart without reinstall",
+    "Restart reconnects with same profile ID and no old tab ownership",
+    "Revoke denies subsequent reads",
+    "Native MV3 connection survived 65 seconds idle"
+  ],
+  "actualCodex": {
+    "surface": "Codex CLI bundled with desktop application; not a new desktop UI session",
+    "tools": [
+      "firefox_open_tab",
+      "firefox_snapshot",
+      "firefox_click",
+      "firefox_type",
+      "firefox_scroll",
+      "firefox_revoke"
+    ],
+    "independentReadback": {
+      "code": "9f942aee",
+      "count": "Count 1",
+      "input": "9f942aee",
+      "scrollY": 600
+    },
+    "postRevokeReadDenied": true
+  },
+  "automatedChecks": {
+    "cargoClippy": "passed with -D warnings",
+    "cargoUnitTests": 21,
+    "stdioProcessTest": "passed",
+    "javascriptTests": 59,
+    "isolatedInstallUpdateRemove": "passed using actual Codex CLI",
+    "advancedBiDiE2E": 3,
+    "extractedPackageInstallUpdateRemove": "passed outside repository",
+    "extractedPackageSignedFirefoxAndCodex": "passed; signed UI installation, real Codex model, restart and two profiles"
+  },
+  "limitations": [
+    "Native Linux x86_64 only; Snap/Flatpak/Windows/macOS unvalidated",
+    "No automatic extension update URL; install next signed XPI manually",
+    "Actual desktop UI E2E for this new native connection was not run",
+    "Cold launch of a selected non-default profile is not guaranteed; open that profile manually",
+    "Mozilla lint Android minimum-version warning; Android is not a release target",
+    "Native chrome permission buttons automated through DOM because headless WebDriver cannot scroll these buttons into view"
+  ]
+}

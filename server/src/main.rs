@@ -3,6 +3,7 @@ mod bidi;
 mod debug;
 mod lifecycle;
 mod manager;
+mod native;
 mod onboarding;
 mod setup;
 use anyhow::{bail, Context, Result};
@@ -422,22 +423,43 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some("--help" | "-h") => {
-            println!("Firefox Codex MCP\n--manage        설치·업데이트·제거 화면\n--install       자동 설치\n--update        이 패키지로 업데이트\n--uninstall     사용자 설정을 보존하며 제거\n--doctor        연결 진단(JSON)\n--repair        중단된 설치 복구\n--version       버전 확인");
+            println!("Firefox Codex MCP\n--manage        설치·업데이트·제거 화면\n--install       확장 연결 프로그램 설치\n--install-bidi [PROFILE] 고급 디버깅 방식 설치\n--update        이 패키지로 업데이트\n--uninstall     사용자 설정을 보존하며 제거\n--doctor        연결 진단(JSON)\n--repair        중단된 설치 복구\n--version       버전 확인");
+            return Ok(());
+        }
+        Some("--install-bidi") => {
+            let profile = env::args().nth(2).map(Ok).unwrap_or_else(|| {
+                onboarding::choose(&onboarding::profiles(&onboarding::home()?)?)
+                    .map(|p| p.to_string_lossy().into_owned())
+            })?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&lifecycle::install(Some(&profile), false)?)?
+            );
             return Ok(());
         }
         Some("--install") => {
             let value = onboarding::install(env::args().nth(2).as_deref())?;
-            println!(
-                "{}\n\nFirefox 프로필: {}\n연결 코드·토큰·탭 허용 설정은 필요 없습니다.",
-                value["nextStep"].as_str().unwrap_or("설치 완료"),
-                value["profile"].as_str().unwrap_or("")
-            );
+            println!("{}", value["nextStep"].as_str().unwrap_or("설치 완료"));
             return Ok(());
         }
         Some("--doctor") => {
             println!("{}", serde_json::to_string_pretty(&onboarding::doctor()?)?);
             return Ok(());
         }
+        Some("--extension") => return debug::stdio_mode(true).await,
+        Some("--native-host") => {
+            let result = native::host().await;
+            if let Err(error) = &result {
+                eprintln!("Native connection ended: {error:#}");
+            }
+            // Tokio's stdin uses a blocking read that cannot be cancelled. On
+            // broker EOF Firefox still holds stdin open. Exit this dedicated
+            // host process so Firefox sees port disconnect and starts the new
+            // installed binary; waiting for runtime shutdown would deadlock.
+            std::process::exit(if result.is_ok() { 0 } else { 1 });
+        }
+        Some("--extension-reset") => return native::reset().await,
+        Some("--extension-broker") => return native::broker().await,
         Some("--bidi") => return debug::stdio().await,
         Some("--bidi-broker") => return debug::broker().await,
         Some("--install-debug" | "--launch-firefox") => {
@@ -459,6 +481,9 @@ async fn main() -> Result<()> {
             };
             println!("{}", serde_json::to_string_pretty(&value)?);
             return Ok(());
+        }
+        None if env::var_os("FIREFOX_MCP_TOKEN_FILE").is_none() => {
+            return debug::stdio_mode(true).await
         }
         _ => {}
     }

@@ -1,5 +1,6 @@
 //! Opt-in real Firefox integration test. Uses a throwaway WebDriver profile.
 mod debug_e2e;
+mod native_e2e;
 use anyhow::{bail, ensure, Context, Result};
 use reqwest::blocking::Client;
 use serde_json::{json, Value};
@@ -62,16 +63,13 @@ fn desktop_firefox_fixture() -> Result<()> {
     let artifacts = PathBuf::from(env::var("FIREFOX_DESKTOP_ARTIFACTS")?);
     fs::create_dir_all(&artifacts)?;
     let token = fs::read_to_string(env::var("FIREFOX_MCP_TOKEN_FILE")?)?;
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .context("missing repository")?
-        .to_path_buf();
+    let legacy = legacy_extension()?;
     let fixture = Fixture::start()?;
     let driver = Driver::start()?;
     driver.call("/window/rect", json!({"width":1280,"height":900}))?;
     driver.call(
         "/moz/addon/install",
-        json!({"path":root.join("extension"),"temporary":true}),
+        json!({"path":legacy.path(),"temporary":true}),
     )?;
     driver.goto(&format!("{}/a", fixture.url))?;
     let mut tabs = vec![("A", driver.handle()?)];
@@ -357,13 +355,16 @@ impl Driver {
         Ok(())
     }
     fn popup(&self) -> Result<()> {
+        self.popup_for(EXTENSION_ID)
+    }
+    fn popup_for(&self, extension_id: &str) -> Result<()> {
         self.context("chrome")?;
         let widget = self.script(r#"
             const {CustomizableUI} = ChromeUtils.importESModule('moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs');
             const id = arguments[0].toLowerCase().replace(/[^a-z0-9_-]/g,'_') + '-browser-action';
             CustomizableUI.addWidgetToArea(id, CustomizableUI.AREA_NAVBAR);
             return id;
-        "#,json!([EXTENSION_ID]))?;
+        "#,json!([extension_id]))?;
         self.click(&format!(
             "#{} .unified-extensions-item-action-button",
             widget.as_str().context("missing toolbar widget")?
@@ -987,10 +988,7 @@ fn codex_roundtrip(
 #[test]
 #[ignore = "requires Firefox and a loopback geckodriver; see docs/validation.md"]
 fn real_firefox_mcp() -> Result<()> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .context("missing repository")?
-        .to_path_buf();
+    let legacy = legacy_extension()?;
     let scratch = tempfile::tempdir()?;
     let token_file = scratch.path().join("bridge.token");
     let generated = Command::new(env!("CARGO_BIN_EXE_firefox-codex-mcp"))
@@ -1010,7 +1008,7 @@ fn real_firefox_mcp() -> Result<()> {
     let driver = Driver::start()?;
     driver.call(
         "/moz/addon/install",
-        json!({"path":root.join("extension"),"temporary":true}),
+        json!({"path":legacy.path(),"temporary":true}),
     )?;
     driver.goto(&fixture.url)?;
     driver.popup()?;
@@ -1169,4 +1167,28 @@ fn real_firefox_mcp() -> Result<()> {
         codex_roundtrip(&driver, &fixture, scratch.path(), &token_file, &executable)?;
     }
     Ok(())
+}
+
+fn legacy_extension() -> Result<tempfile::TempDir> {
+    let dir = tempfile::tempdir()?;
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .context("repository")?
+        .join("extension");
+    for name in [
+        "background.js",
+        "protocol.js",
+        "observation.js",
+        "page.js",
+        "content.js",
+        "popup.html",
+        "popup.js",
+    ] {
+        fs::copy(source.join(name), dir.path().join(name))?;
+    }
+    fs::copy(
+        source.join("manifest-legacy.json"),
+        dir.path().join("manifest.json"),
+    )?;
+    Ok(dir)
 }

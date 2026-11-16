@@ -39,7 +39,11 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     let source = env::var_os("FIREFOX_SETUP_SERVER_BINARY")
         .unwrap_or_else(|| env!("CARGO_BIN_EXE_firefox-codex-mcp").into());
     let executable = Path::new(&source);
+    // No Firefox profile must be needed for the default native connection.
+    let saved_firefox = home.join("saved-firefox");
+    fs::rename(&firefox, &saved_firefox)?;
     let first = run(executable, &["--install"])?;
+    fs::rename(&saved_firefox, &firefox)?;
     ensure!(
         first.status.success(),
         "{}",
@@ -49,6 +53,16 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     let config_once = fs::read_to_string(config.join("config.toml"))?;
     ensure!(config_once.contains(installed.to_str().context("Invalid install path")?));
     ensure!(!config_once.contains(executable.to_str().context("Invalid source path")?));
+    ensure!(config_once.contains("--extension") && !config_once.contains("FIREFOX_MCP_PROFILE"));
+    let manifest = home.join(".mozilla/native-messaging-hosts/firefox_codex_mcp.json");
+    let native: Value = serde_json::from_slice(&fs::read(&manifest)?)?;
+    ensure!(
+        native["allowed_extensions"]
+            == serde_json::json!(["{a171de16-96b6-4e50-94b7-e0b54d94436a}"])
+    );
+    let wrapper = Path::new(native["path"].as_str().context("native path")?);
+    use std::os::unix::fs::PermissionsExt;
+    ensure!(fs::metadata(wrapper)?.permissions().mode() & 0o777 == 0o700);
     let agents_once = fs::read_to_string(config.join("AGENTS.md"))?;
     let second = run(&installed, &["--update"])?;
     ensure!(
@@ -97,6 +111,7 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
         String::from_utf8_lossy(&removal.stderr)
     );
     ensure!(!installed.exists());
+    ensure!(!manifest.exists() && !wrapper.exists());
     ensure!(fs::read_to_string(config.join("AGENTS.md"))? == "Keep my existing Rust preference.\n");
     ensure!(fs::read_to_string(firefox.join("main/user.js"))? == original_pref);
     let remaining = fs::read_to_string(config.join("config.toml"))?;
@@ -140,5 +155,26 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     );
     ensure!(fs::read_to_string(skill)? == "My customized browser skill.\n");
     ensure!(firefox.join("main/prefs.js").exists());
+    // Explicit advanced mode still works, and default install migrates it safely.
+    fs::remove_file(config.join("skills/firefox-browser/SKILL.md"))?;
+    let advanced = run(
+        executable,
+        &[
+            "--install-bidi",
+            firefox.join("main").to_str().context("profile")?,
+        ],
+    )?;
+    ensure!(
+        advanced.status.success(),
+        "advanced: {}",
+        String::from_utf8_lossy(&advanced.stderr)
+    );
+    ensure!(fs::read_to_string(config.join("config.toml"))?.contains("--bidi"));
+    ensure!(run(executable, &["--update"])?.status.success());
+    ensure!(fs::read_to_string(config.join("config.toml"))?.contains("--bidi"));
+    ensure!(run(executable, &["--install"])?.status.success());
+    let migrated = fs::read_to_string(config.join("config.toml"))?;
+    ensure!(migrated.contains("--extension") && !migrated.contains("FIREFOX_MCP_PROFILE"));
+    ensure!(run(executable, &["--uninstall"])?.status.success());
     Ok(())
 }

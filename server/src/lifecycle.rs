@@ -48,10 +48,16 @@ struct Managed {
 #[derive(Serialize, Deserialize)]
 struct Receipt {
     version: String,
+    #[serde(default = "legacy_mode")]
+    mode: String,
     profile: PathBuf,
     codex_home: PathBuf,
     files: Vec<Managed>,
     executable_hash: String,
+}
+
+fn legacy_mode() -> String {
+    "bidi".into()
 }
 
 struct Layout {
@@ -233,7 +239,12 @@ fn strip_marked(value: &str, start: &str, end: &str) -> Result<String> {
 }
 // Run the official CLI against a staging config. The live config changes only
 // together with the rest of the transaction, after a compare-before-write check.
-fn prepare_config(layout: &Layout, profile: &Path, remove: bool) -> Result<Change> {
+fn prepare_config(
+    layout: &Layout,
+    profile: &Path,
+    extension: bool,
+    remove: bool,
+) -> Result<Change> {
     let path = layout.root.join("config.toml");
     let before = snapshot(&path)?;
     let stage = layout
@@ -252,6 +263,11 @@ fn prepare_config(layout: &Layout, profile: &Path, remove: bool) -> Result<Chang
             .args(["mcp"]);
         if remove {
             command.args(["remove", "firefox"]);
+        } else if extension {
+            command
+                .args(["add", "firefox", "--"])
+                .arg(&layout.executable)
+                .arg("--extension");
         } else {
             command
                 .args(["add", "firefox", "--env"])
@@ -285,7 +301,8 @@ fn owned_registration(layout: &Layout) -> Result<bool> {
     }
     Ok(o::configured(&o::codex()?, &layout.root)?.is_some_and(|v| {
         v["transport"]["command"].as_str() == layout.executable.to_str()
-            && v["transport"]["args"] == json!(["--bidi"])
+            && (v["transport"]["args"] == json!(["--bidi"])
+                || v["transport"]["args"] == json!(["--extension"]))
     }))
 }
 pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
@@ -296,15 +313,27 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         !update_only || prior.is_some() || layout.executable.exists(),
         "아직 설치되지 않았습니다. 먼저 설치를 선택하세요."
     );
-    let profile = match (explicit, prior.as_ref()) {
-        (Some(value), _) => setup::profile(value)?,
-        (None, Some(receipt)) => setup::profile(&receipt.profile.to_string_lossy())?,
-        _ => o::choose(&o::profiles(&layout.home)?)?,
+    let extension =
+        explicit.is_none() && !(update_only && prior.as_ref().is_some_and(|p| p.mode == "bidi"));
+    let profile = if extension {
+        PathBuf::new()
+    } else {
+        match (explicit, prior.as_ref()) {
+            (Some(value), _) => setup::profile(value)?,
+            (None, Some(receipt)) if receipt.mode == "bidi" => {
+                setup::profile(&receipt.profile.to_string_lossy())?
+            }
+            _ => o::choose(&o::profiles(&layout.home)?)?,
+        }
     };
     if let Some(prior) = &prior {
         ensure!(
-            prior.codex_home == layout.root && prior.profile == profile,
-            "다른 프로필/CODEX_HOME으로 바꾸려면 기존 설치를 먼저 제거하세요."
+            prior.codex_home == layout.root,
+            "설치 당시 CODEX_HOME을 사용하세요."
+        );
+        ensure!(
+            extension || prior.mode != "bidi" || prior.profile == profile,
+            "BiDi 프로필을 바꾸려면 기존 설치를 먼저 제거하세요."
         );
     }
     fs::create_dir_all(&layout.root)?;
@@ -320,7 +349,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             .parent()
             .context("Missing install directory")?,
     )?;
-    let mut changes = vec![prepare_config(&layout, &profile, false)?];
+    let mut changes = vec![prepare_config(&layout, &profile, extension, false)?];
     let mut files = Vec::new();
     let mut preserved = Vec::new();
     let agents = layout.root.join("AGENTS.md");
@@ -331,35 +360,11 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         text(&current_agents)?
     };
     let agents_bytes = o::guidance(&baseline)?.into_bytes();
-    let pref = profile.join("user.js");
-    let current_pref = snapshot(&pref)?;
-    let old_pref = text(&current_pref)?;
-    let has_existing_pref = prior.is_none()
-        && old_pref
-            .lines()
-            .any(|l| l.trim() == "user_pref(\"remote.prefs.recommended\", false);");
-    let pref_text = if has_existing_pref {
-        old_pref.clone()
-    } else {
-        let clean = strip_marked(&old_pref, PREF_START, PREF_END)?;
-        format!(
-            "{}{PREF_BLOCK}",
-            if clean.is_empty() {
-                String::new()
-            } else {
-                format!("{}\n", clean.trim_end())
-            }
-        )
-    };
-    let launch = layout
-        .home
-        .join(".local/share/applications/firefox-codex.desktop");
     let management = layout
         .home
         .join(".local/share/applications/firefox-codex-manager.desktop");
-    let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex 연결)\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?,setup::quote_desktop(&profile.to_string_lossy())?);
     let manager=format!("[Desktop Entry]\nType=Application\nName=Firefox Codex 관리\nExec={} --manage\nIcon=firefox\nTerminal=false\nCategories=Settings;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?);
-    let entries = vec![
+    let mut entries = vec![
         (
             agents,
             agents_bytes,
@@ -370,9 +375,71 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             o::SKILL.as_bytes().to_vec(),
             None,
         ),
-        (launch, desktop.into_bytes(), None),
         (management, manager.into_bytes(), None),
-        (
+    ];
+    let mut has_existing_pref = false;
+    if extension {
+        let wrapper = layout
+            .executable
+            .parent()
+            .context("Missing directory")?
+            .join("native-host");
+        let quoted = format!(
+            "'{}'",
+            layout.executable.to_string_lossy().replace('\'', "'\\''")
+        );
+        entries.push((
+            wrapper.clone(),
+            format!("#!/bin/sh\nexec {quoted} --native-host \"$@\"\n").into_bytes(),
+            None,
+        ));
+        let manifest = layout
+            .home
+            .join(".mozilla/native-messaging-hosts")
+            .join(format!("{}.json", crate::native::HOST));
+        let bytes = serde_json::to_vec_pretty(
+            &json!({"name":crate::native::HOST,"description":"Firefox Codex local connection","path":wrapper,"type":"stdio","allowed_extensions":[crate::native::EXTENSION_ID]}),
+        )?;
+        if snapshot(&manifest)?.is_some()
+            && !prior
+                .as_ref()
+                .is_some_and(|p| p.files.iter().any(|f| f.path == manifest))
+        {
+            anyhow::bail!(
+                "기존 Native Messaging 등록을 보존합니다: {}",
+                manifest.display()
+            );
+        }
+        entries.push((manifest, bytes, None));
+    } else {
+        let pref = profile.join("user.js");
+        let old_pref = text(&snapshot(&pref)?)?;
+        has_existing_pref = prior.is_none()
+            && old_pref
+                .lines()
+                .any(|l| l.trim() == "user_pref(\"remote.prefs.recommended\", false);");
+        let clean = strip_marked(&old_pref, PREF_START, PREF_END)?;
+        let pref_text = if has_existing_pref {
+            old_pref
+        } else {
+            format!(
+                "{}{PREF_BLOCK}",
+                if clean.is_empty() {
+                    String::new()
+                } else {
+                    format!("{}\n", clean.trim_end())
+                }
+            )
+        };
+        let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex 연결)\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?,setup::quote_desktop(&profile.to_string_lossy())?);
+        entries.push((
+            layout
+                .home
+                .join(".local/share/applications/firefox-codex.desktop"),
+            desktop.into_bytes(),
+            None,
+        ));
+        entries.push((
             pref,
             pref_text.into_bytes(),
             if has_existing_pref {
@@ -380,8 +447,8 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             } else {
                 Some(PREF_BLOCK.into())
             },
-        ),
-    ];
+        ));
+    }
     for (path, bytes, block) in entries {
         let before = snapshot(&path)?;
         let previous = prior
@@ -411,7 +478,11 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         }
         let installed = Snapshot {
             bytes,
-            mode: before.as_ref().map_or(0o600, |s| s.mode),
+            mode: if path.ends_with("native-host") {
+                0o700
+            } else {
+                before.as_ref().map_or(0o600, |s| s.mode)
+            },
         };
         let mut original = previous
             .map(|p| p.before.clone())
@@ -460,9 +531,18 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             after: Some(installed),
         });
     }
+    // Retain receipts for inactive advanced-mode files so later removal remains complete.
+    if let Some(prior) = &prior {
+        for old in &prior.files {
+            if !files.iter().any(|f| f.path == old.path) {
+                files.push(old.clone());
+            }
+        }
+    }
     let bytes = fs::read(std::env::current_exe()?)?;
     let receipt = Receipt {
         version: env!("CARGO_PKG_VERSION").into(),
+        mode: if extension { "extension" } else { "bidi" }.into(),
         profile: profile.clone(),
         codex_home: layout.root.clone(),
         files,
@@ -475,8 +555,14 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         0o600,
     )?);
     transact(&layout, changes)?;
+    let restart_required = extension
+        && prior.is_some()
+        && !Command::new(&layout.executable)
+            .arg("--extension-reset")
+            .output()
+            .is_ok_and(|o| o.status.success());
     Ok(
-        json!({"installed":true,"version":receipt.version,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":"설치 완료. 새 Codex 채팅에서 웹 작업을 요청하세요. 일반 모드 Firefox가 켜져 있다면 저장 후 ‘Firefox (Codex 연결)’로 한 번 다시 여세요. 다음부터 Firefox Codex 관리에서 진단·제거할 수 있습니다. 업데이트는 새 패키지의 설치 화면을 여세요."}),
+        json!({"restartRequired":restart_required,"installed":true,"version":receipt.version,"mode":receipt.mode,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":if extension {"연결 프로그램 설치 완료. 이 화면의 ‘Firefox에 Codex Work Tabs 확장 추가’를 누른 뒤 새 Codex 채팅에서 웹 작업을 요청하세요. 코드·토큰·프로필 경로는 필요 없습니다. 업데이트 시 이전 작업 탭 접근은 해제되며 Firefox는 계속 실행됩니다. 확장은 Firefox 부가 기능 관리자에서 별도로 제거합니다."} else {"설치 완료. 새 Codex 채팅에서 웹 작업을 요청하세요. 일반 모드 Firefox가 켜져 있다면 저장 후 ‘Firefox (Codex 연결)’로 한 번 다시 여세요. 다음부터 Firefox Codex 관리에서 진단·제거할 수 있습니다. 업데이트는 새 패키지의 설치 화면을 여세요."}}),
     )
 }
 pub fn uninstall() -> Result<Value> {
@@ -494,7 +580,12 @@ pub fn uninstall() -> Result<Value> {
     let mut changes = Vec::new();
     let mut preserved = Vec::new();
     if owned_registration(&layout)? {
-        changes.push(prepare_config(&layout, &receipt.profile, true)?);
+        changes.push(prepare_config(
+            &layout,
+            &receipt.profile,
+            receipt.mode == "extension",
+            true,
+        )?);
     } else {
         preserved.push("변경된 또는 제거된 Firefox MCP 등록".into());
     }
@@ -560,11 +651,23 @@ pub fn installed_version() -> Option<String> {
         .ok()
         .map(|r| r.version)
 }
+pub fn installed_mode() -> Option<String> {
+    let data = fs::read(
+        o::home()
+            .ok()?
+            .join(".local/state/firefox-codex-mcp/install.json"),
+    )
+    .ok()?;
+    serde_json::from_slice::<Receipt>(&data)
+        .ok()
+        .map(|r| r.mode)
+}
 pub fn installed_profile() -> Option<PathBuf> {
     let home = o::home().ok()?;
     let data = fs::read(home.join(".local/state/firefox-codex-mcp/install.json")).ok()?;
     serde_json::from_slice::<Receipt>(&data)
         .ok()
+        .filter(|r| r.mode == "bidi")
         .map(|r| r.profile)
 }
 
