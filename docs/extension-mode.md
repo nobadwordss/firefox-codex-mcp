@@ -1,4 +1,4 @@
-# 기본 확장 연결 (0.3)
+# 기본 확장 연결 (0.4)
 
 Native Messaging은 Firefox가 확장 전용 로컬 프로세스를 실행하는 연결 방식입니다.
 Codex와 Firefox는 각각 stdio를 소유하므로 Rust 라우터가 private Unix socket으로
@@ -7,7 +7,8 @@ Codex와 Firefox는 각각 stdio를 소유하므로 Rust 라우터가 private Un
 
 ## 구성과 경계
 
-- `--extension`: MCP stdio. 채팅마다 라우터에서 무작위 owner ID를 발급합니다.
+- `--extension`: MCP stdio. 호스트의 `_meta.threadId`를 검증·해시하고 라우터의
+  무작위 owner와 연결합니다. 모델 인수·프로젝트 경로로 채팅을 추측하지 않습니다.
 - `--native-host`: Firefox length-prefixed JSON과 라우터 newline JSON을 변환합니다.
 - `--extension-broker`: 동일 UID, 0700 디렉터리와 0600 Unix socket, 단일 프로세스 잠금.
 - 0.3.1부터 기본 socket은 HOME 아래 `.local/state/firefox-codex-mcp/runtime`에 둔다.
@@ -26,6 +27,10 @@ Codex와 Firefox는 각각 stdio를 소유하므로 Rust 라우터가 private Un
 확장은 owner별로 자신이 생성한 탭만 저장합니다. 사용자 탭이나 페이지 팝업을 인수하지 않습니다.
 owner를 명령 대기열에 넣기 전에 등록하고, revoke/EOF/pause 시 동일 owner 객체를 무효화합니다.
 따라서 탭 생성이 늦게 완료되어도 취소된 owner에 배정하지 않습니다. 결과 탭은 남겨 둡니다.
+0.4부터 호스트 식별자가 있으면 MCP EOF는 탭을 보존한 채 조작을 정지합니다.
+같은 채팅의 재접속은 새 attachment와 새 owner 객체로 이어가며 콘텐츠 포트를 다시 맺습니다.
+24시간 무요청 시 만료되고 호스트 식별자가 없으면 EOF에서 기존대로 폐기합니다.
+확장의 native 연결 손실과 명시적 철회는 보존되지 않습니다. [세부 설계](chat-continuity.md).
 
 페이지 이동은 탭 소유권을 유지하고 콘텐츠 포트를 닫습니다. 다음 snapshot에서만 재바인딩합니다.
 콘텐츠 세계의 documentId와 grant/session/snapshot을 검사한 뒤 비동기 양보 없이 조작합니다.

@@ -7,13 +7,73 @@ async function setup(){
   const context=vm.createContext({browser,crypto:crypto.webcrypto,URL,Map,Promise,Date,setTimeout:()=>1,clearTimeout(){}});
   for(const file of ['protocol.js','native/background.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
   await flush();const port=ports[0];port.onMessage.emit({kind:'ready'});port.onMessage.emit({kind:'configuration',selected:null,count:1});let seq=0;
-  async function call(name,args={},owner='a'.repeat(32)){const id=String(++seq);port.onMessage.emit({kind:'request',id,owner,name,args});await flush();return messages.find(m=>m.id===id&&m.kind==='response');}
+  const bindings=new Map();
+  function attach(owner='a'.repeat(32),attachment='1'.repeat(32)){bindings.set(owner,attachment);port.onMessage.emit({kind:'attachOwner',owner,attachment});}
+  function suspend(owner='a'.repeat(32),attachment=bindings.get(owner)){port.onMessage.emit({kind:'suspendOwner',owner,attachment});}
+  function raw(id,name,args={},owner='a'.repeat(32),attachment=bindings.get(owner)){port.onMessage.emit({kind:'request',id,owner,attachment,name,args});}
+  async function call(name,args={},owner='a'.repeat(32)){if(!bindings.has(owner))attach(owner);const id=String(++seq);raw(id,name,args,owner);await flush();return messages.find(m=>m.id===id&&m.kind==='response');}
   const send=action=>control.emit({action},{id:'extension',url:'moz-extension://test/native/popup.html'})[0];
-  return {browser,messages,ports,port,tabs,updated,alarms,call,send,control};
+  attach();
+  return {browser,messages,ports,port,tabs,updated,alarms,call,send,control,attach,suspend,raw};
 }
 test('native work tabs are created without grants; existing and other chat tabs stay unavailable',async()=>{const h=await setup();h.tabs.set(1,{id:1,url:'https://private.test'});assert.equal((await h.call('firefox_tabs')).result.tabs.length,0);const opened=await h.call('firefox_open_tab',{url:'https://example.com'});assert.equal(opened.result.tabId,'10');assert.match((await h.call('firefox_select_tab',{tabId:'10'},'b'.repeat(32))).error,/not owned/);assert.match((await h.call('firefox_select_tab',{tabId:'1'})).error,/not owned/);});
-test('revoke fences pending creation and queued work; new request may create a fresh tab',async()=>{const h=await setup();let finish;h.browser.tabs.create=()=>new Promise(r=>finish=r);h.port.onMessage.emit({kind:'request',id:'pending',owner:'a'.repeat(32),name:'firefox_open_tab',args:{url:'https://example.com'}});await flush();h.port.onMessage.emit({kind:'request',id:'queued',owner:'a'.repeat(32),name:'firefox_tabs',args:{}});h.port.onMessage.emit({kind:'dropOwner',owner:'a'.repeat(32)});finish({id:42});await flush();assert.match(h.messages.find(m=>m.id==='pending').error,/released/);assert.match(h.messages.find(m=>m.id==='queued').error,/released/);assert.equal((await h.call('firefox_status')).result.ownedTabs,0);});
+test('revoke fences pending creation and queued work; new request may create a fresh tab',async()=>{const h=await setup();let finish;h.browser.tabs.create=()=>new Promise(r=>finish=r);h.raw('pending','firefox_open_tab',{url:'https://example.com'});await flush();h.raw('queued','firefox_tabs');h.port.onMessage.emit({kind:'dropOwner',owner:'a'.repeat(32)});finish({id:42});await flush();assert.match(h.messages.find(m=>m.id==='pending').error,/released/);assert.match(h.messages.find(m=>m.id==='queued').error,/released/);h.attach();assert.equal((await h.call('firefox_status')).result.ownedTabs,0);});
 test('pause persists, status remains readable, resume does not reacquire released tabs',async()=>{const h=await setup();await h.call('firefox_open_tab',{url:'https://example.com'});await h.send('pause');assert.equal((await h.call('firefox_status')).result.enabled,false);assert.match((await h.call('firefox_open_tab',{url:'https://example.com'})).error,/released/);await h.send('resume');assert.equal((await h.call('firefox_status')).result.ownedTabs,0);});
 test('connection loss releases all tabs; alarm reconnects without a popup',async()=>{const h=await setup();await h.call('firefox_open_tab',{url:'https://example.com'});h.port.onDisconnect.emit();h.alarms.emit();assert.equal(h.ports.length,2);h.ports[1].onMessage.emit({kind:'ready'});assert.equal((await h.send('status')).tabs,0);});
 test('page messages cannot select profile or resume the extension',async()=>{const h=await setup();await assert.rejects(h.control.emit({action:'choose'},{id:'extension',url:'https://example.com'})[0],/Only extension/);assert.equal(h.messages.some(m=>m.kind==='selectProfile'),false);});
 test('default manifest has native transport with no network bridge or static page injection',()=>{const m=JSON.parse(fs.readFileSync(path.join(root,'manifest.json')));assert.equal(m.manifest_version,3);assert.ok(m.permissions.includes('nativeMessaging'));assert.equal(m.content_scripts,undefined);assert.deepEqual(m.host_permissions,['http://*/*','https://*/*']);assert.equal(m.incognito,'not_allowed');});
+
+test('reattachment preserves the exact tab, fences old requests and late EOF',async()=>{
+  const h=await setup(),owner='a'.repeat(32),old='1'.repeat(32),next='2'.repeat(32);
+  const tab=(await h.call('firefox_open_tab',{url:'https://example.com'})).result.tabId;
+  h.suspend();
+  assert.match((await h.call('firefox_tabs')).error,/attachment/);
+  h.attach(owner,next);
+  h.suspend(owner,old);
+  assert.equal((await h.call('firefox_tabs')).result.tabs[0].tabId,tab);
+  h.raw('stale','firefox_close_tab',{},owner,old);await flush();
+  assert.match(h.messages.find(m=>m.id==='stale').error,/attachment/);
+  assert.equal(h.tabs.size,1);
+  assert.match((await h.call('firefox_click',{snapshotId:'old',elementId:1})).error,/fresh snapshot/);
+});
+test('toolbar revocation while detached never resurrects tabs on resume',async()=>{
+  const h=await setup(),owner='a'.repeat(32);
+  const tab=(await h.call('firefox_open_tab',{url:'https://example.com'})).result.tabId;
+  h.suspend();await h.send('revoke');h.attach(owner,'2'.repeat(32));
+  assert.equal((await h.call('firefox_status')).result.ownedTabs,0);
+  assert.match((await h.call('firefox_select_tab',{tabId:tab})).error,/not owned/);
+  assert.equal(h.tabs.size,1);
+});
+test('replacement fences pending creation and its queued commands without clearing retained tabs',async()=>{
+  const h=await setup(),owner='a'.repeat(32);
+  await h.call('firefox_open_tab',{url:'https://example.com'});
+  let finish;h.browser.tabs.create=()=>new Promise(r=>finish=r);
+  h.raw('pending','firefox_open_tab',{url:'https://example.org'});await flush();
+  h.raw('queued','firefox_close_tab');h.attach(owner,'2'.repeat(32));finish({id:42});await flush();
+  assert.match(h.messages.find(m=>m.id==='pending').error,/released/);
+  assert.match(h.messages.find(m=>m.id==='queued').error,/released/);
+  assert.equal((await h.call('firefox_tabs')).result.tabs[0].tabId,'10');
+});
+test('chat revoke stays isolated and is irreversible across attachments',async()=>{
+  const h=await setup(),b='b'.repeat(32);
+  const aTab=(await h.call('firefox_open_tab',{url:'https://example.com'})).result.tabId;
+  const bTab=(await h.call('firefox_open_tab',{url:'https://example.org'},b)).result.tabId;
+  await h.call('firefox_revoke');h.attach('a'.repeat(32),'2'.repeat(32));
+  assert.match((await h.call('firefox_select_tab',{tabId:aTab})).error,/not owned/);
+  assert.match((await h.call('firefox_select_tab',{tabId:bTab})).error,/not owned/);
+  assert.equal((await h.call('firefox_tabs',{},b)).result.tabs[0].tabId,bTab);
+});
+test('EOF during tab creation cannot add the delayed tab to retained ownership',async()=>{
+  const h=await setup(),owner='a'.repeat(32);
+  const retained=(await h.call('firefox_open_tab',{url:'https://example.com'})).result.tabId;
+  let finish;h.browser.tabs.create=()=>new Promise(r=>finish=r);
+  h.raw('pending','firefox_open_tab',{url:'https://example.org'});await flush();
+  h.raw('queued','firefox_close_tab');h.suspend();
+  h.tabs.set(42,{id:42,url:'https://example.org',status:'complete'});finish(h.tabs.get(42));await flush();
+  assert.match(h.messages.find(m=>m.id==='pending').error,/released/);
+  assert.match(h.messages.find(m=>m.id==='queued').error,/released/);
+  h.attach(owner,'2'.repeat(32));
+  assert.equal((await h.call('firefox_tabs')).result.tabs[0].tabId,retained);
+  assert.equal((await h.call('firefox_tabs')).result.tabs.length,1);
+  assert.match((await h.call('firefox_select_tab',{tabId:'42'})).error,/not owned/);
+});

@@ -4,16 +4,16 @@ The `*-unsigned.xpi` in this package is a review/development artifact. It is NOT
 an installable permanent add-on for standard Firefox. Do not present temporary
 `about:debugging` loading as normal installation or as a persistent restart test.
 
-## 0.3.0 signed release
+## 0.4.0 signed release
 
-Mozilla approved Codex Work Tabs 0.3.0 for unlisted/direct distribution.
+Mozilla approved Codex Work Tabs 0.4.0 for unlisted/direct distribution.
 Extension ID: `{a171de16-96b6-4e50-94b7-e0b54d94436a}`.
-AMO version: 6719847; file: 5263930. The original source ZIP was provided for review.
-Signed artifact: `codex-work-tabs-0.3.0.xpi`.
-SHA256: `c5b33190fbacb1b05776156c0f8064624e4a53390089674b2ce3a853bad8a188`.
+AMO version: 6720041; file: 5264124. The original source ZIP was provided for review.
+Signed artifact: `codex-work-tabs-0.4.0.xpi`.
+SHA256: `a96a8c21d5007f5131ae3e0cb9f18547f8938ce36b234cec6abdfeb8eb72c6e2`.
 
 The package builder compares every runtime file with the signed archive (manifest
-JSON semantically, JavaScript/HTML/CSS byte-for-byte). Firefox 160 accepted permanent
+JSON semantically, JavaScript/HTML/CSS and PNG icons byte-for-byte). Firefox 160 accepted permanent
 installation and retained the add-on across restart without reinstalling it.
 The helper and installer embed this same signed artifact.
 
@@ -50,6 +50,9 @@ Reviewer notes:
   Content scripts are injected only into these tabs; user tabs are not adopted.
 - Page text/title/URL/status/control descriptions pass to local Codex. Form input
   values are excluded; password/payment/OTP/file fields cannot be typed into.
-- Popup pause/revoke and disconnect release capabilities; result tabs remain open.
+- Popup pause/revoke and native disconnect release capabilities; result tabs remain open.
+- Ordinary MCP EOF retains host-identified chats for up to 24 hours idle; anonymous
+  clients remain connection-scoped. Reattachment fences old commands and snapshots.
+  Revoked tabs are never reclaimed. See docs/chat-continuity.md.
 - Supported release target: native Linux x86_64 Firefox 140+ and local Codex.
   Snap, Flatpak, Windows and macOS are not validated by this package.

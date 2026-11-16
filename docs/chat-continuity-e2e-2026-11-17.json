@@ -1,0 +1,115 @@
+{
+  "date": "2026-11-17",
+  "version": "0.4.0",
+  "platform": "Linux x86_64 / Firefox 160.0 / local Codex desktop",
+  "signedXpi": {
+    "version": "0.4.0",
+    "amoVersion": 6720041,
+    "amoFile": 5264124,
+    "sha256": "a96a8c21d5007f5131ae3e0cb9f18547f8938ce36b234cec6abdfeb8eb72c6e2",
+    "unlisted": true
+  },
+  "desktop": {
+    "profile": "existing everyday Firefox profile",
+    "debuggingUsed": false,
+    "profileRestarted": false,
+    "connectionMode": "extension",
+    "continuity": "chat",
+    "helperVersion": "0.4.0",
+    "newTestChats": 2,
+    "sameProject": true,
+    "initialTaskNamedFirefoxTool": false,
+    "inputVerification": "independent same-page DOM input/click reports to localhost fixture",
+    "chats": [
+      {
+        "chat": "A",
+        "tabId": "25",
+        "documentId": "7d36de0a-97bd-4cca-a2ff-cb2dd1834808",
+        "observedCounts": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "oneDocumentLoad": true,
+        "inputEqualsVisibleCode": true,
+        "explicitRevoke": true,
+        "nextTurnOwnedTabs": 0,
+        "nextTurnSelectOldTabDenied": true,
+        "nextTurnSnapshotDenied": true
+      },
+      {
+        "chat": "B",
+        "tabId": "26",
+        "documentId": "1dc1bfe4-e480-42e1-b9e2-5367653975e6",
+        "observedCounts": [
+          0,
+          1,
+          2
+        ],
+        "oneDocumentLoad": true,
+        "inputEqualsVisibleCode": true,
+        "explicitRevoke": true,
+        "nextTurnOwnedTabs": 0,
+        "nextTurnSelectOldTabDenied": true,
+        "nextTurnSnapshotDenied": true
+      }
+    ],
+    "crossChatSelectionDeniedBothDirections": true,
+    "revokeDidNotCloseResultTabs": true,
+    "initialAttempt": "The old 0.3.0 extension was still active and was rejected before actions. Opening the exact new signed XPI and completing Firefox confirmation activated 0.4.0; both chats then connected."
+  },
+  "disposableFirefox": {
+    "signedUiAndRestart": {
+      "firstInstall": true,
+      "multiProfile": true,
+      "offlineNoFallback": true,
+      "permanentSignedRestartVerified": true,
+      "restartReconnect": true,
+      "signedInstallUi": true,
+      "temporaryAddonReloaded": false,
+      "twoChats": true
+    },
+    "continuity": {
+      "crossChatDenied": true,
+      "detachedToolbarRevoke": true,
+      "independentFormStateReadback": true,
+      "lateEofIsolation": true,
+      "overlapFencing": true,
+      "restartDoesNotRestoreAccess": true,
+      "revokeIrreversible": true,
+      "sameTabAcrossProcesses": true,
+      "signed": true,
+      "staleSnapshotRejected": true
+    },
+    "scope": "isolated HOME and disposable profiles only; geckodriver system access never used on personal profile"
+  },
+  "hostIdentityProbe": {
+    "twoTurnsSameThreadHash": true,
+    "differentChatDifferentHash": true,
+    "processReusedInProbe": true,
+    "threadEnvironmentVariablePresent": false,
+    "authority": "host params._meta.threadId, never model arguments"
+  },
+  "checks": {
+    "cargoClippy": "passed -D warnings",
+    "rustUnitTests": 25,
+    "stdioProcessTest": 1,
+    "javascriptTests": 64,
+    "installUpdateRemovalE2E": "passed with isolated HOME and actual Codex CLI",
+    "newRaceCoverage": [
+      "suspend during pending tab creation",
+      "replacement registration before first request",
+      "late EOF cannot suspend replacement",
+      "revocation while detached cannot restore ownership"
+    ]
+  },
+  "limitations": [
+    "Continuity ends on native connection loss, Firefox/helper restart or update, profile change, explicit revoke/pause, or 24-hour idle expiry.",
+    "Stopping generation or closing a Codex chat is not an immediate revoke signal.",
+    "Already dispatched browser actions cannot be rolled back.",
+    "Same-UID malicious programs are outside the chat-isolation security boundary.",
+    "Windows 10/11 and other non-Linux targets still require implementation and actual VM validation.",
+    "AMO direct distribution has no automatic extension update channel."
+  ]
+}

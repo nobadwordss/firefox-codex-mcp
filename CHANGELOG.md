@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 — 2026-11-17
+
+- Preserve work tabs across turns and MCP process replacement using Codex host
+  thread metadata; clients without that metadata retain connection-only scope.
+- Fence old connections, queued work, late EOF and stale snapshots. Explicit
+  revocation never restores earlier tabs, including revocation while detached.
+- Expire inactive chat ownership after 24 hours; keep user result tabs open.
+- Add actual Firefox process-replacement, form-state, isolation and restart tests.
+- Add the rounded, tail-less cursor icon with a white outline.
+- Make English the default README and retain a linked Korean edition.
+
 ## 0.3.1 — 2026-11-17
 
 - Fix Firefox/Codex desktop connection splitting when only Firefox inherits

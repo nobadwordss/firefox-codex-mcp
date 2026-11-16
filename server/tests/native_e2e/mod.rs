@@ -111,6 +111,120 @@ fn server(home: &Path) -> Result<Server> {
     c.arg("--extension");
     Server::from_command(c)
 }
+fn identified_server(home: &Path, identity: &str) -> Result<Server> {
+    let mut client = server(home)?;
+    client.thread_id = Some(identity.into());
+    Ok(client)
+}
+
+#[test]
+#[ignore = "actual Firefox: retained chats, process replacement, revocation and restart"]
+fn chat_continuity_and_irreversible_revocation() -> Result<()> {
+    const A: &str = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const B: &str = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    let root = tempfile::tempdir()?;
+    let home = root.path();
+    let fixture = Fixture::start()?;
+    let browser = Browser::start(home, &home.join("profile"))?;
+    installed(home, &browser)?;
+    if env::var_os("FIREFOX_SIGNED_UI").is_none() {
+        browser.addon()?;
+    }
+    let mut a = identified_server(home, A)?;
+    let mut b = identified_server(home, B)?;
+    a.wait_connected(true)?;
+    ensure!(a.ok("firefox_status", json!({}))?["continuity"] == "chat");
+    let tab = a.ok("firefox_open_tab", json!({"url":fixture.url}))?["tabId"].clone();
+    let before = wait_snapshot(&mut a)?;
+    a.ok("firefox_click", action(&before, "Count 0")?)?;
+    let next = wait_snapshot(&mut a)?;
+    let mut typing = action(&next, "Message")?;
+    typing["text"] = json!("same document across MCP processes");
+    a.ok("firefox_type", typing)?;
+    let stale = wait_snapshot(&mut a)?;
+    let btab = b.ok(
+        "firefox_open_tab",
+        json!({"url":format!("{}/b",fixture.url)}),
+    )?["tabId"]
+        .clone();
+    b.denied("firefox_select_tab", json!({"tabId":tab}), "not owned")?;
+    // Replace A while its previous process is still alive, then deliver late EOF.
+    let mut replacement = identified_server(home, A)?;
+    ensure!(replacement.ok("firefox_status", json!({}))?["ownedTabs"] == 1);
+    replacement.denied("firefox_click", action(&stale, "Count 1")?, "snapshot")?;
+    a.denied("firefox_snapshot", json!({}), "")?;
+    drop(a);
+    ensure!(replacement.ok("firefox_tabs", json!({}))?["tabs"][0]["tabId"] == tab);
+    replacement.denied("firefox_select_tab", json!({"tabId":btab}), "not owned")?;
+    drop(replacement);
+    let mut resumed = identified_server(home, A)?;
+    let snapshot = wait_snapshot(&mut resumed)?;
+    ensure!(snapshot["text"]
+        .as_str()
+        .is_some_and(|s| s.contains("Count 1")));
+    resumed.ok("firefox_click", action(&snapshot, "Count 1")?)?;
+    let handles: Value = browser
+        .driver
+        .client
+        .get(format!(
+            "{}/session/{}/window/handles",
+            browser.driver.base, browser.driver.session
+        ))
+        .send()?
+        .json()?;
+    let mut verified = false;
+    for handle in handles["value"].as_array().context("handles")? {
+        browser.driver.call("/window", json!({"handle":handle}))?;
+        if browser.driver.script("return location.href;", json!([]))? == format!("{}/", fixture.url)
+        {
+            let value=browser.driver.script("return {count:document.querySelector('#count').textContent,message:document.querySelector('#message').value};",json!([]))?;
+            ensure!(
+                value["count"] == "Count 2"
+                    && value["message"] == "same document across MCP processes",
+                "DOM state lost: {value}"
+            );
+            verified = true;
+        }
+    }
+    ensure!(verified, "Missing original work tab");
+    resumed.ok("firefox_revoke", json!({}))?;
+    drop(resumed);
+    let mut revoked = identified_server(home, A)?;
+    revoked.denied("firefox_select_tab", json!({"tabId":tab}), "not owned")?;
+    ensure!(wait_snapshot(&mut b)?["text"]
+        .as_str()
+        .is_some_and(|s| s.contains("Count 0")));
+    revoked.ok("firefox_open_tab", json!({"url":fixture.url}))?;
+    drop(revoked);
+    browser.popup()?;
+    browser.driver.click("#revoke")?;
+    browser.driver.close_popup()?;
+    let mut after_toolbar = identified_server(home, A)?;
+    ensure!(after_toolbar.ok("firefox_status", json!({}))?["ownedTabs"] == 0);
+    after_toolbar.denied("firefox_snapshot", json!({}), "No AI work tab")?;
+    b.denied("firefox_snapshot", json!({}), "No AI work tab")?;
+    after_toolbar.ok("firefox_open_tab", json!({"url":fixture.url}))?;
+    drop(after_toolbar);
+    drop(b);
+    drop(browser);
+    let restarted = Browser::start(home, &home.join("profile"))?;
+    if env::var_os("FIREFOX_SIGNED_XPI").is_none() {
+        restarted.addon()?;
+    }
+    let mut after_restart = identified_server(home, A)?;
+    after_restart.wait_connected(true)?;
+    ensure!(after_restart.ok("firefox_status", json!({}))?["ownedTabs"] == 0);
+    if let Ok(out) = env::var("FIREFOX_NATIVE_ARTIFACTS") {
+        fs::create_dir_all(&out)?;
+        fs::write(
+            Path::new(&out).join("continuity-result.json"),
+            serde_json::to_vec_pretty(
+                &json!({"sameTabAcrossProcesses":true,"independentFormStateReadback":true,"overlapFencing":true,"lateEofIsolation":true,"staleSnapshotRejected":true,"crossChatDenied":true,"revokeIrreversible":true,"detachedToolbarRevoke":true,"restartDoesNotRestoreAccess":true,"signed":env::var_os("FIREFOX_SIGNED_XPI").is_some()}),
+            )?,
+        )?;
+    }
+    Ok(())
+}
 fn installer_binary() -> PathBuf {
     env::var_os("FIREFOX_SETUP_SERVER_BINARY")
         .map(PathBuf::from)

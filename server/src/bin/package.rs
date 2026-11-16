@@ -6,8 +6,42 @@ use std::{
     collections::HashSet, env, fs, os::unix::fs::PermissionsExt, path::Path, process::Command,
 };
 
+const RUNTIME_FILES: &[&str] = &[
+    "manifest.json",
+    "protocol.js",
+    "observation.js",
+    "page.js",
+    "content.js",
+    "native/background.js",
+    "native/popup.html",
+    "native/popup.css",
+    "native/popup.js",
+    "icons/cursor-16.png",
+    "icons/cursor-32.png",
+    "icons/cursor-48.png",
+    "icons/cursor-96.png",
+    "icons/cursor-128.png",
+];
+
 fn run(command: &mut Command) -> Result<()> {
     ensure!(command.status()?.success(), "Packaging command failed");
+    Ok(())
+}
+fn copy_directory(source: &Path, target: &Path) -> Result<()> {
+    fs::create_dir_all(target)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let kind = entry.file_type()?;
+        if kind.is_dir() {
+            copy_directory(&entry.path(), &target.join(entry.file_name()))?;
+        } else {
+            ensure!(
+                kind.is_file(),
+                "Only regular documentation files may be packaged"
+            );
+            fs::copy(entry.path(), target.join(entry.file_name()))?;
+        }
+    }
     Ok(())
 }
 fn main() -> Result<()> {
@@ -29,26 +63,22 @@ fn main() -> Result<()> {
         ("packaging/INSTALL.txt", "INSTALL.txt"),
         ("LICENSE", "LICENSE"),
         ("README.md", "README.md"),
+        ("README.ko.md", "README.ko.md"),
+        ("CHANGELOG.md", "CHANGELOG.md"),
         ("packaging/SIGNING.md", "SIGNING.md"),
         ("PRIVACY.md", "PRIVACY.md"),
     ] {
         fs::copy(source, stage.join(target))
             .with_context(|| format!("Required package file: {source}"))?;
     }
-    let signed_name = "codex-work-tabs-0.3.0.xpi";
+    copy_directory(Path::new("docs"), &stage.join("docs"))?;
+    copy_directory(Path::new("extension/icons"), &stage.join("extension/icons"))?;
+    fs::create_dir_all(stage.join("packaging"))?;
+    fs::copy("packaging/SIGNING.md", stage.join("packaging/SIGNING.md"))?;
+    let signed_name = "codex-work-tabs-0.4.0.xpi";
     let signed = Path::new("packaging/signed").join(signed_name);
     let expected_manifest: Value = serde_json::from_slice(&fs::read("extension/manifest.json")?)?;
-    for file in [
-        "manifest.json",
-        "protocol.js",
-        "observation.js",
-        "page.js",
-        "content.js",
-        "native/background.js",
-        "native/popup.html",
-        "native/popup.css",
-        "native/popup.js",
-    ] {
+    for &file in RUNTIME_FILES {
         let output = Command::new("unzip")
             .args(["-p"])
             .arg(&signed)
@@ -83,17 +113,7 @@ fn main() -> Result<()> {
         .current_dir("extension")
         .args(["-q", "-X"])
         .arg(&xpi)
-        .args([
-            "manifest.json",
-            "protocol.js",
-            "observation.js",
-            "page.js",
-            "content.js",
-            "native/background.js",
-            "native/popup.html",
-            "native/popup.css",
-            "native/popup.js",
-        ]))?;
+        .args(RUNTIME_FILES))?;
     fs::copy(&xpi, stage.join(&xpi_name))?;
     let metadata = Command::new(env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
         .args([

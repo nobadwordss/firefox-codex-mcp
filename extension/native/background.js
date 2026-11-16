@@ -4,6 +4,8 @@ const P = FirefoxCodexProtocol;
 const HOST = "firefox_codex_mcp";
 const FILES = ["protocol.js", "observation.js", "page.js", "content.js"];
 const owners = new Map();
+// An attachment is a fenced MCP transport; an owner is a retained chat's tabs.
+const attachments = new Map();
 let port = null,
   connected = false,
   epoch = 0,
@@ -28,6 +30,7 @@ function disconnect() {
   epoch++;
   connected = false;
   revokeAll();
+  attachments.clear();
   queue = Promise.resolve();
   const previous = port;
   port = null;
@@ -48,8 +51,10 @@ function guard(owner, started, control = false) {
       "Firefox access was released before dispatch. Start with a new work tab.",
     );
 }
-function own(id) {
+function own(id, attachment) {
   if (!validOwner(id)) throw Error("Invalid chat identity");
+  if (!validOwner(attachment) || attachments.get(id) !== attachment)
+    throw Error("MCP attachment ended or was replaced; reconnect before continuing");
   let owner = owners.get(id);
   if (!owner) {
     if (owners.size >= 128) throw Error("Too many chats");
@@ -57,6 +62,27 @@ function own(id) {
     owners.set(id, owner);
   }
   return owner;
+}
+function suspendOwner(id, attachment) {
+  if (attachments.get(id) !== attachment) return;
+  attachments.delete(id);
+  const owner = owners.get(id);
+  if (!owner) return;
+  owner.alive = false;
+  for (const tab of owner.tabs.values()) invalidate(tab);
+}
+function attachOwner(id, attachment) {
+  if (!validOwner(id) || !validOwner(attachment)) throw Error("Invalid attachment");
+  if (attachments.get(id) === attachment) return;
+  if (!attachments.has(id) && attachments.size >= 128) throw Error("Too many chats");
+  const previous = owners.get(id);
+  if (previous) {
+    previous.alive = false;
+    for (const tab of previous.tabs.values()) invalidate(tab);
+    // Never revive the old object: queued commands captured it and must fail.
+    owners.set(id, { ...previous, alive: true });
+  }
+  attachments.set(id, attachment);
 }
 function selected(owner) {
   const tab = owner.tabs.get(owner.selected);
@@ -228,7 +254,9 @@ async function execute(request, started) {
       ownedTabs: owners.get(id)?.tabs.size || 0,
       tabEnabled: !!owners.get(id)?.selected,
       nextStep: enabled
-        ? "Use firefox_open_tab to create a work tab."
+        ? owners.get(id)?.tabs.size
+          ? "Use firefox_tabs and a fresh snapshot to continue this chat's work tabs."
+          : "Use firefox_open_tab to create a work tab."
         : "Firefox extension is paused. Resume it in the toolbar.",
     };
   if (name === "firefox_revoke") {
@@ -237,7 +265,7 @@ async function execute(request, started) {
   }
   if (!enabled)
     throw Error("Firefox extension is paused. Resume it in the toolbar.");
-  const owner = own(id);
+  const owner = own(id, request.attachment);
   guard(owner, started);
   if (name === "firefox_open_tab") {
     if (!P.safePage(args.url)) throw Error("Only HTTP(S) URLs are supported");
@@ -343,6 +371,16 @@ function connect() {
     }
     if (message.kind === "dropOwner") {
       revokeOwner(message.owner);
+      attachments.delete(message.owner);
+      return;
+    }
+    if (message.kind === "suspendOwner") {
+      suspendOwner(message.owner, message.attachment);
+      return;
+    }
+    if (message.kind === "attachOwner") {
+      try { attachOwner(message.owner, message.attachment); }
+      catch { disconnect(); schedule(); }
       return;
     }
     if (
@@ -357,9 +395,9 @@ function connect() {
     // Register owner before queueing: revoke invalidates queued work as well.
     let owner;
     try {
-      owner = own(message.owner);
-    } catch {
-      disconnect();
+      owner = own(message.owner, message.attachment);
+    } catch (e) {
+      current.postMessage({ kind: "response", id: message.id, error: String(e.message).slice(0,400) });
       return;
     }
     queue = queue
@@ -380,7 +418,7 @@ function connect() {
           current.postMessage({ kind: "response", id: message.id, ...reply });
       });
   });
-  current.postMessage({ role: "extension", version: 1, profileId });
+  current.postMessage({ role: "extension", version: 1, profileId, capabilities: ["chat-continuity-v1"] });
 }
 async function initialize() {
   const saved = await browser.storage.local.get([

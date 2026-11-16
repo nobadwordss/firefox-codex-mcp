@@ -433,6 +433,7 @@ struct Server {
     input: ChildStdin,
     output: Receiver<std::io::Result<String>>,
     id: u64,
+    thread_id: Option<String>,
 }
 impl Server {
     fn start(token_file: &std::path::Path) -> Result<Self> {
@@ -461,6 +462,7 @@ impl Server {
             input,
             output,
             id: 0,
+            thread_id: None,
         };
         server.rpc("initialize",json!({"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"firefox-e2e","version":"1"}}))?;
         writeln!(
@@ -491,7 +493,11 @@ impl Server {
         Ok(response["result"].clone())
     }
     fn tool(&mut self, name: &str, args: Value) -> Result<Value> {
-        self.rpc("tools/call", json!({"name":name,"arguments":args}))
+        let mut params = json!({"name":name,"arguments":args});
+        if let Some(id) = &self.thread_id {
+            params["_meta"] = json!({"threadId":id});
+        }
+        self.rpc("tools/call", params)
     }
     fn ok(&mut self, name: &str, args: Value) -> Result<Value> {
         let result = self.tool(name, args)?;

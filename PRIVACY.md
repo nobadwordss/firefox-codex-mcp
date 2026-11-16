@@ -23,7 +23,12 @@ A random installation identity and pause preference are stored in the extension.
 The native helper stores the selected random profile identity, duplicate-identity
 quarantine and installation receipts under your local user directory. No profile
 path is required in extension mode. Only transient work-tab ownership is kept in
-memory. Disconnect, restart, pause or revoke clears that ownership.
+memory. A hash of the Codex host's thread identity maps to a random owner in the
+local router; raw chat IDs are not sent to Firefox or stored on disk. Work tabs can
+survive MCP process replacement in the same chat, for up to 24 hours without a
+request. Native/Firefox connection loss, helper restart/update, pause, profile
+switch or explicit revoke clears ownership. Closing or archiving a Codex chat
+does not reliably signal immediate revocation; use the explicit controls.
 
 Use the extension's pause/revoke buttons to release access. Uninstall the extension
 in Firefox and remove the helper from Firefox Codex 관리. Removing the helper does

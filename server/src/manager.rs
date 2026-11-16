@@ -101,7 +101,7 @@ async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> 
             &mut stream,
             "200 OK",
             "application/x-xpinstall",
-            include_bytes!("../../packaging/signed/codex-work-tabs-0.3.0.xpi"),
+            include_bytes!("../../packaging/signed/codex-work-tabs-0.4.0.xpi"),
         )
         .await?;
         return Ok(false);

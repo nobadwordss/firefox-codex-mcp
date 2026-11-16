@@ -1,5 +1,6 @@
 //! Firefox MCP: BiDi work tabs, plus the legacy authenticated extension bridge.
 mod bidi;
+mod continuity;
 mod debug;
 mod lifecycle;
 mod manager;

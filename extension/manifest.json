@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Codex Work Tabs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Unofficial local bridge for Codex work tabs. No codes, tokens or profile paths.",
   "browser_specific_settings": {
     "gecko": {
@@ -14,10 +14,18 @@
   },
   "permissions": ["nativeMessaging", "scripting", "storage", "tabs", "alarms"],
   "host_permissions": ["http://*/*", "https://*/*"],
+  "icons": {
+    "16": "icons/cursor-16.png",
+    "32": "icons/cursor-32.png",
+    "48": "icons/cursor-48.png",
+    "96": "icons/cursor-96.png",
+    "128": "icons/cursor-128.png"
+  },
   "background": {
     "scripts": ["protocol.js", "native/background.js"]
   },
   "action": {
+    "default_icon": { "16": "icons/cursor-16.png", "32": "icons/cursor-32.png" },
     "default_title": "Codex Work Tabs",
     "default_popup": "native/popup.html"
   },
