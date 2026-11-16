@@ -17,7 +17,8 @@ fn command(binary: &Path, home: &Path) -> Command {
     let mut c = Command::new(binary);
     c.env("HOME", home)
         .env("CODEX_HOME", home.join(".codex"))
-        .env("FIREFOX_MCP_RUNTIME_DIR", home.join("runtime"))
+        .env_remove("FIREFOX_MCP_RUNTIME_DIR")
+        .env_remove("XDG_RUNTIME_DIR")
         .env(
             "FIREFOX_MCP_CODEX_BINARY",
             env::var("FIREFOX_SETUP_CODEX_BINARY")
@@ -37,7 +38,12 @@ impl Browser {
             ),
             home,
         );
-        c.env("MOZ_REMOTE_ALLOW_SYSTEM_ACCESS", "1");
+        let firefox_runtime = home.join("firefox-runtime");
+        fs::create_dir_all(&firefox_runtime)?;
+        // Match the real desktop mismatch: Firefox has XDG_RUNTIME_DIR,
+        // Codex and the installer do not. Do not hide it with a shared override.
+        c.env("MOZ_REMOTE_ALLOW_SYSTEM_ACCESS", "1")
+            .env("XDG_RUNTIME_DIR", firefox_runtime);
         let log = fs::File::create(profile.join("webdriver.log"))?;
         let daemon = Daemon(
             c.args([
@@ -360,7 +366,11 @@ fn codex_workflow(home: &Path, browser: &Browser, fixture: &Fixture) -> Result<(
         return Ok(());
     };
     let url = format!("{}/codex-native", fixture.url);
-    let config=format!("mcp_servers.firefox={{command={},args=[\"--extension\"],env={{HOME={},FIREFOX_MCP_RUNTIME_DIR={}}},required=true}}",serde_json::to_string(&home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp"))?,serde_json::to_string(home)?,serde_json::to_string(&home.join("runtime"))?);
+    let config = format!(
+        "mcp_servers.firefox={{command={},args=[\"--extension\"],env={{HOME={}}},required=true}}",
+        serde_json::to_string(&home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp"))?,
+        serde_json::to_string(home)?
+    );
     let prompt=format!("Authorized integration test on a disposable local Firefox fixture. Use only firefox MCP tools; no shell, files, other tools or external sites. Open {url} as your own work tab. Read the random Observation code from rendered body text. Click Count 0 exactly once; then take a fresh snapshot and verify status Count updated to 1. Type the exact observed code into Message. Read a new snapshot, scroll down 600 pixels, read again. Use fresh snapshot and element IDs. Retry stale BEFORE-dispatch errors at most twice, never unknown outcomes. Finally call firefox_revoke and confirm firefox_snapshot is rejected. Report the code and result.");
     let mut process = Daemon(
         Command::new(binary)

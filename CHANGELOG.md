@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 — 2026-11-17
+
+- Fix Firefox/Codex desktop connection splitting when only Firefox inherits
+  XDG_RUNTIME_DIR. Extension clients now share a private HOME-based endpoint.
+- Reconnect both old and new router locations during migration; keep Firefox running.
+- Reproduce the actual environment mismatch in signed Firefox E2E instead of
+  masking it with a shared test-only runtime override.
+- Native-mode diagnostics report browser/debugger state as unknown rather than
+  incorrectly claiming that Firefox is stopped.
+- Add a browser-only desktop fixture with independent local DOM event evidence.
+- Actual personal-profile Codex desktop E2E passed in three new chats, including
+  automatic tool selection, independent input readback and simultaneous isolation.
+- Document ownership reset when the desktop recreates MCP connections across turns.
+- Document Windows 10/11 transport, installer and actual desktop validation requirements.
+- The Mozilla-signed extension remains unchanged at 0.3.0.
+
 ## 0.3.0 — 2026-11-17
 
 - Native Messaging extension is the default; no pairing codes, tokens or profile paths.

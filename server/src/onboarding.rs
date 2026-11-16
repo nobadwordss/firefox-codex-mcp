@@ -206,8 +206,8 @@ pub fn doctor() -> Result<Value> {
         json!({"globalMcpRegistered":registration,"mode":if profile.is_some(){"bidi"}else{"extension"},"nativeHostRegistered":home.join(".mozilla/native-messaging-hosts/firefox_codex_mcp.json").is_file(),"binaryInstalled":executable.is_file(),
         "skillInstalled":read_optional(&root.join("skills/firefox-browser/SKILL.md"))? == SKILL,
         "automaticBrowserGuidance":read_optional(&root.join("AGENTS.md"))?.contains(GUIDANCE),
-        "profile":profile,"firefoxRunning":profile.as_deref().is_some_and(setup::running),
-        "debugPortReachable":reachable,"existingChatsMayNeedRestart":true,
+        "profile":profile,"firefoxRunning":profile.as_deref().map(setup::running),
+        "debugPortReachable":profile.as_ref().map(|_|reachable),"existingChatsMayNeedRestart":true,
         "scope":"Local Codex on this computer; project overrides and administrator policy can restrict availability"}),
     )
 }

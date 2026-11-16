@@ -10,6 +10,9 @@ Codex와 Firefox는 각각 stdio를 소유하므로 Rust 라우터가 private Un
 - `--extension`: MCP stdio. 채팅마다 라우터에서 무작위 owner ID를 발급합니다.
 - `--native-host`: Firefox length-prefixed JSON과 라우터 newline JSON을 변환합니다.
 - `--extension-broker`: 동일 UID, 0700 디렉터리와 0600 Unix socket, 단일 프로세스 잠금.
+- 0.3.1부터 기본 socket은 HOME 아래 `.local/state/firefox-codex-mcp/runtime`에 둔다.
+  Firefox와 Codex가 XDG_RUNTIME_DIR를 다르게 상속해도 주소가 일치한다.
+  명시적인 FIREFOX_MCP_RUNTIME_DIR는 격리 시험용으로만 양쪽에 동일 지정한다.
 - 확장은 storage.local의 무작위 profileId로 현재 프로필을 등록합니다.
 - 첫 작업에서 유일한 프로필을 기본으로 저장합니다. 여러 프로필은 확장의 선택 버튼을
   요구합니다. 기본 프로필이 오프라인이어도 다른 프로필을 사용하지 않습니다.

@@ -61,6 +61,9 @@ pub(crate) fn runtime_directory() -> Result<PathBuf> {
         PathBuf::from(env::var_os("HOME").context("HOME is unavailable")?)
             .join(".local/state/firefox-codex-mcp/runtime")
     };
+    private_runtime_directory(path)
+}
+pub(crate) fn private_runtime_directory(path: PathBuf) -> Result<PathBuf> {
     ensure!(path.is_absolute(), "Runtime directory must be absolute");
     fs::DirBuilder::new()
         .recursive(true)

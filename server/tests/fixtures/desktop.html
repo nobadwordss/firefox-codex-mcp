@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<title>Codex 데스크톱 연결 확인</title>
+<style>
+body{font:18px/1.6 system-ui,sans-serif;max-width:760px;margin:50px auto;padding:0 24px;color:#182230}
+button,input{font:inherit;padding:10px;margin:8px 0}label{display:block}main{padding:24px;border:1px solid #ccd5e0;border-radius:16px}.spacer{height:1300px}
+</style>
+<h1>데스크톱 연결 확인</h1>
+<p>이 페이지는 로컬 테스트용입니다. 아래 확인 코드만 입력하세요.</p>
+<main>
+<p id="code"></p>
+<button id="count" type="button">Count 0</button>
+<label>Message <input id="message" aria-label="Message" autocomplete="off"></label>
+<p id="status" role="status">Ready</p>
+</main>
+<div class="spacer"></div><p>아래쪽 확인 지점</p>
+<script>
+const documentId=crypto.randomUUID(), code=documentId.slice(0,8);
+document.querySelector('#code').textContent='확인 코드: '+code;
+let count=0, sequence=0;
+function report(event){
+  fetch('/evidence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel:location.pathname,documentId,sequence:++sequence,event,code,count,message:document.querySelector('#message').value,status:document.querySelector('#status').textContent,scrollY})}).catch(()=>{});
+}
+document.querySelector('#count').addEventListener('click',()=>{
+  document.querySelector('#count').textContent='Count '+(++count);
+  document.querySelector('#status').textContent='Count updated to '+count;
+  report('click');
+});
+document.querySelector('#message').addEventListener('input',()=>report('input'));
+let scrolling;
+addEventListener('scroll',()=>{clearTimeout(scrolling);scrolling=setTimeout(()=>report('scroll'),100)});
+report('load');
+</script>
+</html>

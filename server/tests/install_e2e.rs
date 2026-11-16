@@ -33,6 +33,7 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
             .current_dir(home)
             .env("HOME", home)
             .env("CODEX_HOME", &config)
+            .env("FIREFOX_MCP_RUNTIME_DIR", home.join("runtime"))
             .env("FIREFOX_MCP_CODEX_BINARY", &codex)
             .output()?)
     };
@@ -93,7 +94,8 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     ] {
         ensure!(result[key] == true, "{key}: {result}");
     }
-    ensure!(result["firefoxRunning"] == false);
+    ensure!(result["firefoxRunning"].is_null());
+    ensure!(result["debugPortReachable"].is_null());
     // An unrelated MCP with the same name must not be replaced.
     let changed = config_once.replace(
         &installed.to_string_lossy().to_string(),

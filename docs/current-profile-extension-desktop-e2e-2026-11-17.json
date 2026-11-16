@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-17",
+  "helperVersion": "0.3.1",
+  "signedExtensionVersion": "0.3.0",
+  "surface": "Actual Codex desktop app, current personal Firefox profile",
+  "firefoxRestarted": false,
+  "profileAndExistingTabsPreserved": true,
+  "extensionInstalledByUser": true,
+  "globalAndProjectMcpMode": "extension",
+  "newDesktopChats": {
+    "A": "Projectless, body/code read, one click, typing, 500px scroll",
+    "B": "Repository project, body/code read, two clicks, typing",
+    "C": "Projectless, example.com -> real Learn more click -> https://www.iana.org/help/example-domains, revoke and denied read"
+  },
+  "automaticToolSelection": {
+    "explicitBrowserOrToolNameInInitialPrompts": false,
+    "allThreeChoseFirefoxSkillAndMcp": true,
+    "scope": "Interactive page tasks; not a guarantee that all informational searches or all models choose Firefox"
+  },
+  "independentPageDomReports": [
+    {
+      "channel": "/a",
+      "code": "86d737c8",
+      "count": 1,
+      "message": "86d737c8",
+      "scrollY": 500
+    },
+    {
+      "channel": "/b",
+      "code": "8f845a80",
+      "count": 2,
+      "message": "8f845a80",
+      "scrollY": 0
+    },
+    {
+      "channel": "/a",
+      "code": "524ef578",
+      "count": 1,
+      "message": "524ef578",
+      "scrollY": 0
+    },
+    {
+      "channel": "/b",
+      "code": "65f7e144",
+      "count": 2,
+      "message": "65f7e144",
+      "scrollY": 0
+    }
+  ],
+  "concurrentIsolation": {
+    "bothConnectionsAliveInSameTurns": true,
+    "aSelectsB": "denied",
+    "bSelectsA": "denied",
+    "eachOwnTabStillReadableAfterDeniedSelect": true,
+    "bRevoke": "success; ownedTabs 1 -> 0; subsequent snapshot denied",
+    "aReadAfterBRevoke": "success; Count 1",
+    "aRevoke": "success; ownedTabs 1 -> 0; subsequent snapshot denied"
+  },
+  "diagnosedAndFixed": {
+    "initialFailure": "Firefox inherited XDG_RUNTIME_DIR, desktop MCP omitted it; two different routers existed",
+    "fix": "Shared private HOME-based extension endpoint; explicit test override retained",
+    "migration": "Replace executable then reset new and legacy XDG router; native host exits and Firefox reconnects without restarting",
+    "regression": "Actual signed Firefox E2E now uses distinct Firefox/MCP runtime environments without a common override"
+  },
+  "connectionLifetime": "Desktop follow-up turns recreated MCP connections in this test. Previous ownership was revoked even in the same chat. Subsequent work opens a new tab; old tabs remain open but are not adopted, so same-tab forms/manual-login continuation across these turns is not supported. Cross-chat isolation was retested with overlapping live connections.",
+  "checks": {
+    "cargoClippy": "passed -D warnings",
+    "cargoUnitTests": 21,
+    "stdioProcessTest": "passed",
+    "javascriptTests": 59,
+    "signedFirefoxMixedEnvironmentE2E": "passed",
+    "isolatedInstallUpdateRemoval": "passed"
+  },
+  "windows": "Windows 10/11 planned in windows-support-plan.md; not implemented or validated on Windows."
+}

@@ -30,7 +30,12 @@ fn valid_id(value: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'-')
 }
 fn socket_path() -> Result<PathBuf> {
-    Ok(crate::debug::runtime_directory()?.join("extension-v1.sock"))
+    // Desktop MCP children may omit XDG_RUNTIME_DIR while Firefox inherits it.
+    // Both sides must choose the same endpoint without sharing launch environments.
+    let directory = env::var_os("FIREFOX_MCP_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or(crate::onboarding::home()?.join(".local/state/firefox-codex-mcp/runtime"));
+    Ok(crate::debug::private_runtime_directory(directory)?.join("extension-v1.sock"))
 }
 fn settings_path() -> Result<PathBuf> {
     let dir = crate::onboarding::home()?.join(".local/state/firefox-codex-mcp");
@@ -442,19 +447,30 @@ pub async fn broker() -> Result<()> {
 }
 /// Update/remove hook. Close only our private transport, never Firefox itself.
 pub async fn reset() -> Result<()> {
-    let Ok(stream) = crate::debug::connect_socket(&socket_path()?).await else {
-        return Ok(());
-    };
-    let mut stream = BufReader::new(stream);
-    stream
-        .get_mut()
-        .write_all(format!("{}\n", json!({"role":"reload","version":VERSION})).as_bytes())
-        .await?;
-    let reply = timeout(Duration::from_secs(3), crate::debug::read_line(&mut stream)).await??;
-    ensure!(
-        reply.is_some_and(|v| v["reloading"] == true),
-        "Old extension connection must be closed manually"
-    );
+    let mut paths = vec![socket_path()?];
+    // Migrate a running 0.3.0 native host from its old XDG endpoint as well.
+    // An explicit test endpoint must never reach the real user's router.
+    if env::var_os("FIREFOX_MCP_RUNTIME_DIR").is_none() {
+        let legacy = crate::debug::runtime_directory()?.join("extension-v1.sock");
+        if !paths.contains(&legacy) {
+            paths.push(legacy);
+        }
+    }
+    for path in paths {
+        let Ok(stream) = crate::debug::connect_socket(&path).await else {
+            continue;
+        };
+        let mut stream = BufReader::new(stream);
+        stream
+            .get_mut()
+            .write_all(format!("{}\n", json!({"role":"reload","version":VERSION})).as_bytes())
+            .await?;
+        let reply = timeout(Duration::from_secs(3), crate::debug::read_line(&mut stream)).await??;
+        ensure!(
+            reply.is_some_and(|v| v["reloading"] == true),
+            "Old extension connection must be closed manually"
+        );
+    }
     Ok(())
 }
 #[cfg(test)]

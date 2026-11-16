@@ -1,4 +1,4 @@
-Firefox Codex MCP 0.3.0 — Linux x86_64
+Firefox Codex MCP 0.3.1 — Linux x86_64
 
 필요한 것: 일반 Linux Firefox 140+와 로컬 Codex 앱 또는 CLI.
 Rust/Node, 연결 코드/토큰/프로필 경로 입력은 필요 없습니다.
