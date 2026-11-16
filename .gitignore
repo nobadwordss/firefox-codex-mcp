@@ -1,0 +1,8 @@
+/target/
+*.xpi
+.env
+.env.*
+!.env.example
+*.token
+node_modules/
+.DS_Store

@@ -1,0 +1,4 @@
+body { width: 310px; margin: 16px; font: 14px system-ui, sans-serif; color: #17212b; }
+h1 { font-size: 18px; } p { line-height: 1.4; }
+input, button { box-sizing: border-box; width: 100%; margin: 6px 0; padding: 9px; }
+button { cursor: pointer; } #status { overflow-wrap: anywhere; font-weight: 600; }

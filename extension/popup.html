@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Firefox Codex MCP</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+<h1>Firefox Codex MCP</h1>
+<p>Only enable a tab you want Codex to read and control. Clicks can submit forms or make purchases. Do not enable sensitive pages.</p>
+<label for="token">Local bridge token (64 hex characters)</label>
+<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Leave blank to reuse saved token">
+<button id="connect">Connect</button>
+<button id="enable">Enable current tab</button>
+<button id="disconnect">Disconnect and revoke access</button>
+<p id="status" role="status">Loading…</p>
+<p>Navigation or connection loss revokes tab access. Re-enable manually after reconnecting.</p>
+<script src="popup.js"></script>
+</body></html>
