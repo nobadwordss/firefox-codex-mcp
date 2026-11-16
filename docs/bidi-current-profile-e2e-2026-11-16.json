@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-16",
+  "mode": "WebDriver BiDi",
+  "scope": "Actual Codex desktop, two chats, existing user Firefox profile",
+  "currentProfile": true,
+  "temporaryProfile": false,
+  "extensionRequired": false,
+  "manualPairingOrTabGrant": false,
+  "systemAccess": false,
+  "initialLaunchFailure": "First launcher did not keep Firefox alive after the launcher command exited; fixed by independent process groups and verified before repeating.",
+  "firefoxPidDuringVerification": 364543,
+  "threads": {
+    "A": "01a1e433-bdaf-76c0-934a-9bfb70d21060",
+    "B": "01a1e433-c937-7bd2-8fda-08c38c916e22"
+  },
+  "toolCounts": {
+    "firefox_status": 10,
+    "firefox_open_tab": 3,
+    "firefox_snapshot": 15,
+    "firefox_click": 4,
+    "firefox_type": 3,
+    "firefox_tabs": 4,
+    "firefox_select_tab": 3,
+    "firefox_revoke": 3,
+    "firefox_navigate": 1
+  },
+  "toolCalls": 46,
+  "expectedDeniedResults": 5,
+  "checks": {
+    "automaticTabCreation": true,
+    "renderedTextRead": true,
+    "clickAndType": true,
+    "crossChatSelectionDeniedBothWays": true,
+    "revokedTabReadAndReselectionDenied": true,
+    "otherChatContinuedAfterRevocation": true,
+    "newWorkTabAfterRevocation": true,
+    "navigationWithoutManualGrant": true,
+    "finalTestOwnershipReleased": true
+  },
+  "visibleResults": {
+    "originalA": {
+      "count": 1,
+      "code": "6e52efe7",
+      "typed": "자동 연결 A: 6e52efe7"
+    },
+    "B": {
+      "count": 2,
+      "code": "1e9bf830",
+      "typed": "자동 연결 B: 1e9bf830"
+    },
+    "reconnectedA": {
+      "count": 1,
+      "code": "233ec9a5",
+      "typed": "자동 재연결 A: 233ec9a5"
+    }
+  },
+  "cleanup": {
+    "dedicatedMcpProcessesStopped": true,
+    "idleBrokerExited": true,
+    "fixtureStopped": true,
+    "userFirefoxStillRunningWithLoopbackDebugging": true,
+    "installedBinaryMatchesReleaseBuild": true
+  },
+  "evidenceLimit": "Actual desktop call results confirm typed=true; final input values were not read back by the desktop snapshot because it intentionally excludes form buffers. A separate real Firefox disposable-profile BiDi test read back DOM values and verified profile localStorage sharing."
+}

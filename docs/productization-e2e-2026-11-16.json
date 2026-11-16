@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "date": "2026-11-16",
+  "environment": {
+    "os": "Fedora 45",
+    "firefox": "160.0",
+    "codexCli": "0.169.0-alpha.11.1"
+  },
+  "userScope": "isolated HOME and disposable Firefox profile; real user profile not changed",
+  "managerUI": {
+    "install": true,
+    "update": true,
+    "doctor": true,
+    "uninstall": true
+  },
+  "actualInstalledBinaryFirefoxE2E": {
+    "readClickType": true,
+    "twoChatIsolation": true,
+    "revokeReconnect": true,
+    "existingTabPreserved": true,
+    "profileStoragePreserved": true
+  },
+  "removal": {
+    "installedBinaryRemoved": true,
+    "mcpRemoved": true,
+    "launchersRemoved": true,
+    "skillRemoved": true,
+    "originalAgentsRestored": true,
+    "originalUserJsRestored": true,
+    "otherMcpPreserved": true,
+    "profilePreserved": true
+  },
+  "regressions": [
+    "user edits survive update then uninstall",
+    "interrupted transaction recovery",
+    "concurrent edits not overwritten",
+    "symlink rejection",
+    "anonymous and cross-origin manager API denied"
+  ],
+  "rustUnitTests": 16,
+  "rustProcessTests": 1,
+  "jsTests": 53,
+  "clippy": "passed",
+  "license": "MIT",
+  "scopeNote": "Manager UI plus actual Firefox/stdin MCP harness and official Codex CLI. Prior desktop model tool-selection evidence is recorded separately.",
+  "remoteCI": "pending push"
+}

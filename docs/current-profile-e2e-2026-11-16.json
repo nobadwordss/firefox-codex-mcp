@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-16",
+  "scope": "Actual existing personal Firefox profile, explicitly enabled localhost fixture tab, real Codex desktop MCP chat",
+  "threadId": "01a1e407-0964-76d3-aef7-d58c01f754bc",
+  "connectionCode": "38243:e7d27abe395c068c64f60c90a54db170",
+  "mcpCalls": 8,
+  "toolCounts": {
+    "firefox_status": 3,
+    "firefox_snapshot": 3,
+    "firefox_click": 1,
+    "firefox_type": 1
+  },
+  "allMcpCallsSucceeded": true,
+  "url": "http://localhost:39351/",
+  "observedBodyCode": "28b01811",
+  "clickCount": 1,
+  "observedStatus": "Count updated to 1",
+  "typedText": "Codex 확인: 28b01811",
+  "typeToolReportedSuccess": true,
+  "userIndependentlyConfirmedButtonAndInput": true,
+  "inputValueReturnedBySnapshot": false,
+  "finalSnapshotId": "3d6926ac-25ad-4235-84f4-2c7a038cb088",
+  "usedTemporaryProfile": false,
+  "usedWebDriver": false,
+  "extensionInstallation": "User temporarily loaded development extension into existing profile",
+  "setupIssuesFixed": [
+    "Public connection code retained across popup close; unsubmitted token not retained",
+    "Connection errors persist across automatic status refresh"
+  ],
+  "setupRecovery": "User completed pairing in the extension UI opened as a normal Firefox tab, then granted the localhost page from its toolbar popup",
+  "checks": {
+    "javascriptTestsPassed": 53,
+    "cargoFmt": "passed",
+    "cargoClippyAllTargets": "passed"
+  },
+  "limitations": [
+    "Extension is temporary and needs loading again after Firefox restart",
+    "MCP configured for this project; original chat has no Firefox tools, dedicated/new project chat does",
+    "Only the explicitly enabled test tab was read or modified",
+    "Persistent signed installation and streamlined pairing remain unfinished"
+  ],
+  "artifacts": "/tmp/firefox-codex-real-profile-check"
+}

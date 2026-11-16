@@ -1,0 +1,6 @@
+# Merge into your Codex config; do not overwrite existing settings.
+[mcp_servers.firefox]
+command = "/absolute/path/to/firefox-codex-mcp/target/release/firefox-codex-mcp"
+
+[mcp_servers.firefox.env]
+FIREFOX_MCP_TOKEN_FILE = "/absolute/path/to/.config/firefox-codex-mcp/bridge.token"

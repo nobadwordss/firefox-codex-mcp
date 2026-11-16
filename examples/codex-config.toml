@@ -1,6 +1,9 @@
-# Merge into your Codex config; do not overwrite existing settings.
+# Merge into your Codex config. Use actual absolute paths.
 [mcp_servers.firefox]
-command = "/absolute/path/to/firefox-codex-mcp/target/release/firefox-codex-mcp"
+command = "/home/USER/.local/lib/firefox-codex-mcp/firefox-codex-mcp"
+args = ["--bidi"]
+startup_timeout_sec = 20
+tool_timeout_sec = 70
 
 [mcp_servers.firefox.env]
-FIREFOX_MCP_TOKEN_FILE = "/absolute/path/to/.config/firefox-codex-mcp/bridge.token"
+FIREFOX_MCP_PROFILE = "/absolute/path/to/current-firefox-profile"
