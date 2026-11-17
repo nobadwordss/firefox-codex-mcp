@@ -134,6 +134,158 @@ impl Drop for Mcp {
         let _ = self.process.0.kill();
     }
 }
+// The real Codex app-server dispatches MCP calls without an LLM/API account.
+// This exercises Codex's Windows process/config/metadata path, not the desktop UI.
+struct Codex {
+    _process: Process,
+    input: ChildStdin,
+    output: mpsc::Receiver<std::io::Result<String>>,
+    seq: u64,
+}
+impl Codex {
+    fn start(root: &Path) -> Result<Self> {
+        let mut process = Process(
+            cmd(Path::new(&env::var("FIREFOX_SETUP_CODEX_BINARY")?), root)
+                .arg("app-server")
+                .current_dir(root)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::inherit())
+                .spawn()?,
+        );
+        let input = process.0.stdin.take().context("Codex stdin")?;
+        let stdout = process.0.stdout.take().context("Codex stdout")?;
+        let (tx, output) = mpsc::channel();
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                if tx.send(line).is_err() {
+                    break;
+                }
+            }
+        });
+        let mut server = Self {
+            _process: process,
+            input,
+            output,
+            seq: 0,
+        };
+        server.rpc("initialize",json!({"clientInfo":{"name":"firefox_windows_e2e","version":"1"},"capabilities":{"experimentalApi":true}}))?;
+        writeln!(
+            server.input,
+            "{}",
+            json!({"method":"initialized","params":{}})
+        )?;
+        server.input.flush()?;
+        Ok(server)
+    }
+    fn rpc(&mut self, method: &str, params: Value) -> Result<Value> {
+        self.seq += 1;
+        writeln!(
+            self.input,
+            "{}",
+            json!({"id":self.seq,"method":method,"params":params})
+        )?;
+        self.input.flush()?;
+        let deadline = Instant::now() + Duration::from_secs(90);
+        loop {
+            let line = self
+                .output
+                .recv_timeout(deadline.saturating_duration_since(Instant::now()))??;
+            let message: Value = serde_json::from_str(&line)?;
+            if message["id"] == self.seq && message.get("method").is_none() {
+                ensure!(message.get("error").is_none(), "Codex {method}: {message}");
+                return Ok(message["result"].clone());
+            }
+            ensure!(
+                message.get("id").is_none() || message.get("method").is_none(),
+                "Unexpected Codex request: {message}"
+            );
+        }
+    }
+    fn thread(&mut self, root: &Path) -> Result<String> {
+        let r=self.rpc("thread/start",json!({"cwd":root,"ephemeral":true,"model":"gpt-5","approvalPolicy":"never","sandbox":"read-only"}))?;
+        Ok(r["thread"]["id"]
+            .as_str()
+            .context("Codex thread ID")?
+            .into())
+    }
+    fn raw(&mut self, chat: &str, name: &str, args: Value) -> Result<Value> {
+        self.rpc(
+            "mcpServer/tool/call",
+            json!({"threadId":chat,"server":"firefox","tool":name,"arguments":args}),
+        )
+    }
+    fn ok(&mut self, chat: &str, name: &str, args: Value) -> Result<Value> {
+        let r = self.raw(chat, name, args)?;
+        ensure!(r["isError"] != true, "Codex {name}: {r}");
+        Ok(serde_json::from_str(
+            r["content"][0]["text"]
+                .as_str()
+                .context("Codex tool content")?,
+        )?)
+    }
+}
+fn codex_roundtrip(root: &Path, url: &str, artifacts: &Path) -> Result<()> {
+    let mut app = Codex::start(root)?;
+    let a = app.thread(root)?;
+    let b = app.thread(root)?;
+    let inventory = app.rpc(
+        "mcpServerStatus/list",
+        json!({"threadId":a,"serverName":"firefox"}),
+    )?;
+    fs::write(
+        artifacts.join("codex-app-server-tools.json"),
+        serde_json::to_vec_pretty(&inventory)?,
+    )?;
+    let status = app.ok(&a, "firefox_status", json!({}))?;
+    ensure!(
+        status["connected"] == true,
+        "Codex Firefox disconnected: {status}"
+    );
+    let tab = app.ok(
+        &a,
+        "firefox_open_tab",
+        json!({"url":format!("{url}/codex-app-server")}),
+    )?["tabId"]
+        .clone();
+    let until = Instant::now() + Duration::from_secs(15);
+    let s = loop {
+        let result = app.raw(&a, "firefox_snapshot", json!({}))?;
+        if result["isError"] != true {
+            let s: Value =
+                serde_json::from_str(result["content"][0]["text"].as_str().context("snapshot")?)?;
+            if s["text"]
+                .as_str()
+                .is_some_and(|v| v.contains("Observation code"))
+            {
+                break s;
+            }
+        }
+        ensure!(Instant::now() < until, "Codex rendered snapshot missing");
+        thread::sleep(Duration::from_millis(100));
+    };
+    app.ok(&a, "firefox_click", action(&s, "Count 0")?)?;
+    let s = app.ok(&a, "firefox_snapshot", json!({}))?;
+    let mut typing = action(&s, "Message")?;
+    typing["text"] = json!("Codex app-server Windows");
+    app.ok(&a, "firefox_type", typing)?;
+    ensure!(
+        app.raw(&b, "firefox_select_tab", json!({"tabId":tab}))?["isError"] == true,
+        "Codex chat isolation failed"
+    );
+    app.ok(&a, "firefox_revoke", json!({}))?;
+    ensure!(
+        app.raw(&a, "firefox_snapshot", json!({}))?["isError"] == true,
+        "Codex revoke failed"
+    );
+    fs::write(
+        artifacts.join("codex-app-server-result.json"),
+        serde_json::to_vec_pretty(
+            &json!({"actualCodexProcess":true,"actualFirefox":true,"read":true,"click":true,"type":true,"chatIsolation":true,"revoke":true,"desktopUi":false,"llmDispatch":false}),
+        )?,
+    )?;
+    Ok(())
+}
 struct Browser {
     driver: Process,
     client: Client,
@@ -449,6 +601,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     browser.click("#revoke")?;
     b.denied("firefox_snapshot", json!({}))?;
     browser.screenshot(&artifacts.join("extension-revoked.png"))?;
+    codex_roundtrip(&root, &url, &artifacts)?;
     // A different build payload rotates immutable paths while old MCP EXEs run.
     let candidate = root.join("update candidate.exe");
     let mut bytes = fs::read(&binary)?;
@@ -509,7 +662,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     fs::write(
         artifacts.join("result.json"),
         serde_json::to_vec_pretty(
-            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":"0.4.0","verified":["Unicode and spaces install","official Codex CLI MCP discovery","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
+            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":"0.4.0","verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
         )?,
     )?;
     Ok(())
