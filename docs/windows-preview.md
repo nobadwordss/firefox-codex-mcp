@@ -102,14 +102,26 @@ Still required before a fully supported Windows desktop release:
 - Cross-user/session negative tests under real interactive accounts.
 - Store/MSIX Firefox, ARM64, WSL and elevated/mixed-user use are not validated.
 
-## Current preview follow-up
+## Setup lock recovery
 
 The [Linux 0.4.1 release-branch Windows workflow](https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44010285979)
 failed at `--repair` after uninstall with a sharing violation (`os error 32`).
-The extracted-package run failed in the first attempt, and the source-build run
-failed on retry. The cause is not established. These failures remain a Windows
-preview follow-up; no Windows installer is published with Linux stable 0.4.1.
-Earlier successful Windows verification records retain their original scope.
+The cleanup worker could still hold `install.lock` with `FileShare.None` after
+deleting an EXE. Opening that lock failed before Rust's `try_lock` ran.
+
+The next Windows preview waits up to ten seconds for both open-time sharing
+violations and ordinary setup lock contention. It preserves exclusive ownership
+throughout setup and reports a busy operation if the deadline expires. Permanent
+open errors are returned immediately. The lock file is not deleted or replaced.
+A sleeping cleanup worker exits if repair has already removed its cleanup journal.
+
+The [repair verification record](windows-repair-e2e-2026-11-17.json) identifies the
+fix commit, Windows Server CI and exact ZIP. Actual repair subprocesses are held
+behind both types of Windows lock until contention is observed, then must finish
+after release without changing unrelated settings. The full lifecycle and Firefox
+E2E are repeated from the extracted ZIP. Earlier failure records remain historical.
+The published beta.1 package is unchanged; the fix is in source and CI preview
+artifacts, with Windows 10/11 desktop and SmartScreen acceptance still pending.
 
 Linux's advanced BiDi mode remains Linux-only. A Windows Server CI pass must never
 be described as a Windows 10/11 desktop pass.
