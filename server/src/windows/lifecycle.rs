@@ -39,6 +39,31 @@ struct Receipt {
     files: Vec<Managed>,
     binaries: Vec<(PathBuf, String)>,
 }
+#[derive(Serialize, Deserialize)]
+struct Cleanup {
+    files: Vec<CleanupFile>,
+}
+#[derive(Serialize, Deserialize)]
+struct CleanupFile {
+    path: PathBuf,
+    sha256: String,
+}
+impl Cleanup {
+    fn from_binaries(binaries: &[(PathBuf, String)]) -> Self {
+        Self {
+            files: binaries
+                .iter()
+                .map(|(path, hash)| CleanupFile {
+                    path: path.clone(),
+                    sha256: hash.clone(),
+                })
+                .collect(),
+        }
+    }
+    fn binaries(self) -> Vec<(PathBuf, String)> {
+        self.files.into_iter().map(|v| (v.path, v.sha256)).collect()
+    }
+}
 struct Layout {
     root: PathBuf,
     codex: PathBuf,
@@ -485,7 +510,9 @@ pub fn uninstall() -> Result<Value> {
     // Record payloads for bounded deferred deletion before removing the receipt.
     changes.push(change(
         file(layout.root.join("cleanup.json")),
-        Some(serde_json::to_string(&prior.binaries)?),
+        Some(serde_json::to_string(&Cleanup::from_binaries(
+            &prior.binaries,
+        ))?),
     )?);
     changes.push(change(file(layout.receipt.clone()), None)?);
     transact(&layout, changes)?;
@@ -496,11 +523,22 @@ pub fn uninstall() -> Result<Value> {
     )
 }
 fn cleanup(root: &Path, binaries: &[(PathBuf, String)]) -> Result<bool> {
+    if root.join("install.json").exists() {
+        return Ok(false);
+    }
     let mut remaining = Vec::new();
     for (path, hash) in binaries {
         w::no_reparse(path)?;
         ensure!(
-            path.starts_with(root.join("versions")),
+            path.starts_with(root.join("versions"))
+                && !path.components().any(|c| matches!(
+                    c,
+                    std::path::Component::ParentDir | std::path::Component::CurDir
+                ))
+                && path
+                    .file_name()
+                    .is_some_and(|name| name == "firefox-codex-mcp.exe"
+                        || name == "firefox-codex-native-host.exe"),
             "Unsafe cleanup path"
         );
         if path.exists() && digest(&fs::read(path)?) == *hash && fs::remove_file(path).is_err() {
@@ -520,20 +558,9 @@ fn cleanup(root: &Path, binaries: &[(PathBuf, String)]) -> Result<bool> {
     use base64::Engine;
     use std::os::windows::process::CommandExt;
     let quote = |v: &str| format!("'{}'", v.replace('\'', "''"));
-    let rows = remaining
-        .iter()
-        .map(|(p, h)| {
-            format!(
-                "[pscustomobject]@{{Path={};Hash={}}}",
-                quote(&p.to_string_lossy()),
-                quote(h)
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(",");
     let script = format!(
         r#"
-$items=@({rows}); $root={root};
+$root={root}; $base=[IO.Path]::GetDirectoryName($root);
 function SafePath($p) {{
   if(!$p.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){{return $false}}
   $at=$p;
@@ -541,15 +568,20 @@ function SafePath($p) {{
   return $true
 }}
 for($i=0;$i -lt 120;$i++){{
- Start-Sleep -Seconds 2; $left=0;
- foreach($item in $items){{$p=$item.Path;
+ Start-Sleep -Seconds 2; $left=0; $guard=$null;
+ try {{$guard=[IO.File]::Open((Join-Path $base 'install.lock'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}}catch{{continue}}
+ try {{
+ if(Test-Path -LiteralPath (Join-Path $base 'install.json')){{break}}
+ $items=(Get-Content -LiteralPath (Join-Path $base 'cleanup.json') -Raw | ConvertFrom-Json).files;
+ foreach($item in $items){{$p=$item.path; if(@('firefox-codex-mcp.exe','firefox-codex-native-host.exe') -notcontains [IO.Path]::GetFileName($p)){{continue}};
   if((Test-Path -LiteralPath $p) -and (SafePath $p)){{try{{
-   if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -eq $item.Hash){{Remove-Item -LiteralPath $p -ErrorAction Stop}}
+   if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -eq $item.sha256){{Remove-Item -LiteralPath $p -ErrorAction Stop}}
   }}catch{{$left++}}}}
   $parent=[IO.Path]::GetDirectoryName($p);
   if((SafePath $parent) -and (Test-Path -LiteralPath $parent)){{try{{[IO.Directory]::Delete($parent,$false)}}catch{{}}}}
  }}
  if($left -eq 0){{break}}
+ }} finally {{$guard.Dispose()}}
 }}
 "#,
         root = quote(&root.join("versions").to_string_lossy())
@@ -578,7 +610,7 @@ pub fn repair() -> Result<Value> {
     {
         cleanup(
             &layout.root,
-            &serde_json::from_slice::<Vec<(PathBuf, String)>>(&bytes)?,
+            &serde_json::from_slice::<Cleanup>(&bytes)?.binaries(),
         )?;
     }
     Ok(json!({"repaired":true,"nextStep":"Interrupted setup recovered."}))

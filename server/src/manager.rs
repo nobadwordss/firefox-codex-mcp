@@ -145,9 +145,16 @@ async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> 
         .await?;
         return Ok(true);
     }
+    let remove_and_exit = cfg!(windows) && request["action"] == "uninstall";
     let result = tokio::task::spawn_blocking(move || action(request)).await?;
+    let close = remove_and_exit && result.is_ok();
     let reply = match result {
-        Ok(value) => json!({"ok":true,"result":value}),
+        Ok(mut value) => {
+            if close {
+                value["managerClosing"] = json!(true);
+            }
+            json!({"ok":true,"result":value})
+        }
         Err(e) => json!({"ok":false,"error":format!("{e:#}")}),
     };
     respond(
@@ -157,7 +164,7 @@ async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> 
         &reply.to_string(),
     )
     .await?;
-    Ok(false)
+    Ok(close)
 }
 pub async fn serve(no_open: bool) -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;

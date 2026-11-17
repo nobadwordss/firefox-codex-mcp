@@ -402,14 +402,21 @@ fn fixture() -> Result<String> {
 fn snapshot(m: &mut Mcp) -> Result<Value> {
     let until = Instant::now() + Duration::from_secs(15);
     loop {
-        let s = m.ok("firefox_snapshot", json!({}))?;
-        if s["text"]
-            .as_str()
-            .is_some_and(|v| v.contains("Observation code"))
-        {
-            return Ok(s);
+        let result = m.tool("firefox_snapshot", json!({}))?;
+        if result["isError"] != true {
+            let s: Value = serde_json::from_str(
+                result["content"][0]["text"]
+                    .as_str()
+                    .context("snapshot text")?,
+            )?;
+            if s["text"]
+                .as_str()
+                .is_some_and(|v| v.contains("Observation code"))
+            {
+                return Ok(s);
+            }
         }
-        ensure!(Instant::now() < until, "fixture not rendered: {s}");
+        ensure!(Instant::now() < until, "fixture did not render: {result}");
         thread::sleep(Duration::from_millis(100));
     }
 }
