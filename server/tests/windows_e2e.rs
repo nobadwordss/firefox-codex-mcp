@@ -289,7 +289,76 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     let initial="# Preserve this comment\nmodel = \"example-model\"\n[mcp_servers.other]\ncommand = \"other.exe\"\n";
     fs::write(root.join("codex/config.toml"), initial)?;
     fs::write(root.join("codex/AGENTS.md"), "Prefer Rust.\n")?;
-    run(&binary, &root, "--install")?;
+    let profile = root.join("profile-a");
+    let browser = Browser::start(&root, &profile)?;
+    let mut manager = Process(
+        cmd(&binary, &root)
+            .arg("--manage-no-open")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()?,
+    );
+    let stdout = manager.0.stdout.take().context("manager stdout")?;
+    let (send, receive) = mpsc::channel();
+    thread::spawn(move || {
+        let mut line = String::new();
+        let result = BufReader::new(stdout).read_line(&mut line).map(|_| line);
+        let _ = send.send(result);
+    });
+    let line = receive.recv_timeout(Duration::from_secs(10))??;
+    let manager_url = line.split_whitespace().last().context("manager URL")?;
+    ensure!(
+        manager_url.starts_with("http://127.0.0.1:"),
+        "Manager must be loopback"
+    );
+    browser.goto(manager_url)?;
+    let until = Instant::now() + Duration::from_secs(10);
+    while browser
+        .script("return document.querySelector('#version').textContent;")?
+        .as_str()
+        .is_none_or(|v| v.contains("Checking"))
+    {
+        ensure!(Instant::now() < until, "manager state unavailable");
+        thread::sleep(Duration::from_millis(100));
+    }
+    browser.click("#install")?;
+    browser.click("#confirm-yes")?;
+    let until = Instant::now() + Duration::from_secs(20);
+    loop {
+        let result = browser.script("return document.querySelector('#result').textContent;")?;
+        if result
+            .as_str()
+            .is_some_and(|v| v.contains("Connection installed"))
+        {
+            break;
+        }
+        ensure!(Instant::now() < until, "GUI install failed: {result}");
+        thread::sleep(Duration::from_millis(100));
+    }
+    browser.screenshot(&artifacts.join("first-install-manager.png"))?;
+    browser.click("#extension-install")?;
+    browser.call("/moz/context", json!({"context":"chrome"}))?;
+    for notice in [
+        "addon-install-blocked-notification",
+        "addon-webext-permissions-notification",
+    ] {
+        let until = Instant::now() + Duration::from_secs(25);
+        loop {
+            let script=format!("const panel=document.querySelector('#notification-popup');const button=document.getElementById('{}')?.querySelector('.popup-notification-primary-button');if(!panel?.hasAttribute('panelopen')||!button||button.disabled||button.hasAttribute('disabled'))return false;button.click();return true;",notice);
+            if browser.script(&script)? == true {
+                break;
+            }
+            ensure!(
+                Instant::now() < until,
+                "Missing Firefox install confirmation: {notice}"
+            );
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+    browser.call("/actions",json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}))?;
+    browser.call("/moz/context", json!({"context":"content"}))?;
+    browser.click("#close")?;
+    drop(manager);
     let first = installed(&root)?;
     let doctor: Value = serde_json::from_str(&run(&binary, &root, "--doctor")?)?;
     ensure!(
@@ -315,12 +384,6 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     fs::write(
         artifacts.join("codex-mcp-registration.json"),
         &listing.stdout,
-    )?;
-    let profile = root.join("profile-a");
-    let browser = Browser::start(&root, &profile)?;
-    browser.call(
-        "/moz/addon/install",
-        json!({"path":env::var("FIREFOX_SIGNED_XPI")?,"temporary":false}),
     )?;
     let url = fixture()?;
     let mut a = Mcp::start(&root, A)?;

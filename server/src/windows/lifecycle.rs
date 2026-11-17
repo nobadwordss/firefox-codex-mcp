@@ -522,10 +522,38 @@ fn cleanup(root: &Path, binaries: &[(PathBuf, String)]) -> Result<bool> {
     let quote = |v: &str| format!("'{}'", v.replace('\'', "''"));
     let rows = remaining
         .iter()
-        .map(|(p, h)| format!("@({}, {})", quote(&p.to_string_lossy()), quote(h)))
+        .map(|(p, h)| {
+            format!(
+                "[pscustomobject]@{{Path={};Hash={}}}",
+                quote(&p.to_string_lossy()),
+                quote(h)
+            )
+        })
         .collect::<Vec<_>>()
         .join(",");
-    let script=format!("$items=@({rows}); for($i=0;$i -lt 120;$i++){{ Start-Sleep -Seconds 2; $left=0; foreach($item in $items){{ $p=$item[0]; if(Test-Path -LiteralPath $p){{ try{{if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -eq $item[1]){{Remove-Item -LiteralPath $p -ErrorAction Stop}}}}catch{{$left++}} }} }} if($left -eq 0){{break}} }}");
+    let script = format!(
+        r#"
+$items=@({rows}); $root={root};
+function SafePath($p) {{
+  if(!$p.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){{return $false}}
+  $at=$p;
+  while($at) {{if(Test-Path -LiteralPath $at){{$node=Get-Item -LiteralPath $at -Force;if($node.Attributes -band [IO.FileAttributes]::ReparsePoint){{return $false}}}};$at=[IO.Path]::GetDirectoryName($at)}}
+  return $true
+}}
+for($i=0;$i -lt 120;$i++){{
+ Start-Sleep -Seconds 2; $left=0;
+ foreach($item in $items){{$p=$item.Path;
+  if((Test-Path -LiteralPath $p) -and (SafePath $p)){{try{{
+   if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -eq $item.Hash){{Remove-Item -LiteralPath $p -ErrorAction Stop}}
+  }}catch{{$left++}}}}
+  $parent=[IO.Path]::GetDirectoryName($p);
+  if((SafePath $parent) -and (Test-Path -LiteralPath $parent)){{try{{[IO.Directory]::Delete($parent,$false)}}catch{{}}}}
+ }}
+ if($left -eq 0){{break}}
+}}
+"#,
+        root = quote(&root.join("versions").to_string_lossy())
+    );
     let encoded = base64::engine::general_purpose::STANDARD.encode(
         script
             .encode_utf16()
@@ -580,4 +608,113 @@ pub fn doctor() -> Result<Value> {
     Ok(
         json!({"globalMcpRegistered":prior.as_ref().is_some_and(|r|command==r.executable.to_str()),"nativeHostRegistered":registered&&manifest.is_file(),"binaryInstalled":prior.as_ref().is_some_and(|r|r.executable.is_file()),"mode":"extension","platform":"windows","firefoxAvailable":crate::transport::firefox().is_ok(),"skillInstalled":read(&file(root.join("skills/firefox-browser/SKILL.md")))?==Some(o::SKILL.into()),"automaticBrowserGuidance":read(&file(root.join("AGENTS.md")))?.is_some_and(|s|s.contains(o::GUIDANCE)),"existingChatsMayNeedRestart":true}),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn layout(root: &Path) -> Layout {
+        Layout {
+            root: root.into(),
+            codex: root.join("codex"),
+            receipt: root.join("install.json"),
+            journal: root.join("transaction.json"),
+            _lock: File::create(root.join("lock")).unwrap(),
+        }
+    }
+    #[test]
+    fn crash_recovery_restores_files_and_registry_but_preserves_new_edits() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = layout(temp.path());
+        let a = file(temp.path().join("config.toml"));
+        write(&a, &Some("# before\n".into())).unwrap();
+        let key = format!(
+            r"Software\FirefoxCodexMCPTests\{}",
+            crate::random_hex(12).unwrap()
+        );
+        let b = registry(key.clone(), "test");
+        let changes = vec![
+            change(a.clone(), Some("after".into())).unwrap(),
+            change(b.clone(), Some("new registry".into())).unwrap(),
+            change(file(temp.path().join("last")), Some("last".into())).unwrap(),
+        ];
+        setup::write_atomic(
+            &layout.journal,
+            &serde_json::to_vec(&changes).unwrap(),
+            0o600,
+        )
+        .unwrap();
+        write(&a, &changes[0].after).unwrap();
+        write(&b, &changes[1].after).unwrap();
+        recover(&layout).unwrap();
+        assert_eq!(read(&a).unwrap(), changes[0].before);
+        assert_eq!(read(&b).unwrap(), None);
+        setup::write_atomic(
+            &layout.journal,
+            &serde_json::to_vec(&changes).unwrap(),
+            0o600,
+        )
+        .unwrap();
+        write(&a, &Some("user edit after crash".into())).unwrap();
+        assert!(recover(&layout).is_err());
+        assert!(layout.journal.exists());
+        assert_eq!(read(&a).unwrap().unwrap(), "user edit after crash");
+        let _ = RegKey::predef(HKEY_CURRENT_USER).delete_subkey_all(key);
+    }
+    #[test]
+    fn locked_file_failure_rolls_back_config_and_registry() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let layout = layout(temp.path());
+        let a = file(temp.path().join("config.toml"));
+        write(&a, &Some("keep".into())).unwrap();
+        let key = format!(
+            r"Software\FirefoxCodexMCPTests\{}",
+            crate::random_hex(12).unwrap()
+        );
+        let b = registry(key.clone(), "value");
+        let blocked = temp.path().join("locked");
+        fs::write(&blocked, "original").unwrap();
+        let changes = vec![
+            change(a.clone(), Some("changed".into())).unwrap(),
+            change(b.clone(), Some("new".into())).unwrap(),
+            change(file(blocked.clone()), Some("replace".into())).unwrap(),
+        ];
+        let _locked = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .open(&blocked)
+            .unwrap();
+        assert!(transact(&layout, changes).is_err());
+        assert_eq!(read(&a).unwrap().unwrap(), "keep");
+        assert_eq!(read(&b).unwrap(), None);
+        assert_eq!(fs::read_to_string(blocked).unwrap(), "original");
+        assert!(!layout.journal.exists());
+        let _ = RegKey::predef(HKEY_CURRENT_USER).delete_subkey_all(key);
+    }
+    #[test]
+    fn configuration_keeps_unrelated_comments_and_foreign_registration() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = layout(temp.path());
+        setup::private_dir(&layout.codex).unwrap();
+        let original = "# keep\n[mcp_servers.other]\ncommand = 'other.exe'\n";
+        fs::write(layout.codex.join("config.toml"), original).unwrap();
+        let prepared = config(
+            &layout,
+            None,
+            Some(Path::new(r"C:\Users\한글 user\mcp.exe")),
+        )
+        .unwrap();
+        assert!(prepared.after.as_ref().unwrap().starts_with(original));
+        assert_eq!(
+            fs::read_to_string(layout.codex.join("config.toml")).unwrap(),
+            original
+        );
+        fs::write(
+            layout.codex.join("config.toml"),
+            "[mcp_servers.firefox]\ncommand='foreign.exe'\n",
+        )
+        .unwrap();
+        assert!(config(&layout, None, Some(Path::new(r"C:\mcp.exe"))).is_err());
+    }
 }

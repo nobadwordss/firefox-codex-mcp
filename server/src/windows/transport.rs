@@ -145,3 +145,37 @@ pub fn firefox() -> Result<PathBuf> {
 pub async fn terminate() {
     std::future::pending::<()>().await;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    #[tokio::test]
+    async fn pipe_roundtrip_is_session_scoped_and_single_broker() {
+        let path = PathBuf::from(format!(
+            r"\\.\pipe\firefox-codex-test-{}",
+            crate::random_hex(16).unwrap()
+        ));
+        let mut listener = Listener::bind(&path).unwrap();
+        assert!(
+            Listener::bind(&path).is_err(),
+            "second broker must not own the name"
+        );
+        let task = tokio::spawn(async move {
+            let mut stream = listener.accept().await.unwrap();
+            let mut data = [0; 4];
+            stream.read_exact(&mut data).await.unwrap();
+            assert_eq!(&data, b"test");
+            stream.write_all(b"okay").await.unwrap();
+            // A replacement instance is still reserved while this client runs.
+            assert!(Listener::bind(&listener.path).is_err());
+        });
+        let mut client = connect(&path).await.unwrap();
+        client.write_all(b"test").await.unwrap();
+        let mut data = [0; 4];
+        client.read_exact(&mut data).await.unwrap();
+        assert_eq!(&data, b"okay");
+        task.await.unwrap();
+        assert!(connect(&path).await.is_err());
+    }
+}
