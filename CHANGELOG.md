@@ -1,11 +1,11 @@
 # Changelog
 
-## 0.5.0-beta.2 — Windows preview (unreleased)
+## 0.5.0-beta.2 — English Windows preview — 2026-11-17
 
 - Wait up to ten seconds for Windows setup/cleanup locks, including exclusive sharing handles from older cleanup workers, before reporting a busy operation.
 - Exit obsolete cleanup workers when repair has already removed their cleanup journal.
 - Add deterministic repair-process tests for cleanup sharing locks and installer byte-range locks, plus timeout and permanent-error coverage.
-- Prepare the English extension and guidance for the next Windows preview.
+- Ship English setup, guidance and Mozilla-signed Codex Work Tabs 0.4.1.
 - Keep Windows desktop and SmartScreen validation pending. Linux English defaults ship separately as stable 0.4.1.
 
 ## 0.4.1 — English Linux release — 2026-11-17

@@ -56,24 +56,28 @@ outside this local integration. Codex's built-in **Computer Use** list is not pa
 
 ## Windows preview
 
-The [0.5.0-beta.1 preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.1)
+The [0.5.0-beta.2 preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)
 targets **Windows 10 22H2 / Windows 11 x64** with desktop Firefox. It is not yet a
 fully validated Windows desktop release: automated verification uses Windows
 Server 2022. See the exact [Windows verification scope](docs/windows-preview.md).
+This English preview includes Mozilla-signed extension **0.4.1** and fixes the
+file-lock collision when repair follows removal.
 
 1. Install desktop Firefox and Codex from their official sources.
-2. Download and extract the Windows ZIP, then double-click `firefox-codex-mcp.exe`. Do not run as administrator.
+2. [Download the Windows beta.2 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip) and fully extract it, then double-click `firefox-codex-mcp.exe`. Do not run as administrator.
 3. Choose **Install connection**, then **Continue** in the local English setup page.
 4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's prompt.
-5. Start a new Codex chat and ask for a browser task.
+5. Start a new Codex chat and try: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
 
 No terminal, Rust, Node, pairing code, token or profile path is needed. The ZIP includes the EXE, dependency licenses and an SBOM. The helper is **not
-Authenticode-signed**. The published beta.1 includes Mozilla-signed extension
-0.4.0. Linux 0.4.1 does not publish or promote a Windows installer. We have not
+Authenticode-signed**. The extension is Mozilla-signed at version 0.4.1. We have not
 validated SmartScreen's downloaded-file flow. Do not disable Windows security to
 install the preview; if blocked, wait for signed delivery or review/build the source.
 
-Update by extracting the newer ZIP and opening its EXE. Remove via **Windows Settings →
+Update by extracting the newer ZIP, opening its EXE and choosing **Update connection**.
+Then install the bundled signed extension 0.4.1 using **Add Codex Work Tabs to Firefox**.
+Previous work-tab access is released; result tabs stay open. Start a new Codex chat afterwards.
+Remove via **Windows Settings →
 Apps → Firefox Codex MCP → Uninstall**, then **Remove connection** in the manager.
 The manager exits after removal. Close old Codex chats to release locked program
 files. Modified files and unrelated Codex settings are preserved; remove the

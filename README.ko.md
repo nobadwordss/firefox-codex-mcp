@@ -63,24 +63,28 @@ Codex의 **컴퓨터 사용 목록**을 패치하지 않고 MCP로 연결합니�
 
 ## Windows 프리뷰
 
-[v0.5.0-beta.1](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.1)은
+[v0.5.0-beta.2](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)은
 Windows 10 22H2·Windows 11 x64와 일반 데스크톱 Firefox를 대상으로 합니다.
 자동 검증 환경은 Windows Server 2022이며, **Windows 10·11 데스크톱에서의 실제 검증은
 아직 완료하지 않았습니다.** [검증 범위](docs/windows-preview.md)를 확인하세요.
+설치 화면과 확장은 영어이며 Mozilla 서명 확장 **0.4.1**을 포함합니다.
+제거 직후 복구할 때 정리 프로세스의 파일 잠금과 충돌하던 문제도 수정했습니다.
 
 1. 공식 배포처에서 Codex와 Firefox를 설치합니다.
-2. Windows ZIP을 받아 압축을 풀고 `firefox-codex-mcp.exe`를 더블클릭합니다. 관리자 권한으로 실행하지 않습니다.
+2. [Windows beta.2 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip)을 받아 압축을 완전히 풀고 `firefox-codex-mcp.exe`를 더블클릭합니다. 관리자 권한으로 실행하지 않습니다.
 3. 영어 관리 화면의 **Install connection → Continue**를 누릅니다.
 4. **Add Codex Work Tabs to Firefox**를 누르고 Firefox의 확장 설치를 확인합니다.
-5. 새 Codex 채팅에서 브라우저 작업을 요청합니다.
+5. 새 Codex 채팅에서 `https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.`처럼 요청합니다.
 
-코드·토큰·프로필 경로나 터미널 입력이 필요 없습니다. 공개 beta.1은 기존 Mozilla 서명
-확장 0.4.0을 사용합니다. Linux 0.4.1에는 Windows 설치본을 포함하지 않습니다.
+코드·토큰·프로필 경로나 터미널 입력이 필요 없습니다. Mozilla 서명 확장 0.4.1을 포함합니다.
 **Windows 연결 프로그램의 Authenticode 서명은 없습니다.** SmartScreen의
 다운로드 설치 흐름은 미검증입니다. 보안 기능을 끄지 마세요. 차단된다면 서명 배포를
 기다리거나 소스를 검토해 직접 빌드해야 합니다.
 
-업데이트는 새 ZIP을 풀고 그 안의 EXE를 실행합니다. 제거는 **Windows 설정 → 앱 → Firefox Codex MCP →
+업데이트는 새 ZIP을 풀고 그 안의 EXE를 실행해 **Update connection**을 누릅니다.
+이어서 **Add Codex Work Tabs to Firefox**로 함께 제공된 서명 확장 0.4.1을 설치합니다.
+이전 작업 탭 접근은 해제되지만 결과 탭은 남습니다. 새 Codex 채팅에서 다시 시작하세요.
+제거는 **Windows 설정 → 앱 → Firefox Codex MCP →
 제거**에서 관리 화면을 연 뒤 **Remove connection**을 누릅니다. 관리 프로그램은 자동
 종료하며, 실행 파일 잠금 해제를 위해 기존 Codex 채팅을 닫아야 합니다. Firefox 프로필·로그인·
 결과 탭·무관한 설정은 보존합니다. 확장은 Firefox에서 별도로 제거합니다.

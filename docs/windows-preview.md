@@ -1,32 +1,44 @@
 # Windows preview: installation and verification boundary
 
-The 0.5.0-beta.1 helper targets Windows 10 22H2 and Windows 11 x64 with ordinary
-desktop Firefox 140+. The extension stays at Mozilla-signed version 0.4.0.
+The [0.5.0-beta.2 English preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)
+targets Windows 10 22H2 and Windows 11 x64 with ordinary desktop Firefox 140+.
+It includes Mozilla-signed English extension 0.4.1 and the repair lock fix below.
 This is a preview, not a claim that Windows 10/11 desktop acceptance testing is complete.
 
 Linux 0.4.1 is the English stable release with Mozilla-signed extension 0.4.1.
 It publishes no Windows installer. Windows remains a separate preview: the
-published beta.1 archive and its 0.4.0 extension are unchanged, and the verification
-record below describes beta.1. Windows source/CI builds are not a desktop stable release.
+beta.2 download has its own release page. The earlier beta.1 archive and its 0.4.0
+extension remain available unchanged as historical releases.
 
 ## Install, update and remove
 
-Download and extract the Windows ZIP from the project's release. Double-click
+[Download the Windows beta.2 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip)
+and fully extract it. Use this Windows-specific link; GitHub Latest remains the
+Linux stable release. Double-click
 `firefox-codex-mcp.exe` as your normal Windows user. Keep the bundled license notices
 with the application when redistributing it. Choose **Install connection → Continue**, then **Add
 Codex Work Tabs to Firefox**. Confirm Firefox's normal extension installation.
-Start a new Codex chat. No administrator rights, code, token, terminal, profile
+Start a new Codex chat and try: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
+A new work tab and successful link click verify the connection. Review tool
+approval requests for the task you asked for. No administrator rights, code, token, terminal, profile
 path, Rust or Node installation is required. The installer can register desktop
 Codex even when its command-line executable is not on PATH.
 
 The manager falls back to your default browser if it cannot locate Firefox. Install
 desktop Firefox from Mozilla, then reopen setup in Firefox to install the extension.
 In the English extension, **Use this Firefox** selects that profile, **Pause**
-pauses control and **Revoke all tab access** revokes all work tabs. The published
-beta.1 package still includes the earlier Korean extension controls.
+pauses control and **Revoke all tab access** revokes all work tabs.
+
+The helper EXE is not Authenticode-signed, and its downloaded-file SmartScreen
+flow is unverified. Do not disable Windows security to install the preview. If
+blocked, wait for signed delivery or review/build the source.
 
 Download and extract a newer ZIP, then open its EXE to update. Executing an older downloaded EXE
-installs that version, so choose the intended release. Windows Settings → Apps →
+installs that version, so choose the intended release. Choose **Update connection**,
+then **Add Codex Work Tabs to Firefox** to install the bundled signed extension
+0.4.1 too. Direct-distribution XPIs have no automatic update channel. Updates
+release previous work-tab access while leaving result tabs open; start a new chat afterwards.
+Windows Settings → Apps →
 Firefox Codex MCP → Uninstall opens the manager; choose **Remove connection**.
 The manager exits after a successful removal. Remove the Firefox extension
 separately if desired. Profiles, logins and visible result tabs remain intact.
@@ -87,8 +99,13 @@ chats, and uses its `mcpServer/tool/call` API to exercise Firefox. It does not u
 mock MCP server. It also does not prove model-driven tool selection or the Windows
 Codex desktop UI: no live model/API account is sent to CI.
 
-The [release verification record](windows-e2e-2026-11-17.json) links the successful
-workflow commit and its artifacts. Source-build and extracted-ZIP E2E both passed
+The [beta.2 release page](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)
+provides the exact ZIP, `SHA256SUMS`, provenance and `release-verification.json`.
+The [repair regression record](windows-repair-e2e-2026-11-17.json) separately
+retains the fix's original source-build and extracted-ZIP test evidence.
+
+The historical [beta.1 verification record](windows-e2e-2026-11-17.json) links its
+successful workflow commit and artifacts. Source-build and extracted-ZIP E2E both passed
 on 2026-11-17, including actual deferred EXE deletion before repair. Windows and
 Linux archive checksums and GitHub build attestations were independently verified.
 
@@ -109,7 +126,7 @@ failed at `--repair` after uninstall with a sharing violation (`os error 32`).
 The cleanup worker could still hold `install.lock` with `FileShare.None` after
 deleting an EXE. Opening that lock failed before Rust's `try_lock` ran.
 
-The next Windows preview waits up to ten seconds for both open-time sharing
+Windows beta.2 waits up to ten seconds for both open-time sharing
 violations and ordinary setup lock contention. It preserves exclusive ownership
 throughout setup and reports a busy operation if the deadline expires. Permanent
 open errors are returned immediately. The lock file is not deleted or replaced.
@@ -120,8 +137,8 @@ fix commit, Windows Server CI and exact ZIP. Actual repair subprocesses are held
 behind both types of Windows lock until contention is observed, then must finish
 after release without changing unrelated settings. The full lifecycle and Firefox
 E2E are repeated from the extracted ZIP. Earlier failure records remain historical.
-The published beta.1 package is unchanged; the fix is in source and CI preview
-artifacts, with Windows 10/11 desktop and SmartScreen acceptance still pending.
+The fix is included in the published beta.2 ZIP. Windows 10/11 desktop and
+SmartScreen acceptance remain pending; the beta.1 package is unchanged.
 
 Linux's advanced BiDi mode remains Linux-only. A Windows Server CI pass must never
 be described as a Windows 10/11 desktop pass.
