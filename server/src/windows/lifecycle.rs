@@ -604,6 +604,8 @@ fn cleanup(root: &Path, binaries: &[(PathBuf, String)]) -> Result<bool> {
     let script = format!(
         r#"
 $root={root}; $base=[IO.Path]::GetDirectoryName($root);
+function Trace($message) {{if({debug}){{Add-Content -LiteralPath (Join-Path $base 'cleanup-test.log') -Value $message -Encoding UTF8}}}}
+Trace 'worker started';
 function SafePath($p) {{
   if(!$p.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){{return $false}}
   $at=$p;
@@ -612,22 +614,27 @@ function SafePath($p) {{
 }}
 for($i=0;$i -lt 120;$i++){{
  Start-Sleep -Seconds 2; $left=0; $guard=$null;
- try {{$guard=[IO.File]::Open((Join-Path $base 'install.lock'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}}catch{{continue}}
+ try {{$guard=[IO.File]::Open((Join-Path $base 'install.lock'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}}catch{{Trace ('lock: '+$_.Exception.Message);continue}}
  try {{
- if(Test-Path -LiteralPath (Join-Path $base 'install.json')){{break}}
+ if(Test-Path -LiteralPath (Join-Path $base 'install.json')){{Trace 'reinstalled';break}}
  $items=(Get-Content -LiteralPath (Join-Path $base 'cleanup.json') -Encoding UTF8 -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).files;
  foreach($item in $items){{$p=$item.path; if(@('firefox-codex-mcp.exe','firefox-codex-native-host.exe') -notcontains [IO.Path]::GetFileName($p)){{continue}};
   if((Test-Path -LiteralPath $p) -and (SafePath $p)){{try{{
-   if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -eq $item.sha256){{Remove-Item -LiteralPath $p -ErrorAction Stop}}
-  }}catch{{$left++}}}}
+   if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -eq $item.sha256){{Remove-Item -LiteralPath $p -ErrorAction Stop;Trace ('deleted: '+$p)}}else{{Trace ('hash changed: '+$p)}}
+  }}catch{{Trace ('delete: '+$_.Exception.Message);$left++}}}}
   $parent=[IO.Path]::GetDirectoryName($p);
   if((SafePath $parent) -and (Test-Path -LiteralPath $parent)){{try{{[IO.Directory]::Delete($parent,$false)}}catch{{}}}}
  }}
  if($left -eq 0){{break}}
- }} finally {{$guard.Dispose()}}
+ }} catch {{Trace ('worker error: '+$_.Exception.Message)}} finally {{$guard.Dispose()}}
 }}
 "#,
-        root = quote(&root.join("versions").to_string_lossy())
+        root = quote(&root.join("versions").to_string_lossy()),
+        debug = if std::env::var_os("FIREFOX_MCP_WINDOWS_E2E").is_some() {
+            "$true"
+        } else {
+            "$false"
+        }
     );
     let encoded = base64::engine::general_purpose::STANDARD.encode(
         script

@@ -840,6 +840,17 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     drop(browser);
     let until = Instant::now() + Duration::from_secs(30);
     while first.exists() || second.exists() {
+        if Instant::now() >= until {
+            let log = fs::read_to_string(root.join("helper/cleanup-test.log"))
+                .unwrap_or_else(|e| format!("No worker log: {e}"));
+            eprintln!("Cleanup diagnostics: {log}");
+            fs::write(artifacts.join("cleanup-test.log"), log)?;
+            eprintln!(
+                "Remaining EXEs: first={} second={}",
+                first.exists(),
+                second.exists()
+            );
+        }
         ensure!(
             Instant::now() < until,
             "Deferred removal did not delete unlocked EXEs (Unicode path)"
