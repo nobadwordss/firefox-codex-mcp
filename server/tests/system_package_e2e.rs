@@ -639,7 +639,7 @@ fn real_package_lifecycle_preserves_users_and_revokes_running_processes() -> Res
     fs::write(
         evidence.join(format!("{}-lifecycle.json", manager.format)),
         serde_json::to_vec_pretty(&json!({
-            "format":manager.format,"sourceVersion":env!("CARGO_PKG_VERSION"),"osRelease":fs::read_to_string("/etc/os-release")?,
+            "completed":true,"format":manager.format,"sourceVersion":env!("CARGO_PKG_VERSION"),"osRelease":fs::read_to_string("/etc/os-release")?,
             "packageTool":String::from_utf8_lossy(&tool.stdout),"dnfVersion":dnf_version,"baselinePackage":baseline.file_name().map(|n|n.to_string_lossy()),"candidatePackage":candidate.file_name().map(|n|n.to_string_lossy()),
             "baselineDescription":"Same candidate source, package release 0; candidate release 1. No earlier public RPM/DEB is claimed.",
             "legacyPortableVersion":"0.4.2","legacyBinarySha256":sha(&fs::read(legacy)?),

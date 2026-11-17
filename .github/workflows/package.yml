@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash
 jobs:
   package:
     runs-on: ubuntu-22.04
@@ -26,16 +29,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes rpm podman libgtk-3-0 libdbus-glib-1-2 libasound2 libxt6 libx11-xcb1
           npm install --global @openai/codex
-          mkdir -p "$RUNNER_TEMP/package-inputs" linux-package-evidence
-          chmod o+rx "$RUNNER_TEMP" "$RUNNER_TEMP/package-inputs"
+          FIREFOX_PACKAGE_INPUTS=$(mktemp -d /tmp/firefox-codex-package-inputs.XXXXXX)
+          chmod 755 "$FIREFOX_PACKAGE_INPUTS"
+          mkdir -p linux-package-evidence
+          echo "FIREFOX_PACKAGE_INPUTS=$FIREFOX_PACKAGE_INPUTS" >> "$GITHUB_ENV"
           CODEX_BINARY=$(find "$(npm root -g)/@openai" -type f -name codex -executable -print -quit)
           test -n "$CODEX_BINARY"
           test "$(od -An -N4 -tx1 "$CODEX_BINARY" | tr -d ' \n')" = 7f454c46
-          cp "$CODEX_BINARY" "$RUNNER_TEMP/package-inputs/codex"
-          chmod 755 "$RUNNER_TEMP/package-inputs/codex"
-          echo "FIREFOX_SETUP_CODEX_BINARY=$RUNNER_TEMP/package-inputs/codex" >> "$GITHUB_ENV"
-          "$RUNNER_TEMP/package-inputs/codex" --version | tee linux-package-evidence/codex-version.txt
-      - run: cargo build --release --locked
+          cp "$CODEX_BINARY" "$FIREFOX_PACKAGE_INPUTS/codex"
+          chmod 755 "$FIREFOX_PACKAGE_INPUTS/codex"
+          echo "FIREFOX_SETUP_CODEX_BINARY=$FIREFOX_PACKAGE_INPUTS/codex" >> "$GITHUB_ENV"
+          "$FIREFOX_PACKAGE_INPUTS/codex" --version | tee linux-package-evidence/codex-version.txt
+      - run: |
+          cargo build --release --locked
+          cp target/release/firefox-codex-mcp "$FIREFOX_PACKAGE_INPUTS/firefox-codex-mcp"
+          chmod 755 "$FIREFOX_PACKAGE_INPUTS/firefox-codex-mcp"
       - run: cargo fetch --locked
       - name: First-user portable install, update, removal and preserved edits
         run: cargo test --release --test install_e2e --locked -- --ignored
@@ -57,9 +65,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download v0.4.2 --repo "$GITHUB_REPOSITORY" --pattern firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz --dir "$RUNNER_TEMP/package-inputs"
-          printf '%s  %s\n' 57f7bb53e5b2f546e6c55b3212f5ddb02e214b5108141ffa2377e8f88fad62e1 "$RUNNER_TEMP/package-inputs/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz" | sha256sum --check
-          tar -xzf "$RUNNER_TEMP/package-inputs/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz" -C "$RUNNER_TEMP/package-inputs"
+          gh release download v0.4.2 --repo "$GITHUB_REPOSITORY" --pattern firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz --dir "$FIREFOX_PACKAGE_INPUTS"
+          printf '%s  %s\n' 57f7bb53e5b2f546e6c55b3212f5ddb02e214b5108141ffa2377e8f88fad62e1 "$FIREFOX_PACKAGE_INPUTS/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz" | sha256sum --check
+          tar -xzf "$FIREFOX_PACKAGE_INPUTS/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz" -C "$FIREFOX_PACKAGE_INPUTS"
       - name: Compile opt-in real package lifecycle test
         run: |
           cargo test --release --locked --test system_package_e2e --test firefox_e2e --no-run --message-format=json > "$RUNNER_TEMP/package-test-build.jsonl"
@@ -75,8 +83,8 @@ jobs:
             GITHUB_ACTIONS=true FIREFOX_PACKAGE_TEST_DISPOSABLE=1 FIREFOX_PACKAGE_FORMAT=deb \
             FIREFOX_PACKAGE_BASELINE="$(realpath ci-baseline/*.deb)" \
             FIREFOX_PACKAGE_CANDIDATE="$(realpath dist/*.deb)" \
-            FIREFOX_PACKAGE_PORTABLE_BINARY="$PWD/target/release/firefox-codex-mcp" \
-            FIREFOX_PACKAGE_LEGACY_BINARY="$RUNNER_TEMP/package-inputs/firefox-codex-mcp-0.4.2-linux-x86_64/firefox-codex-mcp" \
+            FIREFOX_PACKAGE_PORTABLE_BINARY="$FIREFOX_PACKAGE_INPUTS/firefox-codex-mcp" \
+            FIREFOX_PACKAGE_LEGACY_BINARY="$FIREFOX_PACKAGE_INPUTS/firefox-codex-mcp-0.4.2-linux-x86_64/firefox-codex-mcp" \
             FIREFOX_PACKAGE_CODEX_BINARY="$FIREFOX_SETUP_CODEX_BINARY" \
             FIREFOX_PACKAGE_ARTIFACTS="$PWD/linux-package-evidence/ubuntu" \
             "$FIREFOX_PACKAGE_TEST_BINARY" --ignored --nocapture --test-threads=1 \
@@ -85,11 +93,11 @@ jobs:
         run: |
           sudo podman run --rm \
             --volume "$PWD:/workspace:rw" --workdir /workspace \
-            --volume "$RUNNER_TEMP/package-inputs:/test-inputs:ro" \
+            --volume "$FIREFOX_PACKAGE_INPUTS:/test-inputs:ro" \
             --env FIREFOX_PACKAGE_TEST_DISPOSABLE=1 --env FIREFOX_PACKAGE_FORMAT=deb \
             --env FIREFOX_PACKAGE_BASELINE="/workspace/ci-baseline/$(basename "$(realpath ci-baseline/*.deb)")" \
             --env FIREFOX_PACKAGE_CANDIDATE="/workspace/dist/$(basename "$(realpath dist/*.deb)")" \
-            --env FIREFOX_PACKAGE_PORTABLE_BINARY=/workspace/target/release/firefox-codex-mcp \
+            --env FIREFOX_PACKAGE_PORTABLE_BINARY=/test-inputs/firefox-codex-mcp \
             --env FIREFOX_PACKAGE_LEGACY_BINARY=/test-inputs/firefox-codex-mcp-0.4.2-linux-x86_64/firefox-codex-mcp \
             --env FIREFOX_PACKAGE_CODEX_BINARY=/test-inputs/codex \
             --env FIREFOX_PACKAGE_ARTIFACTS=/workspace/linux-package-evidence/debian \
@@ -101,11 +109,11 @@ jobs:
         run: |
           sudo podman run --rm \
             --volume "$PWD:/workspace:rw" --workdir /workspace \
-            --volume "$RUNNER_TEMP/package-inputs:/test-inputs:ro" \
+            --volume "$FIREFOX_PACKAGE_INPUTS:/test-inputs:ro" \
             --env FIREFOX_PACKAGE_TEST_DISPOSABLE=1 --env FIREFOX_PACKAGE_FORMAT=rpm \
             --env FIREFOX_PACKAGE_BASELINE="/workspace/ci-baseline/$(basename "$(realpath ci-baseline/*.rpm)")" \
             --env FIREFOX_PACKAGE_CANDIDATE="/workspace/dist/$(basename "$(realpath dist/*.rpm)")" \
-            --env FIREFOX_PACKAGE_PORTABLE_BINARY=/workspace/target/release/firefox-codex-mcp \
+            --env FIREFOX_PACKAGE_PORTABLE_BINARY=/test-inputs/firefox-codex-mcp \
             --env FIREFOX_PACKAGE_LEGACY_BINARY=/test-inputs/firefox-codex-mcp-0.4.2-linux-x86_64/firefox-codex-mcp \
             --env FIREFOX_PACKAGE_CODEX_BINARY=/test-inputs/codex \
             --env FIREFOX_PACKAGE_ARTIFACTS=/workspace/linux-package-evidence/fedora \
@@ -113,6 +121,8 @@ jobs:
             registry.fedoraproject.org/fedora:45 /bin/bash -euc \
             'dnf --assumeyes install shadow-utils util-linux coreutils glibc-langpack-en; exec "$FIREFOX_PACKAGE_TEST_BINARY" --ignored --nocapture --test-threads=1' \
             2>&1 | tee linux-package-evidence/rpm-lifecycle.log
+      - name: Require completed lifecycle evidence for all three distributions
+        run: cargo run --release --locked --bin verify_linux_evidence -- lifecycle linux-package-evidence
       - name: Install official Firefox and geckodriver for installed-DEB browser checks
         run: |
           curl --fail --location 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US' --output "$RUNNER_TEMP/firefox.tar.xz"
@@ -121,10 +131,10 @@ jobs:
           GECKO_URL=$(curl --fail --silent https://api.github.com/repos/mozilla/geckodriver/releases/latest | jq -r '.assets[] | select(.name | endswith("linux64.tar.gz")) | .browser_download_url')
           test -n "$GECKO_URL"
           curl --fail --location "$GECKO_URL" --output "$RUNNER_TEMP/geckodriver.tar.gz"
-          tar -xzf "$RUNNER_TEMP/geckodriver.tar.gz" -C "$RUNNER_TEMP/package-inputs"
-          echo "FIREFOX_GECKODRIVER=$RUNNER_TEMP/package-inputs/geckodriver" >> "$GITHUB_ENV"
+          tar -xzf "$RUNNER_TEMP/geckodriver.tar.gz" -C "$FIREFOX_PACKAGE_INPUTS"
+          echo "FIREFOX_GECKODRIVER=$FIREFOX_PACKAGE_INPUTS/geckodriver" >> "$GITHUB_ENV"
           /opt/firefox/firefox --version | tee linux-package-evidence/firefox-version.txt
-          "$RUNNER_TEMP/package-inputs/geckodriver" --version | tee linux-package-evidence/geckodriver-version.txt
+          "$FIREFOX_PACKAGE_INPUTS/geckodriver" --version | tee linux-package-evidence/geckodriver-version.txt
           sudo dpkg --install dist/*.deb
       - name: Installed-DEB first web task, signed extension, settings and real Codex app-server
         timeout-minutes: 8
@@ -138,6 +148,7 @@ jobs:
           export FIREFOX_NATIVE_ARTIFACTS="$PWD/linux-package-evidence/installed-deb-firefox"
           cargo test --release --locked --test firefox_e2e native_e2e:: -- --ignored --nocapture --test-threads=1 \
             2>&1 | tee linux-package-evidence/installed-deb-firefox.log
+          cargo run --release --locked --bin verify_linux_evidence -- browser linux-package-evidence/installed-deb-firefox
       - name: Remove CI browser-check package
         if: always()
         run: |
@@ -175,6 +186,7 @@ jobs:
                 /test-inputs/firefox-e2e native_e2e:: --ignored --nocapture --test-threads=1
               dnf --assumeyes remove firefox-codex-mcp
             ' 2>&1 | tee linux-package-evidence/installed-rpm-firefox.log
+          cargo run --release --locked --bin verify_linux_evidence -- browser linux-package-evidence/installed-rpm-firefox
       # One build provenance binds every published Linux delivery to this source.
       - uses: actions/attest-build-provenance@v2
         if: ${{ !github.event.repository.private }}

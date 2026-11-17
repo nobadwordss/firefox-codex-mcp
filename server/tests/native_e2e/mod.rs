@@ -241,6 +241,40 @@ fn installer_binary() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|| env!("CARGO_BIN_EXE_firefox-codex-mcp").into())
 }
+fn confirm_manager_action(driver: &Driver, selector: &str) -> Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let ready = driver.script(
+            "const button=document.querySelector(arguments[0]); return !!button && !button.disabled && !button.hidden && button.getClientRects().length > 0 && document.querySelector('#version')?.textContent.startsWith('Program ');",
+            json!([selector]),
+        )?;
+        if ready == true {
+            break;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings action did not become ready: {selector}"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    driver.click(selector)?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let ready = driver.script(
+            "const dialog=document.querySelector('#confirm'); const button=document.querySelector('#confirm-yes'); return !!dialog && !dialog.hidden && !!button && !button.disabled && button.getClientRects().length > 0;",
+            json!([]),
+        )?;
+        if ready == true {
+            break;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings confirmation did not become visible: {selector}"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    driver.click("#confirm-yes")
+}
 fn installed(home: &Path, browser: &Browser) -> Result<()> {
     let mut c = command(&installer_binary(), home);
     let mut process = Daemon(c.arg("--manage-no-open").stdout(Stdio::piped()).spawn()?);
@@ -252,8 +286,7 @@ fn installed(home: &Path, browser: &Browser) -> Result<()> {
         .or_else(|| line.trim().strip_prefix("Firefox Codex 관리: "))
         .context("manager URL")?;
     browser.driver.goto(url)?;
-    browser.driver.click("#install")?;
-    browser.driver.click("#confirm-yes")?;
+    confirm_manager_action(&browser.driver, "#install")?;
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         let text = browser.driver.script(
@@ -327,6 +360,159 @@ fn installed(home: &Path, browser: &Browser) -> Result<()> {
     ensure!(fs::read_to_string(home.join(".codex/config.toml"))?.contains("--extension"));
     Ok(())
 }
+
+#[test]
+#[ignore = "installed package: extension Settings must connect a completely new user"]
+fn package_extension_settings_before_first_connection() -> Result<()> {
+    if env::var_os("FIREFOX_SETUP_PACKAGE").is_none() {
+        eprintln!("SKIP package_extension_settings_before_first_connection: requires an installed RPM or DEB");
+        return Ok(());
+    }
+    ensure!(
+        env::var_os("FIREFOX_SIGNED_XPI").is_some(),
+        "Cold Settings check requires the signed extension"
+    );
+    let root = tempfile::tempdir()?;
+    let home = root.path();
+    let receipt = home.join(".local/state/firefox-codex-mcp/install.json");
+    let config = home.join(".codex/config.toml");
+    let artifacts =
+        PathBuf::from(env::var("FIREFOX_NATIVE_ARTIFACTS")?).join("cold-extension-first");
+    fs::create_dir_all(&artifacts)?;
+    let fixture = Fixture::start()?;
+    let browser = Browser::start(home, &home.join("profile-cold"))?;
+    ensure!(
+        !receipt.exists() && !config.exists(),
+        "Cold user was already connected"
+    );
+    // This scenario starts with the add-on, not a setup CLI/service. The other
+    // two scenarios exercise Firefox's actual XPI confirmation controls.
+    browser.addon()?;
+    browser.popup()?;
+    ensure!(
+        !receipt.exists() && !config.exists(),
+        "Native discovery silently registered Codex"
+    );
+    capture_native(&browser.driver, &artifacts, 0, "popup-before-connection")?;
+    let handles = || -> Result<Vec<Value>> {
+        let value: Value = browser
+            .driver
+            .client
+            .get(format!(
+                "{}/session/{}/window/handles",
+                browser.driver.base, browser.driver.session
+            ))
+            .send()?
+            .json()?;
+        Ok(value["value"]
+            .as_array()
+            .context("cold Settings handles")?
+            .clone())
+    };
+    let before = handles()?;
+    browser.driver.click("#settings")?;
+    browser.driver.close_popup()?;
+    let deadline = Instant::now() + Duration::from_secs(15);
+    let settings_handle = loop {
+        if let Some(handle) = handles()?.into_iter().find(|h| !before.contains(h)) {
+            break handle;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Cold extension Settings failed to open without a receipt"
+        );
+        thread::sleep(Duration::from_millis(100));
+    };
+    browser
+        .driver
+        .call("/window", json!({"handle":settings_handle}))?;
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        if browser.driver.script("return location.origin.startsWith('http://127.0.0.1:') && document.querySelector('#install')?.textContent === 'Connect Codex' && !document.querySelector('#install').disabled && document.querySelector('#uninstall')?.disabled;", json!([]))? == true {
+            break;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Cold package Settings did not offer Connect Codex"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    ensure!(
+        !receipt.exists() && !config.exists(),
+        "Opening Settings changed Codex before Connect"
+    );
+    capture_native(&browser.driver, &artifacts, 1, "settings-before-connection")?;
+    confirm_manager_action(&browser.driver, "#install")?;
+    let wait_result = |expected: &str| -> Result<()> {
+        let deadline = Instant::now() + Duration::from_secs(15);
+        loop {
+            let value = browser.driver.script(
+                "return document.querySelector('#result').textContent;",
+                json!([]),
+            )?;
+            if value.as_str().is_some_and(|text| text.contains(expected)) {
+                return Ok(());
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "Cold Settings missing {expected}: {value}"
+            );
+            thread::sleep(Duration::from_millis(100));
+        }
+    };
+    wait_result("Connected to Codex")?;
+    ensure!(receipt.is_file());
+    ensure!(fs::read_to_string(&config)?.contains(
+        installed_binary(home)
+            .to_str()
+            .context("package helper path")?
+    ));
+    ensure!(!home
+        .join(".local/lib/firefox-codex-mcp/firefox-codex-mcp")
+        .exists());
+    ensure!(!home
+        .join(".mozilla/native-messaging-hosts/firefox_codex_mcp.json")
+        .exists());
+    browser.driver.click("#doctor")?;
+    wait_result("Codex connection: registered")?;
+    wait_result("Local helper: registered")?;
+    capture_native(&browser.driver, &artifacts, 2, "settings-connected")?;
+    let mut client = server(home)?;
+    client.wait_connected(true)?;
+    ensure!(
+        client.ok("firefox_tabs", json!({}))?["tabs"] == json!([]),
+        "Cold Settings became a chat-owned tab"
+    );
+    drop(client);
+    codex_app_server_roundtrip(home, &fixture, &browser, &artifacts)?;
+    browser
+        .driver
+        .call("/window", json!({"handle":settings_handle}))?;
+    confirm_manager_action(&browser.driver, "#uninstall")?;
+    wait_result("Disconnected this user from Codex")?;
+    ensure!(!receipt.exists());
+    ensure!(!fs::read_to_string(&config)?.contains("mcp_servers.firefox"));
+    ensure!(
+        installed_binary(home).is_file(),
+        "User Disconnect removed the system package"
+    );
+    capture_native(&browser.driver, &artifacts, 3, "settings-disconnected")?;
+    browser.driver.click("#close")?;
+    wait_result("Setup service closed")?;
+    fs::write(
+        artifacts.join("result.json"),
+        serde_json::to_vec_pretty(&json!({
+            "installedPackage":true,"setupCliInvoked":false,"receiptAbsentBeforeSettings":true,"codexConfigurationAbsentBeforeSettings":true,
+            "toolbarSettingsColdStartedHelper":true,"connectViaSettingsUi":true,"doctorViaSettingsUi":true,"systemNativeHostDiscovery":true,
+            "noUserNativeManifestOrBinaryCopy":true,"settingsExcludedFromChatTabs":true,"actualCodexAppServerFirstWebTask":true,
+            "disconnectViaSettingsUi":true,"systemPackagePreservedAfterUserDisconnect":true,
+            "signedExtensionLoadedViaWebDriver":true,"xpiConfirmationUiVerifiedBySeparateScenarios":true,
+            "desktopUiOrModelSelectionVerified":false,"personalProfilesUsed":false
+        }))?,
+    )?;
+    Ok(())
+}
+
 fn wait_snapshot(server: &mut Server) -> Result<Value> {
     let deadline = Instant::now() + Duration::from_secs(12);
     loop {
@@ -470,12 +656,14 @@ fn settings_from_popup(
         "Settings must not become a chat-owned work tab"
     );
     if let Some(action) = action {
-        browser.driver.click(if action == "uninstall" {
-            "#uninstall"
-        } else {
-            "#install"
-        })?;
-        browser.driver.click("#confirm-yes")?;
+        confirm_manager_action(
+            &browser.driver,
+            if action == "uninstall" {
+                "#uninstall"
+            } else {
+                "#install"
+            },
+        )?;
         let expected = if action == "uninstall" {
             "Connection removed."
         } else {
@@ -558,12 +746,25 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     let mut b = server(home)?;
     a.wait_connected(true)?;
     if env::var_os("FIREFOX_NATIVE_APP_SERVER").is_some() {
-        codex_app_server_roundtrip(home, &fixture, &browser)?;
+        let artifacts = PathBuf::from(env::var("FIREFOX_NATIVE_ARTIFACTS")?);
+        codex_app_server_roundtrip(home, &fixture, &browser, &artifacts)?;
     }
     // No profile/code/token/tab-grant input. Only a newly created work tab is visible.
     let baseline = browser.driver.handle()?;
     browser.driver.goto(&fixture.url)?;
     ensure!(a.ok("firefox_tabs", json!({}))?["tabs"] == json!([]));
+    let previous_handles: Value = browser
+        .driver
+        .client
+        .get(format!(
+            "{}/session/{}/window/handles",
+            browser.driver.base, browser.driver.session
+        ))
+        .send()?
+        .json()?;
+    let previous_handles = previous_handles["value"]
+        .as_array()
+        .context("previous browser handles")?;
     let opened = a.ok("firefox_open_tab", json!({"url":fixture.url}))?;
     let handles: Value = browser
         .driver
@@ -578,7 +779,7 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
         .as_array()
         .context("handles")?
         .iter()
-        .find(|h| h.as_str() != Some(&baseline))
+        .find(|h| !previous_handles.contains(h))
         .context("own handle")?
         .clone();
     b.denied(
@@ -857,9 +1058,14 @@ impl AppServer {
         )?)
     }
 }
-fn codex_app_server_roundtrip(home: &Path, fixture: &Fixture, browser: &Browser) -> Result<()> {
-    let artifacts = PathBuf::from(env::var("FIREFOX_NATIVE_ARTIFACTS")?);
-    fs::create_dir_all(&artifacts)?;
+fn codex_app_server_roundtrip(
+    home: &Path,
+    fixture: &Fixture,
+    browser: &Browser,
+    artifacts: &Path,
+) -> Result<()> {
+    fs::create_dir_all(artifacts)?;
+    let original_handle = browser.driver.handle()?;
     let mut app = AppServer::start(home)?;
     let a = app.chat(home)?;
     let b = app.chat(home)?;
@@ -926,11 +1132,14 @@ fn codex_app_server_roundtrip(home: &Path, fixture: &Fixture, browser: &Browser)
                 dom["count"] == "Count 1" && dom["message"] == "Codex app-server Linux package",
                 "Codex DOM readback: {dom}"
             );
-            capture_native(&browser.driver, &artifacts, 40, "codex-app-server-actions")?;
+            capture_native(&browser.driver, artifacts, 40, "codex-app-server-actions")?;
             verified = true;
         }
     }
     ensure!(verified, "Codex package work tab missing");
+    browser
+        .driver
+        .call("/window", json!({"handle":original_handle}))?;
     ensure!(
         app.raw(&b, "firefox_select_tab", json!({"tabId":tab}))?["isError"] == true,
         "Codex package chat isolation failed"

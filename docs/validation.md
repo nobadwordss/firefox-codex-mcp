@@ -1,5 +1,18 @@
 # Validation history
 
+Linux **0.4.3**: [RPM/DEB installation, ownership and recovery](linux-packages.md),
+[release downloads](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.3)
+and [exact-artifact verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/release-verification.json).
+The release record separates Ubuntu/Debian/Fedora package-manager lifecycle,
+installed-package Firefox/Codex app-server dispatch, and any isolated actual-model
+checks. App-server dispatch does not establish model selection or novice usability.
+No product installation is performed on the developer's personal Linux account.
+
+Linux 0.4.2: [published archive and release verification](linux-0.4.2-release-2026-11-17.json).
+Windows **0.5.0-beta.3**: [published ZIP and release verification](windows-beta3-release-2026-11-17.json).
+These earlier releases remain unchanged; Windows 10/11 desktop and SmartScreen
+acceptance remain pending. The records below retain their original scope.
+
 Windows 0.5.0-beta.2 preview: [published downloads](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2), [exact ZIP, public downloads and unchanged Linux stable verification](windows-beta2-release-2026-11-17.json).
 The earlier repair record below predates this publication and preserves its own CI scope.
 
