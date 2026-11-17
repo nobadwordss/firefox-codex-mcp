@@ -15,7 +15,8 @@ Signed artifact: `codex-work-tabs-0.4.1.xpi`.
 SHA256: `4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc`.
 
 Current source builds embed this artifact and compare every runtime file against
-it before packaging. The published helper stable release remains 0.4.0.
+it before packaging. Linux helper 0.4.1 is the English stable release. Windows
+remains a separate preview; Linux release status does not establish Windows desktop support.
 Permanent installation through Firefox's actual confirmation controls, restart,
 two profiles, chat continuity and irreversible revocation passed on Linux with
 Firefox 160. The English clean-home model task also passed. See

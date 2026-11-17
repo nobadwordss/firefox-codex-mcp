@@ -7,14 +7,13 @@ or CLI. You must be able to sign in to Codex. Rust, Node and the project source
 are not needed. Snap/Flatpak Firefox and other operating systems are outside
 this guide's verification scope.
 
-The English interface is prepared for the next preview build. The published
-stable 0.4.0 archive retains its earlier Korean controls; that archive has not
-been replaced. The historical [clean-home test record](linux-first-install-e2e-2026-11-17.json)
-identifies the exact package tested.
+**Linux 0.4.1 is the English stable release.** The installer and extension use
+English; this page describes their actual button labels. Windows remains a
+separate preview. Older release archives remain available unchanged.
 
 ## Extract and run setup
 
-1. Download the Linux x86_64 archive from [GitHub Releases](https://github.com/nobadwordss/firefox-codex-mcp/releases).
+1. [Download the Linux 0.4.1 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz).
 2. Use your file manager's **Extract** action to unpack the whole archive.
    Do not run setup from inside the archive.
 3. Open a terminal in the extracted folder and run:
@@ -69,9 +68,10 @@ no need to disable approvals or the sandbox to use this integration.
 
 ## Verification boundary
 
-The [English-default candidate record](english-default-e2e-2026-11-17.json) covers
-the next preview's English setup, extension and actual model task in an isolated
-home. It is a local unreleased build; the published stable archive is unchanged.
+The [0.4.1 release page](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1)
+provides checksums, GitHub build provenance and `release-verification.json` for
+the exact distribution. The earlier [English-default candidate record](english-default-e2e-2026-11-17.json)
+is retained as historical evidence and identifies its own package and test scope.
 
 The [2026-11-17 clean-home record](linux-first-install-e2e-2026-11-17.json) covers
 the public 0.4.0 archive extracted outside the repository. It started with no MCP,

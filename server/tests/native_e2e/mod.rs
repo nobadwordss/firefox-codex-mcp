@@ -263,6 +263,19 @@ fn installed(home: &Path, browser: &Browser) -> Result<()> {
             env::var_os("FIREFOX_SIGNED_XPI").is_some(),
             "UI install requires the signed XPI"
         );
+        let signed = env::var("FIREFOX_SIGNED_XPI")?;
+        let origin = url.split('#').next().context("manager origin")?;
+        let embedded = browser
+            .driver
+            .client
+            .get(format!("{origin}extension.xpi"))
+            .send()?
+            .error_for_status()?
+            .bytes()?;
+        ensure!(
+            embedded.as_ref() == fs::read(signed)?,
+            "Manager served a different signed XPI"
+        );
         if let Ok(out) = env::var("FIREFOX_NATIVE_ARTIFACTS") {
             fs::create_dir_all(&out)?;
             save_desktop_screenshot(&browser.driver, Path::new(&out), 0, "installer")?;

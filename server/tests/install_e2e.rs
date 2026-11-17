@@ -41,10 +41,14 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     let source = env::var_os("FIREFOX_SETUP_SERVER_BINARY")
         .unwrap_or_else(|| env!("CARGO_BIN_EXE_firefox-codex-mcp").into());
     let executable = Path::new(&source);
+    // A published older installer can seed this same disposable account, so
+    // the ordinary update checks also exercise a real release migration.
+    let upgrade_from = env::var_os("FIREFOX_UPGRADE_FROM_BINARY");
+    let initial = upgrade_from.as_deref().map(Path::new).unwrap_or(executable);
     // No Firefox profile must be needed for the default native connection.
     let saved_firefox = home.join("saved-firefox");
     fs::rename(&firefox, &saved_firefox)?;
-    let first = run(executable, &["--install"])?;
+    let first = run(initial, &["--install"])?;
     fs::rename(&saved_firefox, &firefox)?;
     ensure!(
         first.status.success(),
@@ -52,6 +56,8 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
         String::from_utf8_lossy(&first.stderr)
     );
     let installed = home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp");
+    let initial_version = run(&installed, &["--version"])?;
+    ensure!(initial_version.status.success());
     let config_once = fs::read_to_string(config.join("config.toml"))?;
     ensure!(config_once.contains(installed.to_str().context("Invalid install path")?));
     ensure!(!config_once.contains(executable.to_str().context("Invalid source path")?));
@@ -66,7 +72,7 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     ensure!(fs::metadata(wrapper)?.permissions().mode() & 0o777 == 0o700);
     let agents_once = fs::read_to_string(config.join("AGENTS.md"))?;
-    let second = run(&installed, &["--update"])?;
+    let second = run(executable, &["--update"])?;
     ensure!(
         second.status.success(),
         "{}",
@@ -74,6 +80,21 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     );
     ensure!(config_once == fs::read_to_string(config.join("config.toml"))?);
     ensure!(agents_once == fs::read_to_string(config.join("AGENTS.md"))?);
+    let installed_version = run(&installed, &["--version"])?;
+    let target_version = run(executable, &["--version"])?;
+    ensure!(installed_version.status.success() && target_version.status.success());
+    ensure!(installed_version.stdout == target_version.stdout);
+    ensure!(fs::read(&installed)? == fs::read(executable)?);
+    if upgrade_from.is_some() {
+        ensure!(
+            fs::read_to_string(config.join("skills/firefox-browser/SKILL.md"))?
+                .contains("Use this Firefox")
+        );
+        ensure!(fs::read_to_string(
+            home.join(".local/share/applications/firefox-codex-manager.desktop")
+        )?
+        .contains("Name=Firefox Codex Manager"));
+    }
     ensure!(
         config_once.contains("test-model")
             && config_once.contains("mcp_servers.other")
@@ -179,5 +200,22 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     let migrated = fs::read_to_string(config.join("config.toml"))?;
     ensure!(migrated.contains("--extension") && !migrated.contains("FIREFOX_MCP_PROFILE"));
     ensure!(run(executable, &["--uninstall"])?.status.success());
+    if let Some(out) = env::var_os("FIREFOX_UPGRADE_ARTIFACTS") {
+        fs::create_dir_all(&out)?;
+        fs::write(
+            Path::new(&out).join("upgrade-result.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "from":String::from_utf8(initial_version.stdout)?.trim(),
+                "to":String::from_utf8(installed_version.stdout)?.trim(),
+                "publishedSourceProvided":upgrade_from.is_some(),
+                "installedBinaryMatchesTarget":true,
+                "unrelatedConfigurationPreserved":true,
+                "englishSkillAndLauncher":upgrade_from.is_some(),
+                "repeatedInstallUpdateRemoval":true,
+                "userEditsPreserved":true,
+                "advancedModeMigration":true
+            }))?,
+        )?;
+    }
     Ok(())
 }

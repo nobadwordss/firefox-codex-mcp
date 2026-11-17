@@ -1,0 +1,272 @@
+{
+  "date": "2026-11-17",
+  "release": "0.4.1",
+  "scope": "English Linux x86_64 stable release; Windows remains a separate preview",
+  "buildCommit": "920795cb154f68feab20ef17f8a16872a7938d48",
+  "releaseBranch": "codex/linux-0.4.1",
+  "releaseUrl": "https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1",
+  "artifacts": {
+    "archive": "firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz",
+    "archiveSha256": "0b39ef35064773ce7ac224193598282921fb08cd733b8698f73eace029689683",
+    "binarySha256": "1a6fa77cea58b414f0b68c751b0b799dc50c85381c9d9b98081ea8007c5ad794",
+    "signedExtensionVersion": "0.4.1",
+    "signedExtensionSha256": "4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc",
+    "previousPublicArchiveSha256": "d762cdf73aff33d9e768ed7f073b156244cccbc9b4a8d84005a9929ecb1a16b3",
+    "build": {
+      "binarySha256": "1a6fa77cea58b414f0b68c751b0b799dc50c85381c9d9b98081ea8007c5ad794",
+      "commit": "920795cb154f68feab20ef17f8a16872a7938d48",
+      "runner": "Linux",
+      "target": "x86_64-unknown-linux-gnu",
+      "version": "0.4.1"
+    }
+  },
+  "workflows": {
+    "checks": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44010286123",
+    "linuxDistribution": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44010285931"
+  },
+  "checks": {
+    "sourceAndExtractedUbuntuInstallUpdateRemoval": "passed",
+    "rustfmt": "passed",
+    "clippyWarningsDenied": "passed",
+    "rustUnitTests": 25,
+    "rustProcessTests": 1,
+    "javascriptTests": 64,
+    "checksums": "passed",
+    "provenance": "Verified against exact source commit, refs/heads/codex/linux-0.4.1 and .github/workflows/package.yml",
+    "servedExtensionMatchesSignedReleaseAsset": "passed byte-for-byte in actual manager E2E"
+  },
+  "environment": {
+    "build": "GitHub ubuntu-22.04, x86_64-unknown-linux-gnu",
+    "runtime": "Fedora Linux 45 x86_64",
+    "firefox": "160.0, headless disposable profiles",
+    "codex": "Native 0.169.0-alpha.11.1 CLI, actual model task",
+    "model": "CLI default; not pinned or overridden",
+    "geckodriver": "0.36.0"
+  },
+  "upgrade": {
+    "advancedModeMigration": true,
+    "englishSkillAndLauncher": true,
+    "from": "Firefox Codex MCP 0.4.0",
+    "installedBinaryMatchesTarget": true,
+    "publishedSourceProvided": true,
+    "repeatedInstallUpdateRemoval": true,
+    "to": "Firefox Codex MCP 0.4.1",
+    "unrelatedConfigurationPreserved": true,
+    "userEditsPreserved": true
+  },
+  "nativeInstallRestartAndProfiles": {
+    "firstInstall": true,
+    "multiProfile": true,
+    "offlineNoFallback": true,
+    "permanentSignedRestartVerified": true,
+    "restartReconnect": true,
+    "signedInstallUi": true,
+    "temporaryAddonReloaded": false,
+    "twoChats": true
+  },
+  "chatContinuityAndRevocation": {
+    "crossChatDenied": true,
+    "detachedToolbarRevoke": true,
+    "independentFormStateReadback": true,
+    "lateEofIsolation": true,
+    "overlapFencing": true,
+    "restartDoesNotRestoreAccess": true,
+    "revokeIrreversible": true,
+    "sameTabAcrossProcesses": true,
+    "signed": true,
+    "staleSnapshotRejected": true
+  },
+  "firstRun": {
+    "actualCodexModel": {
+      "answer": "Clicked Count 0 exactly once and entered observation code `277f23c4` in Message. Confirmed the page displays “Count 1” and “Count updated to 1”.",
+      "approvalMode": "approve-for-me (automatic review)",
+      "calls": [
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_open_tab"
+        },
+        {
+          "error": null,
+          "failureContent": [
+            {
+              "text": "Only owned HTTP(S) tabs can be controlled",
+              "type": "text"
+            }
+          ],
+          "isError": null,
+          "server": "firefox",
+          "status": "failed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_tabs"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_click"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_type"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        }
+      ],
+      "completed": true,
+      "installedSkillRead": true,
+      "mcpConfigurationOverridden": false,
+      "toolNamedInPrompt": false
+    },
+    "automaticRegistration": {
+      "guidance": true,
+      "mcp": true,
+      "nativeHost": true,
+      "skill": true
+    },
+    "elapsedSeconds": 35.348396429,
+    "extensionPopup": {
+      "language": "en",
+      "status": "Connected. Codex can open its own work tabs."
+    },
+    "independentDomReadback": {
+      "code": "277f23c4",
+      "count": "Count 1",
+      "input": "277f23c4",
+      "status": "Count updated to 1"
+    },
+    "initialState": {
+      "guidance": false,
+      "mcp": false,
+      "nativeHost": false,
+      "skill": false
+    },
+    "instrumentation": "Headless Firefox with Marionette; normal installer and Firefox permission controls",
+    "login": "read-only mount",
+    "packageOnly": true,
+    "registrationVerified": true,
+    "scriptLaunchedManagerAndFirefox": true,
+    "setupLanguage": "en",
+    "signedExtensionInstalledThroughFirefoxPrompts": true,
+    "status": "passed"
+  },
+  "isolation": {
+    "credentialsCopied": false,
+    "filesChecked": [
+      ".codex/config.toml",
+      ".codex/AGENTS.md",
+      ".codex/skills/firefox-browser/SKILL.md",
+      ".codex/auth.json",
+      ".mozilla/native-messaging-hosts/firefox_codex_mcp.json",
+      ".local/lib/firefox-codex-mcp/firefox-codex-mcp",
+      ".local/lib/firefox-codex-mcp/native-host",
+      ".config/mozilla/firefox/profiles.ini",
+      ".mozilla/firefox/profiles.ini"
+    ],
+    "loginMountedReadOnly": true,
+    "originalSettingsUnchanged": true,
+    "realHomeHidden": true,
+    "systemReadOnly": true,
+    "testAccountRemovedOnExit": true
+  },
+  "observations": [
+    "The first snapshot returned Only owned HTTP(S) tabs can be controlled while the new page was becoming ready. The model recovered through firefox_tabs and a fresh snapshot; all independently checked browser effects passed. This retry is retained in the trace above."
+  ],
+  "review": {
+    "reviewer": "Gemini",
+    "status": "Advisory review, not independent execution",
+    "acceptedChecks": [
+      "Upgrade from published 0.4.0",
+      "Exact signed XPI embedded and served by the release helper",
+      "Default main README points to live release assets; anonymous download checked after publication"
+    ]
+  },
+  "harness": {
+    "baseCommit": "a5f1f5b3054e698b283fd57d21e39f0998796911",
+    "installE2eSha256": "baa518fad26ec5571f968a93518dbd85bb6ef222a8db5f3c296657f27564d37e",
+    "nativeE2eSha256": "963a09c6cddec0073cb7c139346c8c92e2ac92ac13d9f12fec568f9547b5e8bf",
+    "note": "Main regression harness extended with optional published-version upgrade and served-XPI byte comparison; production release bytes are the unchanged CI archive"
+  },
+  "limits": [
+    "Clean home with installed system prerequisites, not a fresh OS",
+    "Existing login mounted read-only; prerequisite installation or new-account sign-in not tested",
+    "Firefox permission controls invoked through headless/Marionette automation",
+    "Model CLI invocation used --approve-for-me automatic approval review; manual GUI approvals and a novice study are not claimed",
+    "Other Linux distributions, Snap/Flatpak Firefox, macOS, ARM64 and Android not validated",
+    "Windows 10/11 desktop, Windows actual model selection and SmartScreen remain unverified; no Windows assets published",
+    "No comparative execution or performance/security advantage over competing tools claimed"
+  ],
+  "publication": {
+    "status": "Published stable Latest release",
+    "checkedAtUtc": "2026-11-17T03:40:02.814Z",
+    "url": "https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1",
+    "isDraft": false,
+    "isPrerelease": false,
+    "latestApiTag": "v0.4.1",
+    "allSevenAssetsAnonymousHttp200": true,
+    "allPublicAssetBytesMatchVerifiedUploads": true,
+    "allPublishedChecksumsPassed": true,
+    "publicArchiveMatchesExecutedCiArchive": true,
+    "windowsAssetsPublished": false,
+    "note": "The release asset release-verification.json records pre-publication executable validation. This main-branch record adds successful public availability verification.",
+    "latestBadgeObserved": true
+  },
+  "relatedWindowsPreviewCi": {
+    "url": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44010285979",
+    "attempt1": "Extracted-distribution test failed at --repair with Windows sharing violation (os error 32) after uninstall",
+    "attempt2": "Source-build test failed at --repair with the same sharing violation",
+    "scope": "Recorded as a Windows preview follow-up. No Windows stable artifact is published or Windows desktop acceptance claimed by this Linux release."
+  },
+  "reproduceUpgrade": {
+    "FIREFOX_UPGRADE_FROM_BINARY": "/tmp/extracted-0.4.0/firefox-codex-mcp-0.4.0-linux-x86_64/firefox-codex-mcp",
+    "FIREFOX_SETUP_SERVER_BINARY": "/tmp/extracted-0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64/firefox-codex-mcp",
+    "FIREFOX_SETUP_CODEX_BINARY": "/absolute/path/to/codex",
+    "FIREFOX_UPGRADE_ARTIFACTS": "/tmp/upgrade-evidence",
+    "command": "cargo test --release --locked --test install_e2e -- --ignored --nocapture --test-threads=1"
+  },
+  "screenshots": [
+    "assets/linux-0.4.1-setup-2026-11-17.png",
+    "assets/linux-0.4.1-first-web-task-2026-11-17.png",
+    "assets/linux-0.4.1-extension-popup-2026-11-17.png",
+    "assets/linux-0.4.1-gemini-review-2026-11-17.jpg",
+    "assets/linux-0.4.1-published-release-2026-11-17.jpg"
+  ]
+}

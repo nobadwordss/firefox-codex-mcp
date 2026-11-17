@@ -4,9 +4,10 @@ The 0.5.0-beta.1 helper targets Windows 10 22H2 and Windows 11 x64 with ordinary
 desktop Firefox 140+. The extension stays at Mozilla-signed version 0.4.0.
 This is a preview, not a claim that Windows 10/11 desktop acceptance testing is complete.
 
-Current source builds prepare 0.5.0-beta.2 with English setup, diagnostics and
-the Mozilla-signed English extension 0.4.1. The published beta.1 archive and its
-0.4.0 extension are unchanged; the verification record below describes beta.1.
+Linux 0.4.1 is the English stable release with Mozilla-signed extension 0.4.1.
+It publishes no Windows installer. Windows remains a separate preview: the
+published beta.1 archive and its 0.4.0 extension are unchanged, and the verification
+record below describes beta.1. Windows source/CI builds are not a desktop stable release.
 
 ## Install, update and remove
 
@@ -100,6 +101,15 @@ Still required before a fully supported Windows desktop release:
   helper EXE is unsigned; never disable Windows security to install it.
 - Cross-user/session negative tests under real interactive accounts.
 - Store/MSIX Firefox, ARM64, WSL and elevated/mixed-user use are not validated.
+
+## Current preview follow-up
+
+The [Linux 0.4.1 release-branch Windows workflow](https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44010285979)
+failed at `--repair` after uninstall with a sharing violation (`os error 32`).
+The extracted-package run failed in the first attempt, and the source-build run
+failed on retry. The cause is not established. These failures remain a Windows
+preview follow-up; no Windows installer is published with Linux stable 0.4.1.
+Earlier successful Windows verification records retain their original scope.
 
 Linux's advanced BiDi mode remains Linux-only. A Windows Server CI pass must never
 be described as a Windows 10/11 desktop pass.

@@ -1,7 +1,10 @@
 # Validation history
 
-English defaults, next preview 0.5.0-beta.2: [isolated installation, actual model task and signed extension 0.4.1](english-default-e2e-2026-11-17.json).
-This is a local candidate build, not a replacement for the published stable archive.
+Linux stable 0.4.1: [release downloads](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1), [exact-archive verification and public download checks](linux-0.4.1-release-2026-11-17.json).
+The release publishes Linux x86_64 only; Windows retains its separate preview status.
+
+Historical English-default candidate: [isolated installation, actual model task and signed extension 0.4.1](english-default-e2e-2026-11-17.json).
+That record identifies the earlier local candidate; the stable release is verified separately above.
 
 Linux first installation: [public 0.4.0 archive, clean home and actual model task](linux-first-install-e2e-2026-11-17.json).
 Existing settings were hidden and only the login was mounted read-only. This is
@@ -10,7 +13,7 @@ distinct from a fresh OS or novice user study. See the [first-install guide](fir
 Windows 0.5.0-beta.1: [Windows Server installation, Codex–Firefox E2E and extracted ZIP](windows-e2e-2026-11-17.json).
 Windows 10/11 desktop, actual model tool selection and SmartScreen remain unverified.
 
-Stable 0.4.0: [chat continuity, actual desktop chats and signed extension](chat-continuity-e2e-2026-11-17.json).
+Previous stable 0.4.0: [chat continuity, actual desktop chats and signed extension](chat-continuity-e2e-2026-11-17.json).
 The historical notes below retain their original Korean text. The current default
 connection uses the Native Messaging extension.
 
