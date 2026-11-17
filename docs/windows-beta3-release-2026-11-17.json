@@ -1,0 +1,304 @@
+{
+  "date": "2026-11-17",
+  "release": "0.5.0-beta.3",
+  "status": "Published Windows prerelease; Windows desktop acceptance pending",
+  "buildCommit": "4e1a943191f53266052792c59112ee507ffb0bd6",
+  "workflows": {
+    "windows": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44038958722",
+    "note": "The root release record retains the exact checks/Linux run IDs; Windows archive provenance pins its own workflow and source."
+  },
+  "environment": {
+    "os": "Windows Server2022 x64 (GitHub windows-2022)",
+    "firefox": "160.0, headless disposable profiles",
+    "codex": "Official native Codex CLI/app-server; version not separately captured",
+    "modelCredentials": "None sent to CI; app-server dispatch is not model-driven verification"
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "msvcClippyWarningsDenied": "passed",
+    "windowsUnitTests": 31,
+    "javascriptTests": 72,
+    "sourceBuildE2ETests": 2,
+    "sourceBuildSeconds": 42.63,
+    "extractedZipE2ETests": 2,
+    "extractedZipSeconds": 35.86,
+    "actualRepairContentionCases": 4,
+    "checksums": "passed",
+    "githubProvenance": "Verified exact build commit, refs/heads/main, Windows workflow and hosted-runner policy",
+    "packagedGuideLinks": "Direct beta.3 URL present; relative README and Windows/management-guide targets exist in ZIP",
+    "signedExtension": "0.4.2; packaged XPI matches standalone signed bytes and source guard",
+    "noEmbeddedAuthenticodeCertificateTable": true
+  },
+  "sourceLifecycle": {
+    "firefoxVersion": "160.0",
+    "notVerified": [
+      "Windows 10 desktop",
+      "Windows 11 desktop",
+      "Codex desktop UI or live model dispatch",
+      "Authenticode and SmartScreen"
+    ],
+    "os": "Windows_NT",
+    "runner": "win22",
+    "signedExtension": "0.4.2",
+    "verified": [
+      "Unicode and spaces install",
+      "official Codex CLI MCP discovery",
+      "actual Codex app-server tool dispatch",
+      "normal Known Folders endpoint without MCP environment overrides",
+      "signed permanent extension",
+      "native messaging + named pipes",
+      "single-profile automatic selection",
+      "extension toolbar Settings in same Firefox profile",
+      "Settings excluded from work tabs",
+      "Settings update response after native reset",
+      "nonselected-profile Settings",
+      "Settings removal response and automatic service shutdown",
+      "read text and status",
+      "click and type",
+      "two-chat isolation",
+      "MCP replacement continuity",
+      "irreversible revoke",
+      "extension UI revoke and pause",
+      "two-profile selection and no offline fallback",
+      "update with running old EXE",
+      "Firefox restart",
+      "uninstall preserves unrelated settings"
+    ]
+  },
+  "extractedLifecycle": {
+    "firefoxVersion": "160.0",
+    "notVerified": [
+      "Windows 10 desktop",
+      "Windows 11 desktop",
+      "Codex desktop UI or live model dispatch",
+      "Authenticode and SmartScreen"
+    ],
+    "os": "Windows_NT",
+    "runner": "win22",
+    "signedExtension": "0.4.2",
+    "verified": [
+      "Unicode and spaces install",
+      "official Codex CLI MCP discovery",
+      "actual Codex app-server tool dispatch",
+      "normal Known Folders endpoint without MCP environment overrides",
+      "signed permanent extension",
+      "native messaging + named pipes",
+      "single-profile automatic selection",
+      "extension toolbar Settings in same Firefox profile",
+      "Settings excluded from work tabs",
+      "Settings update response after native reset",
+      "nonselected-profile Settings",
+      "Settings removal response and automatic service shutdown",
+      "read text and status",
+      "click and type",
+      "two-chat isolation",
+      "MCP replacement continuity",
+      "irreversible revoke",
+      "extension UI revoke and pause",
+      "two-profile selection and no offline fallback",
+      "update with running old EXE",
+      "Firefox restart",
+      "uninstall preserves unrelated settings"
+    ]
+  },
+  "sourceRepair": {
+    "cases": [
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "cleanup-exclusive-share",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      },
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "installer-byte-range",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      }
+    ]
+  },
+  "extractedRepair": {
+    "cases": [
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "cleanup-exclusive-share",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      },
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "installer-byte-range",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      }
+    ]
+  },
+  "artifact": {
+    "archive": "firefox-codex-mcp-0.5.0-beta.3-windows-x86_64.zip",
+    "archiveSha256": "9429296b933355ac3c1cb106dcde0d7d4acda4896be0c798e3720fea36d93a3c",
+    "binarySha256": "201536e334ca65372fe9b0d504f7a7f4ae45aa97f5874a1e24218bf2aed17244",
+    "signedExtensionSha256": "14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f",
+    "build": {
+      "binarySha256": "201536e334ca65372fe9b0d504f7a7f4ae45aa97f5874a1e24218bf2aed17244",
+      "commit": "4e1a943191f53266052792c59112ee507ffb0bd6",
+      "runner": "Windows",
+      "target": "x86_64-pc-windows-msvc",
+      "version": "0.5.0-beta.3"
+    },
+    "allArchiveChecksumsVerified": true,
+    "embeddedSignedXpiMatchesStandalone": true,
+    "packagedGuideLinksVerified": true,
+    "englishDefaultInstructions": true,
+    "embeddedAuthenticodeCertificateTable": false,
+    "publicReleasePublished": false
+  },
+  "releasePolicy": {
+    "prerelease": true,
+    "makeLatest": false,
+    "windowsAssetsOnly": true,
+    "linuxStable": "0.4.2",
+    "priorReleasesRemainUnchanged": true
+  },
+  "upgradeBoundary": {
+    "verified": "In-place update with active old EXEs, using a distinct payload overlay of this build; stale ownership revoked and unrelated settings preserved",
+    "notClaimed": "Actual published beta.2 receipt/EXE and signed0.4.1 extension upgraded to beta.3/0.4.2 on Windows"
+  },
+  "priorFailure": {
+    "id": 44034380201,
+    "jobId": 133873615426,
+    "url": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44034380201",
+    "sourceBuildE2E": "passed",
+    "extractedZipE2E": "failed",
+    "failure": "resume not applied",
+    "failureTime": "2026-11-17T06:55:36Z",
+    "artifactId": 14306961528,
+    "artifactSha256": "304e8f7ce6dc3fefa6d6657133a29c193c9fdf4383f0a107a129507f35bb4fb9"
+  },
+  "harnessFix": {
+    "file": "server/tests/windows_e2e.rs",
+    "description": "Wait for enabled rendered Pause/Resume action labels before subsequent toggle clicks, while retaining independent MCP enabled-state and revoked-tab assertions. Native enabled changes before async popup storage/rendering complete.",
+    "runtimeAndSignedExtensionChanged": false
+  },
+  "notVerified": [
+    "Windows 10 desktop",
+    "Windows 11 desktop",
+    "Codex desktop UI or live model dispatch",
+    "Authenticode and SmartScreen"
+  ],
+  "executionBoundary": "Windows Server automated source and extracted-package evidence; not Windows10/11 desktop, separate Codex desktop GUI, live model selection or SmartScreen acceptance.",
+  "publication": {
+    "id": 448294755,
+    "tag": "v0.5.0-beta.3",
+    "url": "https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.3",
+    "publishedAt": "2026-11-17T07:37:41Z",
+    "prerelease": true,
+    "latestAtVerification": false,
+    "assets": [
+      {
+        "name": "codex-work-tabs-0.4.2.xpi",
+        "size": 46139,
+        "digest": "sha256:14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f"
+      },
+      {
+        "name": "firefox-codex-mcp-0.5.0-beta.3-windows-x86_64.zip",
+        "size": 3330081,
+        "digest": "sha256:9429296b933355ac3c1cb106dcde0d7d4acda4896be0c798e3720fea36d93a3c"
+      },
+      {
+        "name": "provenance-verification.json",
+        "size": 14040,
+        "digest": "sha256:8f18343424a005b943995699bc1d6823603e4e94d33512a4154072ca97506368"
+      },
+      {
+        "name": "release-verification.json",
+        "size": 7464,
+        "digest": "sha256:69bb44cca5dc47afc5cf7503dd76574d944941918aa4d79a60c02432bff4c285"
+      },
+      {
+        "name": "SHA256SUMS",
+        "size": 574,
+        "digest": "sha256:581cf24738022bd4dab927ed9e7eb5688c9a102e8f8c394a16a6aca169a65148"
+      },
+      {
+        "name": "windows-attestation.jsonl",
+        "size": 11005,
+        "digest": "sha256:aa02b68cee09897cf97485038501d80f96488774cfb53d9ae5ba5937d27ffebb"
+      },
+      {
+        "name": "windows-evidence.zip",
+        "size": 400096,
+        "digest": "sha256:32edd7da5887462c2aa5846be9da2abc0893e9f5fdb4ac0d72180a4a704438dd"
+      }
+    ]
+  },
+  "anonymousVerification": {
+    "allAssetsHttp200AndSha256Matched": true,
+    "assets": [
+      {
+        "tag": "v0.5.0-beta.3",
+        "asset": "SHA256SUMS",
+        "httpStatus": 200,
+        "sha256": "581cf24738022bd4dab927ed9e7eb5688c9a102e8f8c394a16a6aca169a65148",
+        "anonymous": true
+      },
+      {
+        "tag": "v0.5.0-beta.3",
+        "asset": "windows-evidence.zip",
+        "httpStatus": 200,
+        "sha256": "32edd7da5887462c2aa5846be9da2abc0893e9f5fdb4ac0d72180a4a704438dd",
+        "anonymous": true
+      },
+      {
+        "tag": "v0.5.0-beta.3",
+        "asset": "release-verification.json",
+        "httpStatus": 200,
+        "sha256": "69bb44cca5dc47afc5cf7503dd76574d944941918aa4d79a60c02432bff4c285",
+        "anonymous": true
+      },
+      {
+        "tag": "v0.5.0-beta.3",
+        "asset": "windows-attestation.jsonl",
+        "httpStatus": 200,
+        "sha256": "aa02b68cee09897cf97485038501d80f96488774cfb53d9ae5ba5937d27ffebb",
+        "anonymous": true
+      },
+      {
+        "tag": "v0.5.0-beta.3",
+        "asset": "provenance-verification.json",
+        "httpStatus": 200,
+        "sha256": "8f18343424a005b943995699bc1d6823603e4e94d33512a4154072ca97506368",
+        "anonymous": true
+      },
+      {
+        "tag": "v0.5.0-beta.3",
+        "asset": "codex-work-tabs-0.4.2.xpi",
+        "httpStatus": 200,
+        "sha256": "14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f",
+        "anonymous": true
+      },
+      {
+        "tag": "v0.5.0-beta.3",
+        "asset": "firefox-codex-mcp-0.5.0-beta.3-windows-x86_64.zip",
+        "httpStatus": 200,
+        "sha256": "9429296b933355ac3c1cb106dcde0d7d4acda4896be0c798e3720fea36d93a3c",
+        "anonymous": true
+      }
+    ],
+    "latestTag": "v0.4.2"
+  },
+  "previousReleaseAssetsUnchanged": true,
+  "releaseArchiveRepacked": false,
+  "advisoryReview": {
+    "reviewer": "Gemini",
+    "scope": "Release/reset advisory review, not execution evidence",
+    "checks": [
+      "Actual previous Linux release upgrade and managed launcher migration",
+      "Live main README download URLs and anonymous public access",
+      "Project-local MCP overrides included in private local reset scope"
+    ]
+  }
+}
