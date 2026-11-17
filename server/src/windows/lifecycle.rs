@@ -601,8 +601,13 @@ fn cleanup(root: &Path, binaries: &[(PathBuf, String)]) -> Result<bool> {
     // interpolation, recursive directory deletion or execution-policy bypass.
     use base64::Engine;
     let quote = |v: &str| format!("'{}'", v.replace('\'', "''"));
+    // A Rust child of PowerShell 7 inherits its module path; Windows PowerShell
+    // 5.1 then tries loading incompatible Core modules. This worker needs only
+    // its own built-ins, so reset that path inside the child (not the user).
+    // https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_psmodulepath
     let script = format!(
         r#"
+$env:PSModulePath=[IO.Path]::Combine($PSHOME,'Modules');
 $root={root}; $base=[IO.Path]::GetDirectoryName($root);
 function Trace($message) {{if({debug}){{Add-Content -LiteralPath (Join-Path $base 'cleanup-test.log') -Value $message -Encoding UTF8}}}}
 Trace 'worker started';
