@@ -44,24 +44,45 @@ fn cmd(binary: &Path, root: &Path) -> Command {
 }
 fn run(binary: &Path, root: &Path, arg: &str) -> Result<String> {
     eprintln!("Windows lifecycle {arg}: {}", root.display());
-    let output = cmd(binary, root)
-        .arg(arg)
-        .stderr(Stdio::inherit())
-        .output()?;
-    ensure!(
-        output.status.success(),
-        "{arg} failed: {}",
-        String::from_utf8_lossy(&output.stderr)
+    let mut process = Process(
+        cmd(binary, root)
+            .arg(arg)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()?,
     );
+    let mut stdout = process.0.stdout.take().context("lifecycle stdout")?;
+    let (send, receive) = mpsc::channel();
+    thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let result = stdout.read_to_end(&mut bytes).map(|_| bytes);
+        let _ = send.send(result);
+    });
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let status = loop {
+        if let Some(status) = process.0.try_wait()? {
+            break status;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Lifecycle process did not exit: {arg}"
+        );
+        thread::sleep(Duration::from_millis(50));
+    };
+    ensure!(status.success(), "{arg} failed: {status}");
+    let output = receive
+        .recv_timeout(Duration::from_secs(2))
+        .context("Lifecycle exited but a descendant retained its output pipe")??;
     if matches!(arg, "--update" | "--uninstall") {
-        let result: Value = serde_json::from_slice(&output.stdout)?;
+        let result: Value = serde_json::from_slice(&output)?;
         ensure!(
             result["restartRequired"] != true,
             "Router reset failed: {result}"
         );
     }
     eprintln!("Windows lifecycle {arg}: complete");
-    Ok(String::from_utf8(output.stdout)?)
+    Ok(String::from_utf8(output)?)
 }
 fn installed(root: &Path) -> Result<PathBuf> {
     let r: Value = serde_json::from_slice(&fs::read(install_root(root)?.join("install.json"))?)?;

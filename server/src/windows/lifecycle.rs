@@ -600,7 +600,6 @@ fn cleanup(root: &Path, binaries: &[(PathBuf, String)]) -> Result<bool> {
     // scoped, encoded deletion after exit; no external script, elevation, shell
     // interpolation, recursive directory deletion or execution-policy bypass.
     use base64::Engine;
-    use std::os::windows::process::CommandExt;
     let quote = |v: &str| format!("'{}'", v.replace('\'', "''"));
     let script = format!(
         r#"
@@ -637,13 +636,36 @@ for($i=0;$i -lt 120;$i++){{
             .collect::<Vec<_>>(),
     );
     let system = std::env::var_os("SystemRoot").context("SystemRoot missing")?;
-    Command::new(PathBuf::from(system).join("System32/WindowsPowerShell/v1.0/powershell.exe"))
-        .args(["-NoProfile", "-NonInteractive", "-EncodedCommand", &encoded])
-        .creation_flags(0x08000000)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
+    let executable = PathBuf::from(system).join("System32/WindowsPowerShell/v1.0/powershell.exe");
+    // A cleanup worker must not keep the installer's redirected output pipe
+    // alive. Explicitly disable ALL handle inheritance, including non-stdio
+    // handles. It uses only its own files and needs no console or stdio.
+    use windows_sys::Win32::System::Threading::*;
+    let mut command = w::wide(format!(
+        "\"{}\" -NoProfile -NonInteractive -EncodedCommand {encoded}",
+        executable.display()
+    ));
+    let startup = STARTUPINFOW {
+        cb: std::mem::size_of::<STARTUPINFOW>() as u32,
+        ..Default::default()
+    };
+    let mut process = PROCESS_INFORMATION::default();
+    w::check(unsafe {
+        CreateProcessW(
+            w::wide(&executable).as_ptr(),
+            command.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
+            std::ptr::null(),
+            std::ptr::null(),
+            &startup,
+            &mut process,
+        )
+    })?;
+    let _process = w::Handle(process.hProcess);
+    let _thread = w::Handle(process.hThread);
     Ok(true)
 }
 pub fn repair() -> Result<Value> {
