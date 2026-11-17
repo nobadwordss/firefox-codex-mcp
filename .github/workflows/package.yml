@@ -28,8 +28,9 @@ jobs:
           npm install --global @openai/codex
           mkdir -p "$RUNNER_TEMP/package-inputs" linux-package-evidence
           chmod o+rx "$RUNNER_TEMP" "$RUNNER_TEMP/package-inputs"
-          CODEX_BINARY=$(find "$(npm root -g)" -type f -path '*/codex/codex' -executable -print -quit)
+          CODEX_BINARY=$(find "$(npm root -g)/@openai" -type f -name codex -executable -print -quit)
           test -n "$CODEX_BINARY"
+          test "$(od -An -N4 -tx1 "$CODEX_BINARY" | tr -d ' \n')" = 7f454c46
           cp "$CODEX_BINARY" "$RUNNER_TEMP/package-inputs/codex"
           chmod 755 "$RUNNER_TEMP/package-inputs/codex"
           echo "FIREFOX_SETUP_CODEX_BINARY=$RUNNER_TEMP/package-inputs/codex" >> "$GITHUB_ENV"

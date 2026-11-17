@@ -629,11 +629,18 @@ fn real_package_lifecycle_preserves_users_and_revokes_running_processes() -> Res
         "rpm"
     };
     let tool = checked(Command::new(package_tool).arg("--version"))?;
+    let dnf_version = if manager.format == "rpm" {
+        Some(String::from_utf8(
+            checked(Command::new("dnf").arg("--version"))?.stdout,
+        )?)
+    } else {
+        None
+    };
     fs::write(
         evidence.join(format!("{}-lifecycle.json", manager.format)),
         serde_json::to_vec_pretty(&json!({
             "format":manager.format,"sourceVersion":env!("CARGO_PKG_VERSION"),"osRelease":fs::read_to_string("/etc/os-release")?,
-            "packageTool":String::from_utf8_lossy(&tool.stdout),"baselinePackage":baseline.file_name(),"candidatePackage":candidate.file_name(),
+            "packageTool":String::from_utf8_lossy(&tool.stdout),"dnfVersion":dnf_version,"baselinePackage":baseline.file_name().map(|n|n.to_string_lossy()),"candidatePackage":candidate.file_name().map(|n|n.to_string_lossy()),
             "baselineDescription":"Same candidate source, package release 0; candidate release 1. No earlier public RPM/DEB is claimed.",
             "legacyPortableVersion":"0.4.2","legacyBinarySha256":sha(&fs::read(legacy)?),
             "verified":["actual package install","actual package release upgrade","actual package reinstall","two nonroot users","portable 0.4.2 migration","edited legacy payload preserved and disconnected","foreign user manifest refusal","foreign Codex registration refusal","no user binary copy","system native manifest and wrapper","unchanged unrelated TOML including args=[]","custom CODEX_HOME recovered from receipt without environment override","user Disconnect leaves package and other user","existing MCP denied after Disconnect","generation revokes active broker, native host, MCP and Settings","package removal leaves user settings untouched","offline portable Disconnect after package removal","modified skill and added rules preserved","idempotent Disconnect","remove then install","synthetic Firefox profile and login fixtures byte-identical"],

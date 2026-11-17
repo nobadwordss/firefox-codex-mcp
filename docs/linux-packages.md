@@ -46,8 +46,10 @@ Install newer signed XPIs in Firefox separately when the release calls for one.
 
 First open **Settings → Disconnect Codex** for each connected OS account. It
 revokes work-tab access and removes only that account's owned Codex configuration,
-skill and guidance. User edits are preserved and reported. The system program
-remains available for other accounts and for reconnecting later.
+skill and guidance. Disconnect removes the entire owned Firefox MCP entry,
+including custom options inside that entry. Unrelated MCP entries, edits outside
+managed sections and modified managed files are preserved and reported. The system
+program remains available for other accounts and for reconnecting later.
 
 Then remove it with the software manager:
 
