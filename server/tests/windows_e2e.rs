@@ -17,11 +17,29 @@ const A: &str = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const B: &str = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const EXT: &str = "{a171de16-96b6-4e50-94b7-e0b54d94436a}";
 const UUID: &str = "5ee70e6e-5f96-4594-8ef0-ad9ef7a20bed";
+fn known_folders(root: &Path) -> bool {
+    root.join("use-known-folders").is_file()
+}
+fn install_root(root: &Path) -> Result<PathBuf> {
+    if known_folders(root) {
+        Ok(
+            PathBuf::from(env::var_os("LOCALAPPDATA").context("LOCALAPPDATA")?)
+                .join("FirefoxCodexMCP"),
+        )
+    } else {
+        Ok(root.join("helper"))
+    }
+}
 fn cmd(binary: &Path, root: &Path) -> Command {
     let mut c = Command::new(binary);
-    c.env("FIREFOX_MCP_INSTALL_ROOT", root.join("helper"))
-        .env("CODEX_HOME", root.join("codex"))
-        .env("FIREFOX_MCP_RUNTIME_DIR", root.join("runtime"));
+    c.env("CODEX_HOME", root.join("codex"));
+    if known_folders(root) {
+        c.env_remove("FIREFOX_MCP_INSTALL_ROOT")
+            .env_remove("FIREFOX_MCP_RUNTIME_DIR");
+    } else {
+        c.env("FIREFOX_MCP_INSTALL_ROOT", root.join("helper"))
+            .env("FIREFOX_MCP_RUNTIME_DIR", root.join("runtime"));
+    }
     c
 }
 fn run(binary: &Path, root: &Path, arg: &str) -> Result<String> {
@@ -34,7 +52,7 @@ fn run(binary: &Path, root: &Path, arg: &str) -> Result<String> {
     Ok(String::from_utf8(output.stdout)?)
 }
 fn installed(root: &Path) -> Result<PathBuf> {
-    let r: Value = serde_json::from_slice(&fs::read(root.join("helper/install.json"))?)?;
+    let r: Value = serde_json::from_slice(&fs::read(install_root(root)?.join("install.json"))?)?;
     Ok(PathBuf::from(
         r["executable"].as_str().context("installed exe")?,
     ))
@@ -152,9 +170,13 @@ impl Codex {
             serde_json::to_string(&root.join("helper"))?,
             serde_json::to_string(&root.join("runtime"))?
         );
+        let mut command = cmd(Path::new(&env::var("FIREFOX_SETUP_CODEX_BINARY")?), root);
+        command.arg("app-server");
+        if !known_folders(root) {
+            command.args(["-c", &isolation]);
+        }
         let mut process = Process(
-            cmd(Path::new(&env::var("FIREFOX_SETUP_CODEX_BINARY")?), root)
-                .args(["app-server", "-c", &isolation])
+            command
                 .current_dir(root)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -752,10 +774,50 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     drop(after_restart);
     drop(browser);
     run(&binary, &root, "--repair")?;
+    // Normal production endpoint: neither Firefox nor Codex gets an endpoint
+    // override. Only Codex's standard CODEX_HOME remains isolated for CI.
+    let normal = tempfile::tempdir()?;
+    fs::write(normal.path().join("use-known-folders"), b"1")?;
+    ensure!(
+        !install_root(normal.path())?.join("install.json").exists(),
+        "Disposable runner already has a normal installation"
+    );
+    let retained_selection = install_root(normal.path())?
+        .join("state/profiles.json")
+        .exists();
+    run(&binary, normal.path(), "--install")?;
+    let normal_browser = Browser::start(normal.path(), &normal.path().join("profile"))?;
+    normal_browser.call(
+        "/moz/addon/install",
+        json!({"path":env::var("FIREFOX_SIGNED_XPI")?,"temporary":false}),
+    )?;
+    if retained_selection {
+        normal_browser.goto(&format!("moz-extension://{UUID}/native/popup.html"))?;
+        let until = Instant::now() + Duration::from_secs(15);
+        while normal_browser
+            .script("return document.querySelector('#status').textContent;")?
+            .as_str()
+            .is_none_or(|v| !v.contains("연결됨"))
+        {
+            ensure!(Instant::now() < until, "normal profile reconnect");
+            thread::sleep(Duration::from_millis(100));
+        }
+        normal_browser.click("#choose")?;
+    }
+    let mut normal_mcp = Mcp::start(normal.path(), A)?;
+    normal_mcp.connected()?;
+    let normal_artifacts = artifacts.join("known-folders");
+    fs::create_dir_all(&normal_artifacts)?;
+    codex_roundtrip(normal.path(), &url, &normal_artifacts)?;
+    run(&binary, normal.path(), "--uninstall")?;
+    normal_mcp.denied("firefox_snapshot", json!({}))?;
+    drop(normal_mcp);
+    drop(normal_browser);
+    run(&binary, normal.path(), "--repair")?;
     fs::write(
         artifacts.join("result.json"),
         serde_json::to_vec_pretty(
-            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":"0.4.0","verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke and pause","two-profile selection and no offline fallback","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
+            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":"0.4.0","verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","normal Known Folders endpoint without MCP environment overrides","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke and pause","two-profile selection and no offline fallback","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
         )?,
     )?;
     Ok(())
