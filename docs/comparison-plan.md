@@ -18,11 +18,47 @@ Publish a comparative claim only with measurements that readers can reproduce.
 | [Foxhand](https://github.com/hamb1y/foxhand) | Native Messaging, Codex configuration, Windows/macOS/Linux helper installation, iframe-aware observation, uploads and rich-editor input | README review only |
 | [firefox-bridge](https://github.com/raychao-oao/firefox-bridge) | Signed extension, Codex integration, tab leases, native Windows and WSL setup | README review only |
 | [firefox-mcp](https://github.com/dh1011/firefox-mcp/blob/main/docs/how-it-works.md) | Per-app tab groups, connection approval/stop controls and selection of existing tabs | Design-document review only |
+| [Computer Use MCP](https://github.com/mirsella/computer-use-mcp/tree/b373e68e6273217d549097efdfbbee0b9fbd47d4) | KDE Wayland desktop control through AT-SPI, portals, PipeWire and EIS; foreground/private-background workers; packaged Rust executable, Codex plugin manifests and skill | Documentation and selected packaging/integration source reviewed at `b373e68e6273217d549097efdfbbee0b9fbd47d4` (2.2.0); not installed or executed |
 
 Do not infer that a competitor lacks cross-turn continuity merely because a
 README does not describe it. Record absent documentation as **unknown**.
 Our narrower refusal to adopt existing user tabs is a deliberate product policy;
 broader tools address different workflows. It is not a blanket security ranking.
+
+## Reference review: Computer Use MCP
+
+Reviewed the pinned [README](https://github.com/mirsella/computer-use-mcp/blob/b373e68e6273217d549097efdfbbee0b9fbd47d4/README.md),
+[MCP contract](https://github.com/mirsella/computer-use-mcp/blob/b373e68e6273217d549097efdfbbee0b9fbd47d4/MCP.md),
+[security boundaries](https://github.com/mirsella/computer-use-mcp/blob/b373e68e6273217d549097efdfbbee0b9fbd47d4/SECURITY.md)
+and [architecture](https://github.com/mirsella/computer-use-mcp/blob/b373e68e6273217d549097efdfbbee0b9fbd47d4/ARCHITECTURE.md)
+on 2026-11-17. Its reported smoke-test results remain the author's evidence;
+we did not reproduce them. Useful ideas for our installation work are:
+
+- Bundle discovery and guidance. Its [package manifest](https://github.com/mirsella/computer-use-mcp/blob/b373e68e6273217d549097efdfbbee0b9fbd47d4/package.json)
+  ships the native executable, MCP/plugin manifests and skill together. Consider
+  an optional Codex plugin path after verifying host support. Our RPM/DEB still
+  needs Firefox's native-host registration and per-account Connect; a plugin
+  cannot replace those requirements.
+- Diagnose before requesting access. Its documented `doctor` checks prerequisites
+  and session binding without portal consent, while `init` requests approval.
+  Keep our setup diagnostics read-only and distinguish configuration checks from
+  a successful first web task, with a concrete recovery step for each failure.
+- Recover a missing graphical environment narrowly. Its [host entrypoint](https://github.com/mirsella/computer-use-mcp/blob/b373e68e6273217d549097efdfbbee0b9fbd47d4/host/mcp-server)
+  fills only missing allowlisted values from the user service manager, bounds
+  the lookup to five seconds and replaces the shell with the server. This is a
+  reference for testing Firefox launch from service-started hosts, not a reason
+  to import the entire environment or alter the user's session.
+- Keep authority and recovery explicit. The documents describe generation-bound
+  IDs, retiring revoked workers and distinguishing blocked dispatch from uncertain
+  outcomes. Compare those boundaries with our revoke/reconnect tests; never
+  automatically replay an action whose effect is unknown.
+
+Its desktop/session routing and portal approvals are different authorities from
+our Firefox chat-owned work tabs. AT-SPI access can occur without a portal prompt;
+portal consent covers a session rather than each call. Private desktop routing
+is documented as cooperative same-user separation. Per-chat browser continuity,
+setup usability, performance and comparative security remain unmeasured here.
+This review does not expand our product into desktop-wide control.
 
 ## Equal test conditions
 
