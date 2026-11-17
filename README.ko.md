@@ -12,11 +12,11 @@ Codex가 사용 중인 Firefox의 로그인 상태로 **자신의 작업 탭을 
 기본 연결은 Firefox 확장 + 로컬 연결 프로그램입니다. 코드·토큰·프로필 경로를 입력하거나
 탭마다 허용할 필요가 없습니다. 기존 WebDriver BiDi 방식은 고급 옵션으로 유지합니다.
 
-**다음 버전 0.5.0-beta.3은 아직 미배포입니다.** 별도의 Firefox 앱 메뉴 항목을 없애고
-일반 Firefox와 확장의 **Settings**에서 관리하도록 변경하고 있습니다. 로컬 연결 프로그램은
-OS 사용자별로 한 번 설치해야 하며 확장만으로 설치할 수는 없습니다.
-[새 관리 흐름](docs/firefox-only-management.md)을 참고하세요. 아래 다운로드 안내는
-기존 Linux **0.4.1**과 Windows **0.5.0-beta.2**를 설명하며 공개된 압축 파일은 변경하지 않습니다.
+**Linux 0.4.2 정식판 · Windows 0.5.0-beta.3 프리뷰.** 처음 설치한 뒤에는 일반 Firefox의
+**Codex Work Tabs → Settings**에서 관리합니다. 별도 Firefox 앱 메뉴 항목이나 전용 프로필을
+만들지 않습니다. 로컬 연결 프로그램은 OS 사용자별로 한 번 설치해야 하며 확장만으로 설치할
+수는 없습니다. [관리 안내](docs/firefox-only-management.md)를 참고하세요. 과거 배포 파일은
+변경하지 않고 그대로 남깁니다.
 
 ```text
 Codex 채팅 A ─ MCP stdio ─┐                       ┌─ A의 새 작업 탭
@@ -31,11 +31,11 @@ Linux x86_64의 일반 Firefox 140+와 로컬 Codex 앱/CLI가 필요합니다.
 패키지는 Rust·Node 설치 없이 실행됩니다. Ubuntu 22.04(glibc 2.35) 이상 대상이며
 Windows는 아래 별도 프리뷰를 제공합니다. macOS, Snap/Flatpak, Android는 검증하지 않았습니다.
 
-**0.4.1은 영문 Linux 정식판입니다.** 설치 화면·확장·진단은 영어이며 Windows는 별도
-프리뷰로 유지합니다. [릴리스 안내·체크섬·검증 기록](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1)을 함께 제공합니다.
+**0.4.2는 영문 Linux 정식판입니다.** 설치 화면·확장·진단은 영어이며 Windows는 별도
+프리뷰로 유지합니다. [릴리스 안내·체크섬·검증 기록](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.2)을 함께 제공합니다.
 
 1. Codex를 열어 로그인할 수 있는지 확인하고 일반 Firefox를 준비합니다.
-2. [Linux 0.4.1 압축 파일](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz)을 받아 압축을 완전히 풉니다. 풀린 폴더에서 **여기서 터미널 열기**를 선택해 `./install.sh`를 실행합니다. 파일 관리자에서 스크립트 실행을 지원하면 직접 실행해도 됩니다.
+2. [Linux 0.4.2 압축 파일](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.2/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz)을 받아 압축을 완전히 풉니다. 풀린 폴더에서 **여기서 터미널 열기**를 선택해 `./install.sh`를 실행합니다. 파일 관리자에서 스크립트 실행을 지원하면 직접 실행해도 됩니다.
 3. Firefox에 열린 관리 화면에서 **Install connection → Continue**를 누릅니다. MCP 등록과 브라우저 스킬·사용 지침은 설치기가 자동으로 넣으므로 따로 설정하지 않습니다.
 4. 같은 화면에서 **Add Codex Work Tabs to Firefox**를 누르고 Firefox의 설치·권한 안내를 확인합니다.
 5. 새 Codex 채팅에 다음처럼 요청합니다. `https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.`
@@ -44,7 +44,7 @@ Windows는 아래 별도 프리뷰를 제공합니다. macOS, Snap/Flatpak, Andr
 도구 사용 승인이 나오면 요청한 웹 작업인지 확인한 뒤 허용하세요.
 스크립트가 편집기로 열리거나 도구가 안 보이면 [처음 설치 안내](docs/first-install-linux.ko.md)를 확인하세요.
 
-Linux 0.4.1은 Mozilla가 서명한 영문 확장 `codex-work-tabs-0.4.1.xpi`를 포함합니다.
+Linux 0.4.2는 Mozilla가 서명한 영문 확장 `codex-work-tabs-0.4.2.xpi`를 포함합니다.
 아래는 기존 **0.4.0 연결 프로그램 + 확장**으로 확인한 검증 기록입니다.
 일반 Firefox의 영구 설치·재시작·다중 프로필을 검증했습니다.
 현재 개인 프로필의 실제 Codex 데스크톱 두 채팅에서 여러 턴에 걸쳐 동일 탭·문서·입력값이
@@ -69,30 +69,31 @@ Codex의 **컴퓨터 사용 목록**을 패치하지 않고 MCP로 연결합니�
 
 ## Windows 프리뷰
 
-[v0.5.0-beta.2](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)은
+[v0.5.0-beta.3](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.3)은
 Windows 10 22H2·Windows 11 x64와 일반 데스크톱 Firefox를 대상으로 합니다.
 자동 검증 환경은 Windows Server 2022이며, **Windows 10·11 데스크톱에서의 실제 검증은
 아직 완료하지 않았습니다.** [검증 범위](docs/windows-preview.md)를 확인하세요.
-설치 화면과 확장은 영어이며 Mozilla 서명 확장 **0.4.1**을 포함합니다.
-제거 직후 복구할 때 정리 프로세스의 파일 잠금과 충돌하던 문제도 수정했습니다.
+설치 화면과 확장은 영어이며 Mozilla 서명 확장 **0.4.2**를 포함합니다.
+확장의 Settings에서 관리하며, 연결 재설정 중에도 업데이트·제거 결과를 표시합니다.
+기존 제거·복구 파일 잠금 수정도 포함합니다.
 
 1. 공식 배포처에서 Codex와 Firefox를 설치합니다.
-2. [Windows beta.2 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip)을 받아 압축을 완전히 풀고 `firefox-codex-mcp.exe`를 더블클릭합니다. 관리자 권한으로 실행하지 않습니다.
+2. [Windows beta.3 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.3/firefox-codex-mcp-0.5.0-beta.3-windows-x86_64.zip)을 받아 압축을 완전히 풀고 `firefox-codex-mcp.exe`를 더블클릭합니다. 관리자 권한으로 실행하지 않습니다.
 3. 영어 관리 화면의 **Install connection → Continue**를 누릅니다.
 4. **Add Codex Work Tabs to Firefox**를 누르고 Firefox의 확장 설치를 확인합니다.
 5. 새 Codex 채팅에서 `https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.`처럼 요청합니다.
 
-코드·토큰·프로필 경로나 터미널 입력이 필요 없습니다. Mozilla 서명 확장 0.4.1을 포함합니다.
+코드·토큰·프로필 경로나 터미널 입력이 필요 없습니다. Mozilla 서명 확장 0.4.2를 포함합니다.
 **Windows 연결 프로그램의 Authenticode 서명은 없습니다.** SmartScreen의
 다운로드 설치 흐름은 미검증입니다. 보안 기능을 끄지 마세요. 차단된다면 서명 배포를
 기다리거나 소스를 검토해 직접 빌드해야 합니다.
 
 업데이트는 새 ZIP을 풀고 그 안의 EXE를 실행해 **Update connection**을 누릅니다.
-이어서 **Add Codex Work Tabs to Firefox**로 함께 제공된 서명 확장 0.4.1을 설치합니다.
+이어서 **Add Codex Work Tabs to Firefox**로 함께 제공된 서명 확장 0.4.2를 설치합니다.
 이전 작업 탭 접근은 해제되지만 결과 탭은 남습니다. 새 Codex 채팅에서 다시 시작하세요.
-제거는 **Windows 설정 → 앱 → Firefox Codex MCP →
-제거**에서 관리 화면을 연 뒤 **Remove connection**을 누릅니다. 관리 프로그램은 자동
-종료하며, 실행 파일 잠금 해제를 위해 기존 Codex 채팅을 닫아야 합니다. Firefox 프로필·로그인·
+점검·복구·제거는 일반 Firefox의 **Codex Work Tabs → Settings**에서 합니다.
+**Remove connection**을 누르면 제거됩니다. **Windows 설정 → 앱 → Firefox Codex MCP →
+제거**도 사용할 수 있습니다. 관리 프로그램은 자동 종료하며, 실행 파일 잠금 해제를 위해 기존 Codex 채팅을 닫아야 합니다. Firefox 프로필·로그인·
 결과 탭·무관한 설정은 보존합니다. 확장은 Firefox에서 별도로 제거합니다.
 BiDi는 Linux 전용이며 WSL·Store Firefox·ARM64·관리자/다른 계정 혼용은 검증 범위 밖입니다.
 
@@ -140,9 +141,9 @@ BiDi는 Linux 전용이며 WSL·Store Firefox·ARM64·관리자/다른 계정 �
 확장은 Firefox 부가 기능 관리자에서 업데이트/제거합니다. 직접 배포한 서명 XPI에는 별도의
 자동 업데이트 URL이 없으므로 새 서명 XPI 설치가 필요합니다. AMO 목록 배포는 추후 단계입니다.
 
-공개된 Linux 0.4.1에서는 앱 메뉴의 **Firefox Codex Manager**에서 진단·복구·제거할 수 있습니다.
-다음 버전은 이 항목을 없애고 확장의 **Settings**에서 관리합니다.
-[새 흐름과 이전 설치 처리](docs/firefox-only-management.md)를 참고하세요. 제거는 전역 MCP 등록과
+일반 Firefox의 **Codex Work Tabs → Settings**에서 진단·복구·제거할 수 있습니다.
+별도 앱 메뉴 실행기는 필요 없습니다. 연결 프로그램이나 확장이 없으면 압축을 푼 패키지의
+설치 파일을 다시 실행하세요. [관리와 이전 설치 처리](docs/firefox-only-management.md)를 참고하세요. 제거는 전역 MCP 등록과
 설치한 파일/관리 블록만 대상으로 하며 사용자 수정, Firefox 프로필·로그인·결과 탭은 보존합니다.
 기존 채팅을 종료하면 남아 있는 연결도 끝납니다. 확장은 별도로 제거하세요.
 설치 장부와 복구 정보는 `~/.local/state/firefox-codex-mcp/`입니다.
@@ -158,8 +159,9 @@ BiDi는 Linux 전용이며 WSL·Store Firefox·ARM64·관리자/다른 계정 �
 ```
 
 관리 화면 기본 선택은 확장입니다. 기존 BiDi 설치를 확장으로 바꾸려면 기본 설치를 실행하세요.
-공개된 Linux 버전에는 BiDi용 **Firefox (Codex connection)** 실행기가 있지만 다음 버전부터는
-제공하지 않습니다. 일반 확장 연결은 기존 Firefox만 실행하면 됩니다. 앱을 강제 종료하지 않습니다.
+디버깅용 앱 메뉴 실행기는 만들지 않습니다. 고급 BiDi 사용자는 작업을 저장하고 Firefox를 닫은 뒤
+`./install.sh --launch-firefox /absolute/profile`을 사용할 수 있습니다. 일반 확장 연결은 기존
+Firefox만 실행하면 됩니다. 앱을 강제 종료하지 않습니다.
 
 ## 개발·검증·패키징
 

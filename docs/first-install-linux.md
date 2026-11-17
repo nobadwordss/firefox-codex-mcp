@@ -7,18 +7,16 @@ or CLI. You must be able to sign in to Codex. Rust, Node and the project source
 are not needed. Snap/Flatpak Firefox and other operating systems are outside
 this guide's verification scope.
 
-**Linux 0.4.1 is the English stable release.** The installer and extension use
-English; this page describes their actual button labels. Windows remains a
-separate preview. Older release archives remain available unchanged.
-
-This guide covers that published **0.4.1 archive**. The unreleased
-**0.5.0-beta.3** source removes extra app-menu entries and adds management in the
-extension's **Settings**. See the [next-version management guide](firefox-only-management.md);
-it does not change the installation steps or verification evidence for 0.4.1.
+**Linux 0.4.2 is the English stable release.** The installer and signed extension
+use English; this page describes their actual button labels. Use ordinary Firefox
+and its existing profile, then manage the connection through the extension's
+**Settings**. No extra application-menu launcher or Firefox profile is installed.
+Windows remains a separate preview. Older release archives remain unchanged.
+See the [management guide](firefox-only-management.md).
 
 ## Extract and run setup
 
-1. [Download the Linux 0.4.1 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz).
+1. [Download the Linux 0.4.2 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.2/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz).
 2. Use your file manager's **Extract** action to unpack the whole archive.
    Do not run setup from inside the archive.
 3. Open a terminal in the extracted folder and run:
@@ -54,6 +52,19 @@ A new Firefox work tab and a successful link click confirm the connection.
 Review any tool approval request for the task you asked for. **Registered** in
 the setup page confirms configuration; the web task verifies actual tab control.
 
+## Everyday use and removal
+
+Use your normal Firefox. Open **Codex Work Tabs → Settings** for **Check setup**,
+**Repair** or **Remove connection**. Pause and revoke controls stay in the extension.
+Install the helper once per OS user; the extension cannot install it by itself.
+Remove the helper before removing the extension. If the helper cannot connect or
+the extension is already removed, rerun `./install.sh` from the extracted package
+for repair or removal. Firefox profiles, website logins and result tabs are preserved.
+
+To update, open setup from the newer package, choose **Update connection**, then
+install that package's signed extension too. Direct-distribution XPIs have no
+automatic update channel. Start a new Codex chat after updating.
+
 ## Troubleshooting
 
 | What you see | What to check |
@@ -73,10 +84,12 @@ no need to disable approvals or the sandbox to use this integration.
 
 ## Verification boundary
 
-The [0.4.1 release page](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1)
+The [0.4.2 release page](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.2)
 provides checksums, GitHub build provenance and `release-verification.json` for
-the exact distribution. The earlier [English-default candidate record](english-default-e2e-2026-11-17.json)
-is retained as historical evidence and identifies its own package and test scope.
+the exact distribution. The [Firefox management source-preparation record](firefox-only-management-e2e-2026-11-17.json)
+records its own source builds, signed-extension checks and clean-home actual-model
+run. Release verification identifies the final archive separately. Earlier
+[English-default candidate evidence](english-default-e2e-2026-11-17.json) is historical.
 
 The [2026-11-17 clean-home record](linux-first-install-e2e-2026-11-17.json) covers
 the public 0.4.0 archive extracted outside the repository. It started with no MCP,

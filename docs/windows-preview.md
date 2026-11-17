@@ -1,23 +1,20 @@
 # Windows preview: installation and verification boundary
 
-The [0.5.0-beta.2 English preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)
+The [0.5.0-beta.3 English preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.3)
 targets Windows 10 22H2 and Windows 11 x64 with ordinary desktop Firefox 140+.
-It includes Mozilla-signed English extension 0.4.1 and the repair lock fix below.
-This is a preview, not a claim that Windows 10/11 desktop acceptance testing is complete.
+It includes Mozilla-signed English extension 0.4.2 and management through
+**Codex Work Tabs → Settings** in your normal Firefox. No extra launcher or
+Firefox profile is needed. This is a preview, not a claim that Windows 10/11
+desktop acceptance testing is complete.
 
-Linux 0.4.1 is the English stable release with Mozilla-signed extension 0.4.1.
-It publishes no Windows installer. Windows remains a separate preview: the
-beta.2 download has its own release page. The earlier beta.1 archive and its 0.4.0
-extension remain available unchanged as historical releases.
-
-This page's download steps and verification evidence cover published **beta.2**.
-The unreleased **0.5.0-beta.3** source moves routine management into the
-extension's **Settings**. See the [next-version management guide](firefox-only-management.md).
-No beta.3 download or Windows desktop acceptance result is claimed here.
+Linux 0.4.2 is the separate English stable release with the same signed extension.
+It publishes no Windows installer. GitHub Latest points to Linux; use the
+Windows-specific download below. Earlier Linux 0.4.1 and Windows beta.1/beta.2
+archives remain unchanged. See the [management guide](firefox-only-management.md).
 
 ## Install, update and remove
 
-[Download the Windows beta.2 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip)
+[Download the Windows beta.3 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.3/firefox-codex-mcp-0.5.0-beta.3-windows-x86_64.zip)
 and fully extract it. Use this Windows-specific link; GitHub Latest remains the
 Linux stable release. Double-click
 `firefox-codex-mcp.exe` as your normal Windows user. Keep the bundled license notices
@@ -31,8 +28,11 @@ Codex even when its command-line executable is not on PATH.
 
 The manager falls back to your default browser if it cannot locate Firefox. Install
 desktop Firefox from Mozilla, then reopen setup in Firefox to install the extension.
-In the English extension, **Use this Firefox** selects that profile, **Pause**
-pauses control and **Revoke all tab access** revokes all work tabs.
+Install the helper once per Windows user; the extension cannot install it alone.
+After setup, use ordinary Firefox. Open **Codex Work Tabs → Settings** for checks,
+repair and removal. In the English extension, **Pause** pauses control and
+**Revoke all tab access** revokes all work tabs. A single connected profile is
+selected automatically; **Use this Firefox** appears when a profile choice is needed.
 
 The helper EXE is not Authenticode-signed, and its downloaded-file SmartScreen
 flow is unverified. Do not disable Windows security to install the preview. If
@@ -41,12 +41,15 @@ blocked, wait for signed delivery or review/build the source.
 Download and extract a newer ZIP, then open its EXE to update. Executing an older downloaded EXE
 installs that version, so choose the intended release. Choose **Update connection**,
 then **Add Codex Work Tabs to Firefox** to install the bundled signed extension
-0.4.1 too. Direct-distribution XPIs have no automatic update channel. Updates
+0.4.2 too. Direct-distribution XPIs have no automatic update channel. Updates
 release previous work-tab access while leaving result tabs open; start a new chat afterwards.
-Windows Settings → Apps →
-Firefox Codex MCP → Uninstall opens the manager; choose **Remove connection**.
-The manager exits after a successful removal. Remove the Firefox extension
-separately if desired. Profiles, logins and visible result tabs remain intact.
+To remove the helper, open the extension's **Settings → Remove connection**.
+Windows Settings → Apps → Firefox Codex MCP → Uninstall is also available.
+The setup service exits after successful removal. Then remove the Firefox
+extension separately if desired. Profiles, logins and visible result tabs remain intact.
+If the extension was already removed or the helper cannot connect, reopen the
+extracted package's EXE for repair or removal. Removing the add-on alone leaves
+the helper and Codex registration.
 
 Running Codex chats can keep old EXEs locked. Removal retries unchanged payload
 deletion for up to four minutes. Close those chats promptly; if a file is still
@@ -104,10 +107,13 @@ chats, and uses its `mcpServer/tool/call` API to exercise Firefox. It does not u
 mock MCP server. It also does not prove model-driven tool selection or the Windows
 Codex desktop UI: no live model/API account is sent to CI.
 
-The [beta.2 release page](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)
+The [beta.3 release page](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.3)
 provides the exact ZIP, `SHA256SUMS`, provenance and `release-verification.json`.
-The [repair regression record](windows-repair-e2e-2026-11-17.json) separately
-retains the fix's original source-build and extracted-ZIP test evidence.
+The [Firefox management preparation record](firefox-only-management-e2e-2026-11-17.json)
+retains the earlier source/ZIP checks and failures that led to the Settings lifetime
+fix. Final release verification identifies its exact archive separately.
+The historical [repair regression record](windows-repair-e2e-2026-11-17.json)
+retains beta.2's original lock-fix evidence.
 
 The historical [beta.1 verification record](windows-e2e-2026-11-17.json) links its
 successful workflow commit and artifacts. Source-build and extracted-ZIP E2E both passed
@@ -123,6 +129,19 @@ Still required before a fully supported Windows desktop release:
   helper EXE is unsigned; never disable Windows security to install it.
 - Cross-user/session negative tests under real interactive accounts.
 - Store/MSIX Firefox, ARM64, WSL and elevated/mixed-user use are not validated.
+
+## Settings during update and removal
+
+Beta.3 opens Settings in the Firefox profile that requested it. The page is
+outside chat-owned work tabs. Its update/removal response completes even when
+the native connection resets. Source-build and extracted-ZIP tests exercise that
+boundary and management from a nonselected profile.
+
+Firefox closes a native host's Windows Job when its native connection ends.
+Only the Settings subprocess uses `CREATE_BREAKAWAY_FROM_JOB` so the bounded
+local setup service can finish its response. Broker/chat lifetime and revocation
+behavior are unchanged. This follows [Mozilla's native-app lifetime documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging#closing_the_native_app).
+It does not establish the Windows Codex desktop app's Job lifetime behavior.
 
 ## Setup lock recovery
 

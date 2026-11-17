@@ -16,10 +16,11 @@ instructions were provided for review.
 Signed artifact: `codex-work-tabs-0.4.2.xpi`.
 SHA256: `14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f`.
 
-Current source builds embed this artifact and compare all runtime files before
-packaging. Helper 0.5.0-beta.3 remains unreleased; published Linux 0.4.1 and
-Windows 0.5.0-beta.2 assets remain unchanged. Source/test approval is separate
-from a public release or Windows 10/11 desktop acceptance.
+Linux helper 0.4.2 stable and Windows helper 0.5.0-beta.3 preview embed this
+artifact. The package builder compares all runtime files before packaging.
+Earlier Linux 0.4.1 and Windows beta.2 assets remain unchanged. Source preparation
+and final archive verification are recorded separately. Windows Server CI does
+not establish Windows 10/11 desktop acceptance.
 
 ## 0.4.1 signed English build
 
@@ -32,8 +33,8 @@ Signed artifact: `codex-work-tabs-0.4.1.xpi`.
 SHA256: `4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc`.
 
 Published Linux helper 0.4.1 and Windows preview beta.2 embed this artifact.
-Linux helper 0.4.1 is the English stable release. Windows
-remains a separate preview; Linux release status does not establish Windows desktop support.
+Linux helper 0.4.1 was the previous English stable release. Windows remains a
+separate preview; Linux release status does not establish Windows desktop support.
 Permanent installation through Firefox's actual confirmation controls, restart,
 two profiles, chat continuity and irreversible revocation passed on Linux with
 Firefox 160. The English clean-home model task also passed. See
@@ -79,7 +80,8 @@ Reviewer notes:
 - No bundler, minifier, remote scripts, eval, telemetry, or external extension server.
 - JavaScript in the XPI is the source. Build: `zip -X` with an explicit runtime file list.
 - Native host: Rust executable, mode --native-host, permitted ID only, stdin/stdout
-  framing. Local router uses a same-UID private Unix socket; no network listener.
+  framing. The local router uses a same-user Unix socket or Windows named pipe.
+  Settings starts a token-protected loopback HTTP page; no remote server is used.
 - Native helper is needed once per OS user; the extension cannot install it.
 - The AI can create HTTP(S) work tabs using that Firefox profile's existing logins.
   Content scripts are injected only into these tabs; user tabs are not adopted.
@@ -89,5 +91,6 @@ Reviewer notes:
 - Ordinary MCP EOF retains host-identified chats for up to 24 hours idle; anonymous
   clients remain connection-scoped. Reattachment fences old commands and snapshots.
   Revoked tabs are never reclaimed. See docs/chat-continuity.md.
-- Supported release target: native Linux x86_64 Firefox 140+ and local Codex.
-  Snap, Flatpak, Windows and macOS are not validated by this package.
+- Stable target: native Linux x86_64 Firefox 140+ and local Codex. Windows x64
+  is a separate preview tested on Windows Server; Windows 10/11 desktop acceptance
+  remains pending. Snap, Flatpak and macOS are not validated.

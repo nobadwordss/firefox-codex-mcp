@@ -454,6 +454,20 @@ impl Browser {
         self.call(&format!("/element/{id}/click"), json!({}))?;
         Ok(())
     }
+    fn wait_toggle_label(&self, expected: &str) -> Result<()> {
+        let deadline = Instant::now() + Duration::from_secs(8);
+        loop {
+            let rendered = self.script("const button=document.querySelector('#toggle');return button?{text:button.innerText,disabled:button.disabled}:null;")?;
+            if rendered["text"] == expected && rendered["disabled"] == false {
+                return Ok(());
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "Extension toggle did not render {expected}: {rendered}"
+            );
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
     fn popup_script(&self, script: &str) -> Result<Value> {
         self.call("/execute/sync", json!({"script":r#"
             const {getMarionetteCommandsActorProxy} = ChromeUtils.importESModule('chrome://remote/content/marionette/actors/MarionetteCommandsParent.sys.mjs');
@@ -1067,6 +1081,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     browser.screenshot(&artifacts.join("extension-revoked.png"))?;
     let paused_tab = a.ok("firefox_open_tab", json!({"url":url}))?["tabId"].clone();
     snapshot(&mut a)?;
+    browser.wait_toggle_label("Pause")?;
     browser.click("#toggle")?;
     let until = Instant::now() + Duration::from_secs(8);
     while a.ok("firefox_status", json!({}))?["enabled"] != false {
@@ -1074,12 +1089,16 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
         thread::sleep(Duration::from_millis(100));
     }
     a.denied("firefox_snapshot", json!({}))?;
+    // Native state changes before async storage and popup rendering finish.
+    // Wait for the displayed action before asking the UI to resume control.
+    browser.wait_toggle_label("Resume")?;
     browser.click("#toggle")?;
     let until = Instant::now() + Duration::from_secs(8);
     while a.ok("firefox_status", json!({}))?["enabled"] != true {
         ensure!(Instant::now() < until, "resume not applied");
         thread::sleep(Duration::from_millis(100));
     }
+    browser.wait_toggle_label("Pause")?;
     a.denied("firefox_select_tab", json!({"tabId":paused_tab}))?;
     codex_roundtrip(&root, &url, &artifacts, &browser)?;
     // A different build payload rotates immutable paths while old MCP EXEs run.

@@ -1,13 +1,13 @@
 Firefox Codex MCP — Linux x86_64 (한국어 번역)
 
-다음 패키지 안내: 0.5.0-beta.3, 아직 미배포입니다.
-공개된 Linux 0.4.1 압축 파일은 변경하지 않으며 그 파일에 포함된 안내를 따릅니다.
+설치 안내: Linux 0.4.2 정식판.
+Mozilla 서명 확장 Codex Work Tabs 0.4.2를 포함합니다. 과거 배포 파일은 변경하지 않습니다.
 English instructions: INSTALL.txt. 한국어 설명: README.ko.md.
 설치 화면과 확장 버튼은 영어입니다. 아래 버튼 이름을 그대로 찾으세요.
 
 필요한 것: 일반 Linux Firefox 140+와 로컬 Codex 앱 또는 CLI.
 Rust/Node, 연결 코드/토큰/프로필 경로 입력은 필요 없습니다.
-Windows/macOS, Snap/Flatpak, Android는 지원 검증하지 않았습니다.
+Windows는 별도 프리뷰입니다. macOS, Snap/Flatpak, Android는 검증하지 않았습니다.
 
 처음 설치
 1. Codex를 열어 로그인할 수 있는지 확인하고 일반 Firefox를 준비합니다.
@@ -35,8 +35,8 @@ Windows/macOS, Snap/Flatpak, Android는 지원 검증하지 않았습니다.
 - 도구 승인이 차단됨: 관리자가 허용한 승인 절차를 사용하세요. 설치기는 승인 정책을 바꾸지 않습니다.
   비대화형 codex exec는 일반 채팅과 승인 방식이 다릅니다. 첫 사용은 Codex 앱 또는 대화형 CLI에서 확인하세요.
 
-공개된 Linux 0.4.1 첫 설치 안내: docs/first-install-linux.ko.md
-다음 버전 관리 안내: docs/firefox-only-management.md
+Linux 첫 설치 안내: docs/first-install-linux.ko.md
+Firefox 관리 안내: docs/firefox-only-management.md
 
 일상 사용과 관리
 기존 Firefox와 프로필을 그대로 사용합니다. 별도의 Firefox 앱 메뉴 항목이나

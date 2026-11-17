@@ -6,12 +6,12 @@ Let Codex open and use its own work tabs in your everyday Firefox profile, with
 your existing website logins. A Firefox extension and a small local Rust helper
 connect automatically: no pairing codes, tokens, profile paths, or per-tab setup.
 
-**Next release, unreleased 0.5.0-beta.3:** after initial setup, manage the connection
-from ordinary Firefox using the extension's **Settings**. No extra Firefox app-menu
-entries are installed. The helper still needs a one-time installation per OS user;
-the extension cannot install it by itself. See the [new management flow](docs/firefox-only-management.md).
-The download instructions below still describe published Linux **0.4.1** and
-Windows **0.5.0-beta.2**, whose archives are unchanged.
+**Linux 0.4.2 stable · Windows 0.5.0-beta.3 preview.** After initial setup, manage
+the connection from ordinary Firefox using **Codex Work Tabs → Settings**. No extra
+Firefox app-menu entries or separate profiles are installed. The helper needs a
+one-time installation per OS user; the extension cannot install it by itself.
+See the [management guide](docs/firefox-only-management.md). Older release archives
+remain available unchanged.
 
 ![Codex Work Tabs cursor](extension/icons/cursor-96.png)
 
@@ -29,12 +29,12 @@ The package runs without Rust or Node installed. It targets Ubuntu 22.04
 (glibc 2.35) or newer. Windows has a separate preview below. macOS,
 Snap/Flatpak Firefox and Android are not validated.
 
-**0.4.1 is the English Linux stable release.** Setup, extension controls and
-diagnostics use English. [Release notes, checksums and verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1)
+**0.4.2 is the English Linux stable release.** Setup, extension controls and
+diagnostics use English. [Release notes, checksums and verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.2)
 are available with the download. Windows remains a separate preview.
 
 1. Open Codex and check that you can sign in. Install ordinary desktop Firefox.
-2. [Download the Linux 0.4.1 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz) and fully extract it. Open a terminal in the extracted folder and run `./install.sh`. A file manager that supports running scripts can also launch it directly.
+2. [Download the Linux 0.4.2 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.2/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz) and fully extract it. Open a terminal in the extracted folder and run `./install.sh`. A file manager that supports running scripts can also launch it directly.
 3. In the local manager, choose **Install connection**, then **Continue**. The installer registers MCP and installs the browser skill and guidance automatically.
 4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's installation and permission prompts.
 5. Start a new Codex chat and ask: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
@@ -51,7 +51,7 @@ in the intended profile. An offline selected profile never silently falls back t
 
 The package includes a Mozilla-signed extension for permanent installation.
 This is an **unlisted, direct distribution**, not an AMO search listing.
-Linux 0.4.1 includes `codex-work-tabs-0.4.1.xpi`. Use the signed XPI bundled with
+Linux 0.4.2 includes `codex-work-tabs-0.4.2.xpi`. Use the signed XPI bundled with
 your package; `*-unsigned.xpi` is only for development/review.
 See [signing and release](packaging/SIGNING.md).
 
@@ -63,30 +63,31 @@ outside this local integration. Codex's built-in **Computer Use** list is not pa
 
 ## Windows preview
 
-The [0.5.0-beta.2 preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2)
+The [0.5.0-beta.3 preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.3)
 targets **Windows 10 22H2 / Windows 11 x64** with desktop Firefox. It is not yet a
 fully validated Windows desktop release: automated verification uses Windows
 Server 2022. See the exact [Windows verification scope](docs/windows-preview.md).
-This English preview includes Mozilla-signed extension **0.4.1** and fixes the
-file-lock collision when repair follows removal.
+This English preview includes Mozilla-signed extension **0.4.2**, extension-based Settings, and the
+repair lock fixes. Settings completes update/removal responses when the native
+connection resets.
 
 1. Install desktop Firefox and Codex from their official sources.
-2. [Download the Windows beta.2 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip) and fully extract it, then double-click `firefox-codex-mcp.exe`. Do not run as administrator.
+2. [Download the Windows beta.3 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.3/firefox-codex-mcp-0.5.0-beta.3-windows-x86_64.zip) and fully extract it, then double-click `firefox-codex-mcp.exe`. Do not run as administrator.
 3. Choose **Install connection**, then **Continue** in the local English setup page.
 4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's prompt.
 5. Start a new Codex chat and try: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
 
 No terminal, Rust, Node, pairing code, token or profile path is needed. The ZIP includes the EXE, dependency licenses and an SBOM. The helper is **not
-Authenticode-signed**. The extension is Mozilla-signed at version 0.4.1. We have not
+Authenticode-signed**. The extension is Mozilla-signed at version 0.4.2. We have not
 validated SmartScreen's downloaded-file flow. Do not disable Windows security to
 install the preview; if blocked, wait for signed delivery or review/build the source.
 
 Update by extracting the newer ZIP, opening its EXE and choosing **Update connection**.
-Then install the bundled signed extension 0.4.1 using **Add Codex Work Tabs to Firefox**.
+Then install the bundled signed extension 0.4.2 using **Add Codex Work Tabs to Firefox**.
 Previous work-tab access is released; result tabs stay open. Start a new Codex chat afterwards.
-Remove via **Windows Settings →
-Apps → Firefox Codex MCP → Uninstall**, then **Remove connection** in the manager.
-The manager exits after removal. Close old Codex chats to release locked program
+For checks, repair and removal, open **Codex Work Tabs → Settings** in your normal
+Firefox. Choose **Remove connection** there. **Windows Settings → Apps → Firefox
+Codex MCP → Uninstall** is also available. The setup service exits after removal. Close old Codex chats to release locked program
 files. Modified files and unrelated Codex settings are preserved; remove the
 extension separately in Firefox. See [installation details](docs/windows-preview.md).
 BiDi remains Linux-only; WSL, Store Firefox, ARM64 and elevated/mixed-user operation
@@ -153,10 +154,10 @@ running, but helper replacement releases old work-tab access. Install the matchi
 signed XPI to update the extension, then use a fresh Codex chat. Direct-distribution
 XPIs currently have no automatic update channel.
 
-For the published Linux 0.4.1 package, the app-menu entry **Firefox Codex Manager**
-provides diagnosis, recovery and removal. The unreleased next version removes
-that entry and puts management in the extension's **Settings** instead; see the
-[new flow and migration](docs/firefox-only-management.md).
+Open **Codex Work Tabs → Settings** in your ordinary Firefox for checks, repair
+and removal. No separate application launcher is needed. If the helper or
+extension is unavailable, reopen setup from the extracted package. See the
+[management and migration guide](docs/firefox-only-management.md).
 Removal targets registered MCP settings, installed files and managed blocks while
 preserving user edits, Firefox profiles, logins and result tabs. Remove the Firefox
 extension separately in Add-ons Manager. Local receipts and recovery state live
@@ -173,9 +174,10 @@ under `~/.local/state/firefox-codex-mcp/`.
 ```
 
 WebDriver BiDi remains an advanced option with connection-scoped ownership.
-Published Linux packages include a **Firefox (Codex connection)** debug launcher;
-the next version removes it. Normal extension use needs only ordinary Firefox.
-To migrate a BiDi installation, install the default extension connection.
+No debugging app-menu launcher is created. Advanced BiDi users can run
+`./install.sh --launch-firefox /absolute/profile` after saving their work and closing
+Firefox. To migrate a BiDi installation, install the default extension connection.
+Normal extension use needs only ordinary Firefox.
 
 ## Development and verification
 

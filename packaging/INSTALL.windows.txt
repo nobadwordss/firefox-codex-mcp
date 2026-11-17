@@ -1,12 +1,12 @@
 Firefox Codex MCP — English Windows preview
 
-Next package instructions: 0.5.0-beta.3, unreleased.
-The public 0.5.0-beta.2 ZIP is unchanged; use its own bundled instructions.
+Installation instructions: Windows 0.5.0-beta.3 preview.
+Includes Mozilla-signed Codex Work Tabs 0.4.2. Older release archives are unchanged.
 
 Target: Windows 10 22H2 and Windows 11, x86-64, desktop Firefox.
 Windows 10/11 desktop validation is pending. CI uses Windows Server.
-The helper EXE is not Authenticode-signed. Use the Mozilla-signed Firefox extension
-supplied with a completed release package; unsigned XPIs are for development only.
+The helper EXE is not Authenticode-signed. The bundled Firefox extension 0.4.2 is
+Mozilla-signed; unsigned XPIs are for development only.
 Do not disable SmartScreen, antivirus, or Windows security to install this preview.
 If Windows blocks it, use the source/build instructions or wait for signed delivery.
 
@@ -58,4 +58,4 @@ Microsoft Store Firefox, ARM64 and BiDi mode on Windows are not validated.
 
 Source, checksums, release provenance, verification limits and support:
 https://github.com/nobadwordss/firefox-codex-mcp
-Next-version management guide: docs/firefox-only-management.md
+Firefox management guide: docs/firefox-only-management.md

@@ -1,12 +1,25 @@
 # Changelog
 
-## 0.5.0-beta.3 — Unreleased
+## 0.5.0-beta.3 — Firefox management Windows preview — 2026-11-17
 
 - Use ordinary Firefox and its extension for day-to-day management, without extra application-menu launchers or a separate browser profile.
 - Open Settings in the requesting Firefox profile through a capability-checked native control, outside the MCP tool surface.
 - Hide redundant single-profile selection and keep pause/revoke controls in Mozilla-signed extension 0.4.2.
 - Retire receipt-owned old launchers and managed debugging preferences transactionally, preserving deletions, custom edits and original baselines.
-- Keep Linux 0.4.1 stable and Windows 0.5.0-beta.2 published assets unchanged. The one-time per-user native helper installation remains necessary.
+- Keep the Settings page alive while updating/removing the Windows native connection so its HTTP response completes.
+- Verify installation, running update, removal, repair locks and signed Firefox work from source and the extracted ZIP on Windows Server.
+- Keep Windows 10/11 desktop and SmartScreen acceptance pending. The one-time per-user helper installation remains necessary.
+- Preserve earlier Linux 0.4.1 and Windows beta.2 release files.
+
+## 0.4.2 — Firefox management Linux release — 2026-11-17
+
+- Manage the connection from ordinary Firefox through Codex Work Tabs → Settings.
+- Remove extra application-menu launchers and profile selection from normal setup.
+- Automatically use a single connected Firefox profile; retain explicit multi-profile choice and no offline fallback.
+- Include Mozilla-signed Codex Work Tabs 0.4.2 with pause, revoke and Settings controls.
+- Retire unchanged receipt-owned old launchers and managed debugging blocks while preserving user edits, deletions, profiles and logins.
+- Verify clean-home package installation, actual model browser work, chat continuity/revocation, signed Firefox restart and installer lifecycle.
+- Keep Windows a separate beta release and preserve prior release files.
 
 ## 0.5.0-beta.2 — English Windows preview — 2026-11-17
 

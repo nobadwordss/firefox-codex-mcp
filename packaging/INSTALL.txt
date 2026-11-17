@@ -1,7 +1,7 @@
 Firefox Codex MCP — Linux x86_64
 
-Next package instructions: 0.5.0-beta.3, unreleased.
-The public Linux 0.4.1 archive is unchanged; use its own bundled instructions.
+Installation instructions: Linux 0.4.2 stable.
+Includes Mozilla-signed Codex Work Tabs 0.4.2. Older release archives are unchanged.
 English instructions: README.md. Korean translation: README.ko.md and INSTALL.ko.txt.
 
 Requirements: ordinary Firefox 140+ and the local Codex app or CLI.
@@ -36,8 +36,8 @@ If something goes wrong
   Setup never changes approval policy. Non-interactive codex exec has different
   approval behavior; first try the Codex app or interactive CLI.
 
-Published Linux 0.4.1 first-install guide: docs/first-install-linux.md
-Next-version management guide: docs/firefox-only-management.md
+Linux first-install guide: docs/first-install-linux.md
+Firefox management guide: docs/firefox-only-management.md
 
 Everyday use and management
 Use your ordinary Firefox and its existing profile. No extra Firefox app-menu

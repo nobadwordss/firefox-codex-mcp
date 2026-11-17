@@ -1,13 +1,13 @@
 # Manage the connection in Firefox
 
-Development instructions for **0.5.0-beta.3, unreleased**. Public Linux **0.4.1**
-and Windows **0.5.0-beta.2** downloads remain unchanged. Follow their bundled
-instructions or the [Linux installation guide](first-install-linux.md) and
-[Windows preview guide](windows-preview.md) when using those releases.
+Instructions for **Linux 0.4.2 stable** and **Windows 0.5.0-beta.3 preview**.
+Use the [Linux installation guide](first-install-linux.md) or
+[Windows preview guide](windows-preview.md) for the correct download. Older
+Linux 0.4.1 and Windows beta.2 archives remain available unchanged.
 
-The source extension is **0.4.2**, approved and signed by Mozilla for unlisted
-distribution on 2026-11-17. Next-version packages are still unreleased; source,
-signed-install and platform verification are recorded separately. Linux clean-home
+Both packages include **Codex Work Tabs 0.4.2**, approved and signed by Mozilla
+for unlisted/direct distribution on 2026-11-17. Source preparation, final archive
+verification and platform scope are recorded separately. Linux clean-home
 installation and actual model work passed, as did Windows Server source-build
 and extracted-ZIP installation, update, removal and Firefox E2E. Windows 10/11
 desktop acceptance remains pending.
@@ -60,7 +60,7 @@ does not uninstall the helper or remove Codex's connection settings.
 
 ## Verified Firefox controls
 
-These screenshots show the signed 0.4.2 extension and unreleased beta.3 helper in
+These screenshots show the signed 0.4.2 extension and beta.3 candidate helper in
 a disposable Linux Firefox 160 profile. They are an automated integration check,
 not a first-time-user study or Windows desktop acceptance.
 
@@ -72,19 +72,20 @@ not a first-time-user study or Windows desktop acceptance.
 
 ## Existing installations
 
-The next installer removes its unchanged, previously managed **Firefox Codex
+The installer removes its unchanged, previously managed **Firefox Codex
 Manager** and **Firefox (Codex connection)** launchers. Modified launchers are
 preserved and reported rather than silently overwritten or deleted. Ordinary
 Firefox, its profile, logins and result tabs remain available.
 
 Older BiDi debugging installations are an advanced compatibility path. Install
 the default extension connection to use this Firefox-based management flow.
-The next installer does not create a debug launcher. Advanced BiDi users can use
+The installer does not create a debug launcher. Advanced BiDi users can use
 the helper's `--launch-firefox PROFILE` command after saving their work and closing
 Firefox; it is not part of normal installation.
 
-These are source-version instructions. They do not establish Windows 10/11
-desktop, SmartScreen or first-time-user acceptance. Verification records for
-earlier releases retain their original scope.
+These instructions do not establish Windows 10/11 desktop, SmartScreen or
+first-time-user acceptance. Source-preparation screenshots and tests retain their
+own candidate scope; each release supplies verification for its exact archive.
+Earlier release records retain their original scope.
 
 Verification and boundaries: [2026-11-17 record](firefox-only-management-e2e-2026-11-17.json).
