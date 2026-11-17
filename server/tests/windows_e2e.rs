@@ -44,12 +44,22 @@ fn cmd(binary: &Path, root: &Path) -> Command {
 }
 fn run(binary: &Path, root: &Path, arg: &str) -> Result<String> {
     eprintln!("Windows lifecycle {arg}: {}", root.display());
-    let output = cmd(binary, root).arg(arg).output()?;
+    let output = cmd(binary, root)
+        .arg(arg)
+        .stderr(Stdio::inherit())
+        .output()?;
     ensure!(
         output.status.success(),
         "{arg} failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+    if matches!(arg, "--update" | "--uninstall") {
+        let result: Value = serde_json::from_slice(&output.stdout)?;
+        ensure!(
+            result["restartRequired"] != true,
+            "Router reset failed: {result}"
+        );
+    }
     eprintln!("Windows lifecycle {arg}: complete");
     Ok(String::from_utf8(output.stdout)?)
 }

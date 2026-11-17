@@ -153,6 +153,11 @@ installation, choose the manager's default extension installation.
 
 ## Development and verification
 
+Our focus is predictable Codex chat ownership, continuity and revocation with
+reproducible checks. See the [comparison plan](docs/comparison-plan.md) for related
+projects and fair test criteria; no comparative performance or security advantage
+has been measured.
+
 Requires Rust 1.89+, Node 24+, and `zip`, `unzip`, `tar` for packaging.
 
 ```bash

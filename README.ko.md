@@ -1,5 +1,9 @@
 # Firefox Codex MCP
 
+제품의 초점은 Codex 채팅별 탭 격리·이어쓰기·철회와 쉬운 설치입니다.
+관련 도구와 [동일 조건 비교 계획](docs/comparison-plan.md)을 공개하며,
+아직 직접 측정하지 않은 성능·보안 우위를 주장하지 않습니다.
+
 [English](README.md) · **한국어**
 
 ![Codex Work Tabs 커서](extension/icons/cursor-96.png)

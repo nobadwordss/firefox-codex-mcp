@@ -333,11 +333,34 @@ fn install_binary(path: &Path, bytes: &[u8]) -> Result<()> {
     setup::write_atomic(path, bytes, 0o700)
 }
 fn reset(executable: &Path) -> bool {
-    Command::new(executable)
+    let Ok(mut child) = Command::new(executable)
         .arg("--extension-reset")
         .stdin(Stdio::null())
-        .output()
-        .is_ok_and(|v| v.status.success())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
+        .spawn()
+    else {
+        return false;
+    };
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return status.success(),
+            Ok(None) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(std::time::Duration::from_millis(50))
+            }
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return false;
+            }
+        }
+    }
+}
+fn trace(step: &str) {
+    if std::env::var_os("FIREFOX_MCP_WINDOWS_E2E").is_some() {
+        eprintln!("Windows removal: {step}");
+    }
 }
 pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
     ensure!(
@@ -471,6 +494,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
     )
 }
 pub fn uninstall() -> Result<Value> {
+    trace("open layout");
     let layout = Layout::open()?;
     recover(&layout)?;
     let Some(prior) = receipt()? else {
@@ -518,8 +542,15 @@ pub fn uninstall() -> Result<Value> {
         ))?),
     )?);
     changes.push(change(file(layout.receipt.clone()), None)?);
+    trace("commit registration removal");
     transact(&layout, changes)?;
+    trace("reset router");
     let reset_ok = reset(&std::env::current_exe()?);
+    trace(if reset_ok {
+        "router reset complete"
+    } else {
+        "router reset failed"
+    });
     let (deferred, cleanup_warning) = match cleanup(&layout.root, &prior.binaries) {
         Ok(pending) => (pending, None),
         Err(error) => (
@@ -529,6 +560,7 @@ pub fn uninstall() -> Result<Value> {
             )),
         ),
     };
+    trace("cleanup scheduled");
     Ok(
         json!({"removed":true,"preservedModifiedFiles":preserved,"deferredCleanup":deferred,"cleanupWarning":cleanup_warning,"restartRequired":!reset_ok,"nextStep":"Connection removed. Close this manager and existing Codex chats to release running files. Firefox, your profiles, logins and result tabs are preserved. Remove Codex Work Tabs separately in Firefox Add-ons. Unmodified program files are cleaned up after the manager exits; modified files are preserved."}),
     )

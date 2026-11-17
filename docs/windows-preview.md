@@ -31,6 +31,9 @@ locked, run a downloaded setup EXE with `--repair` after closing them. Recovery
 metadata and profile-selection state may remain under the user installation root.
 Changed files/registry values are preserved. Reinstalling cancels an old cleanup
 worker; it never recursively deletes the installation directory.
+If organizational policy blocks PowerShell, connection removal can still finish
+but deferred file cleanup may not run. Close the affected chats and use `--repair`
+from the extracted package; do not weaken that policy to remove the helper.
 
 ## Windows implementation
 
