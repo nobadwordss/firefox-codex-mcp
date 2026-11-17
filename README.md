@@ -81,7 +81,7 @@ Remove via **Windows Settings →
 Apps → Firefox Codex MCP → Uninstall**, then **Remove connection** in the manager.
 The manager exits after removal. Close old Codex chats to release locked program
 files. Modified files and unrelated Codex settings are preserved; remove the
-extension separately in Firefox. See [installation details](packaging/INSTALL.windows.txt).
+extension separately in Firefox. See [installation details](docs/windows-preview.md).
 BiDi remains Linux-only; WSL, Store Firefox, ARM64 and elevated/mixed-user operation
 are outside this preview's validation scope.
 
