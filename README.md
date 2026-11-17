@@ -190,7 +190,8 @@ Remove the extension separately in Firefox Add-ons Manager if desired.
 For the tar.gz fallback, run the newer archive's `install.sh` and choose **Update
 connection**; choose **Remove connection** in extension Settings to remove it.
 The following commands apply to that fallback. All paths preserve Firefox profiles,
-logins, result tabs and user edits. Install newer signed XPIs separately; direct
+logins, result tabs and unrelated settings. Disconnect removes the owned Firefox
+MCP entry, including custom options within it. Install newer signed XPIs separately; direct
 distribution currently has no automatic extension update channel.
 
 ```bash

@@ -15,6 +15,7 @@ use std::{
 };
 
 pub const EXECUTABLE: &str = "/usr/libexec/firefox-codex-mcp/firefox-codex-mcp";
+const DIRECTORY: &str = "/usr/libexec/firefox-codex-mcp";
 pub const MARKER: &str = "/usr/libexec/firefox-codex-mcp/installation.json";
 pub const NATIVE_HOST: &str = "/usr/libexec/firefox-codex-mcp/native-host";
 pub const MANIFESTS: [&str; 2] = [
@@ -170,14 +171,23 @@ impl Installation {
 
 /// Inspect the fixed package slot. A damaged slot never falls back to a user
 /// installation, which would hide the package manager's ownership from users.
-pub fn installed() -> Result<Option<Installation>> {
-    let path = Path::new(EXECUTABLE);
+fn package_slot_present(directory: &Path) -> Result<bool> {
     let present = |path: &Path| match fs::symlink_metadata(path) {
         Ok(_) => Ok(true),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(error) => Err(error),
     };
-    if !present(path)? && !present(Path::new(MARKER))? {
+    // Directory entries, including dangling symlinks, are evidence of a slot.
+    // An incomplete/failed package transaction must not create a competing
+    // portable install merely because its executable and marker are missing.
+    Ok(present(directory)?
+        || present(&directory.join("firefox-codex-mcp"))?
+        || present(&directory.join("installation.json"))?)
+}
+
+pub fn installed() -> Result<Option<Installation>> {
+    let path = Path::new(EXECUTABLE);
+    if !package_slot_present(Path::new(DIRECTORY))? {
         return Ok(None);
     }
     let marker = marker_at(Path::new(MARKER), 0)?;
@@ -220,6 +230,32 @@ pub fn current() -> Result<Option<Installation>> {
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn incomplete_or_dangling_package_slot_never_looks_uninstalled() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let directory = temp.path().join("package-slot");
+        assert!(!package_slot_present(&directory)?);
+        fs::create_dir(&directory)?;
+        assert!(package_slot_present(&directory)?);
+        for name in ["firefox-codex-mcp", "installation.json"] {
+            let link = directory.join(name);
+            std::os::unix::fs::symlink(temp.path().join("missing"), &link)?;
+            assert!(package_slot_present(&directory)?);
+            fs::remove_file(link)?;
+        }
+        fs::remove_dir(&directory)?;
+        std::os::unix::fs::symlink(temp.path().join("missing-directory"), &directory)?;
+        assert!(package_slot_present(&directory)?);
+        fs::remove_file(&directory)?;
+        assert!(!package_slot_present(&directory)?);
+
+        // A path traversal error must not be mistaken for a removed package.
+        let non_directory = temp.path().join("regular-file");
+        fs::write(&non_directory, b"not a directory")?;
+        assert!(package_slot_present(&non_directory.join("child")).is_err());
+        Ok(())
+    }
 
     #[test]
     fn validates_marker_schema_and_rejects_user_writable_parent() -> Result<()> {
