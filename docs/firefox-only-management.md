@@ -7,7 +7,10 @@ instructions or the [Linux installation guide](first-install-linux.md) and
 
 The source extension is **0.4.2**, approved and signed by Mozilla for unlisted
 distribution on 2026-11-17. Next-version packages are still unreleased; source,
-signed-install and platform verification are recorded separately.
+signed-install and platform verification are recorded separately. Linux clean-home
+installation and actual model work passed, as did Windows Server source-build
+and extracted-ZIP installation, update, removal and Firefox E2E. Windows 10/11
+desktop acceptance remains pending.
 
 ## Install once, then use ordinary Firefox
 

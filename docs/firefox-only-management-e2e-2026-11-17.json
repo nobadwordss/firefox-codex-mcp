@@ -1,7 +1,7 @@
 {
   "date": "2026-11-17",
-  "status": "Local verification and Linux CI passed; Windows Settings update fix passed; fixture-conflict regression corrected and full Windows rerun pending; helper unreleased",
-  "sourceCommit": "0118db0de46c6162a17ed6e794ea329232013479",
+  "status": "Implemented, committed to main and verified locally plus Linux/Windows Server CI; helper remains unreleased",
+  "sourceCommit": "7a9055261eb790fe7cdd4c9d5e8ecac18e50ddb2",
   "helperVersion": "0.5.0-beta.3",
   "extension": {
     "version": "0.4.2",
@@ -10,7 +10,13 @@
     "distribution": "unlisted/direct",
     "signedSha256": "14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f",
     "runtimeMatchesSource": true,
-    "permissionsChanged": false
+    "permissionsChanged": false,
+    "completeSourceArchive": {
+      "sourceCommit": "7a9055261eb790fe7cdd4c9d5e8ecac18e50ddb2",
+      "sha256": "350c1bfa8c1c8a22f27be3ee137bcbf8e44e0546ede6b27b3206b0b9aa71409b",
+      "includesNativeBuildContext": true,
+      "sourceAndReviewerNotesUpdated": true
+    }
   },
   "productChanges": [
     "No extra app-menu launchers for normal Firefox or helper management",
@@ -35,7 +41,9 @@
     "installMigrationE2E": "passed",
     "signedFirefoxNativeE2ETests": 2,
     "signedFirefoxNativeE2ESeconds": 25.24,
-    "packageRuntimeSignatureGuard": "passed"
+    "packageRuntimeSignatureGuard": "passed",
+    "testedImplementationCommit": "0118db0de46c6162a17ed6e794ea329232013479",
+    "scope": "Local signed Firefox and clean-model runs preceded the Windows-only manager lifetime fix; final platform CI below tests the fixed helper."
   },
   "nativeFirefox": {
     "extensionSettingsInSameFirefoxProfile": true,
@@ -232,9 +240,9 @@
     ]
   },
   "workflows": {
-    "checks": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44032358861",
-    "linuxDistribution": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44032358883",
-    "windows": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44032358924"
+    "checks": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033634452",
+    "linuxDistribution": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033634346",
+    "windows": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033634399"
   },
   "publishedReleases": {
     "latest": {
@@ -322,7 +330,8 @@
       "prerelease": true,
       "tag_name": "v0.5.0-beta.2"
     },
-    "newReleasePublished": false
+    "newReleasePublished": false,
+    "metadataAndAssetDigestsUnchangedAfterAllSourcePushes": true
   },
   "notVerified": [
     "Fresh OS prerequisite installation and first-time-user study",
@@ -379,18 +388,6 @@
       "releasePublished": false
     }
   },
-  "linuxCiArchive": {
-    "archiveSha256": "7e757eedf63ce3f40c8a472dcd5e1c98f83b533682cd2259e64f2615d2446c5c",
-    "build": {
-      "binarySha256": "e57306e4653bc945cb2f6bc8dbf193078bf911e2ef25b26bcfea4acb91870b3d",
-      "commit": "0118db0de46c6162a17ed6e794ea329232013479",
-      "runner": "Linux",
-      "target": "x86_64-unknown-linux-gnu",
-      "version": "0.5.0-beta.3"
-    },
-    "checksumsVerified": true,
-    "signedXpiMatchesSource": true
-  },
   "firstFailurePreserved": true,
   "productionFixCommit": "3f423ae3d74ae540ebb88a6f1db75a66b2a55909",
   "ciSecondAttempt": {
@@ -440,6 +437,275 @@
         "digest": "sha256:2d35be2158c147446e4898ca92398a2079a424d3cdbabb7b41c36d3f19803d42"
       },
       "releasePublished": false
+    }
+  },
+  "initialImplementationCommit": "0118db0de46c6162a17ed6e794ea329232013479",
+  "ciFinal": {
+    "sourceCommit": "7a9055261eb790fe7cdd4c9d5e8ecac18e50ddb2",
+    "checks": "passed",
+    "linuxDistribution": "passed",
+    "windowsServer": "passed",
+    "windowsSourceBuildE2E": "passed, both tests",
+    "windowsExtractedZipE2E": "passed, both tests",
+    "windowsManagerLifetimeFix": "Settings manager alone uses CREATE_BREAKAWAY_FROM_JOB so update/removal responses complete after the native reset. Broker/chat lifetime behavior is unchanged.",
+    "primarySources": [
+      "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging#closing_the_native_app",
+      "https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags"
+    ],
+    "inferenceBoundary": "The first Windows HTTP response failure, documented Firefox Native Messaging Job behavior, and passing response after the scoped flag fix support this diagnosis. This does not measure the Codex desktop GUI Job lifecycle.",
+    "windowsJobId": 133871181069,
+    "windowsTests": {
+      "rustDefaultPassed": 31,
+      "javascriptPassed": 72,
+      "source": {
+        "passed": 2,
+        "failed": 0,
+        "seconds": 56.62,
+        "resultFile": "result.json"
+      },
+      "extractedDistribution": {
+        "passed": 2,
+        "failed": 0,
+        "seconds": 39.43,
+        "resultFile": "extracted/result.json"
+      }
+    },
+    "windowsToolchain": {
+      "target": "x86_64-pc-windows-msvc",
+      "rust": "1.100.0",
+      "runner": "win22",
+      "firefox": "160.0",
+      "signedExtension": "0.4.2"
+    },
+    "windowsSteps": [
+      {
+        "name": "Run cargo fmt --all -- --check",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Run cargo test --workspace --locked",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Run node --test --test-isolation=none extension/tests/*.test.cjs",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Run cargo build --release --locked",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Real install, running update, removal and signed Firefox E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Package EXE, ZIP, dependency notices and SBOM",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Test extracted distribution outside repository",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Run actions/attest-build-provenance@v2",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Run actions/upload-artifact@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Run actions/upload-artifact@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      }
+    ],
+    "windowsArtifacts": [
+      {
+        "id": 14306342305,
+        "name": "windows-preview-evidence",
+        "sizeBytes": 369571,
+        "digest": "sha256:4e22893efa4ce79396fb8ccf5ad63148795686050b3ffe3ec6e8b55137b96c41",
+        "url": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033634399/artifacts/14306342305"
+      },
+      {
+        "id": 14306008580,
+        "name": "firefox-codex-mcp-windows-x86_64",
+        "sizeBytes": 3133236,
+        "digest": "sha256:579aa601c58bf48d4ab1b4bc6f394e3dd5604ed168f1161cc245126e304959e3",
+        "url": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033634399/artifacts/14306008580"
+      }
+    ]
+  },
+  "linuxCiArchiveInitial": {
+    "archiveSha256": "7e757eedf63ce3f40c8a472dcd5e1c98f83b533682cd2259e64f2615d2446c5c",
+    "build": {
+      "binarySha256": "e57306e4653bc945cb2f6bc8dbf193078bf911e2ef25b26bcfea4acb91870b3d",
+      "commit": "0118db0de46c6162a17ed6e794ea329232013479",
+      "runner": "Linux",
+      "target": "x86_64-unknown-linux-gnu",
+      "version": "0.5.0-beta.3"
+    },
+    "checksumsVerified": true,
+    "signedXpiMatchesSource": true
+  },
+  "linuxCiArchive": {
+    "archiveSha256": "d4b7ba8f072326d366a1b95d84ccef19e6cae9ab0105309672a16b593ccbc0c9",
+    "build": {
+      "binarySha256": "6f43f4fcb3d1e685ab05ff1e11aa650bd779c857d2350e565d8ecc682474af23",
+      "commit": "7a9055261eb790fe7cdd4c9d5e8ecac18e50ddb2",
+      "runner": "Linux",
+      "target": "x86_64-unknown-linux-gnu",
+      "version": "0.5.0-beta.3"
+    },
+    "checksumsVerified": true,
+    "signedXpiSha256": "14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f"
+  },
+  "windowsCiArchive": {
+    "archiveSha256": "abafafd5fa62bc97a3688229b63110364f204d37773e13498a682b3913aea442",
+    "build": {
+      "binarySha256": "7f04113beeb9ab81d80d2f154acd16cfd4bb298f608c6ec9552591a6c877e9d3",
+      "commit": "7a9055261eb790fe7cdd4c9d5e8ecac18e50ddb2",
+      "runner": "Windows",
+      "target": "x86_64-pc-windows-msvc",
+      "version": "0.5.0-beta.3"
+    },
+    "checksumsVerified": true,
+    "signedXpiSha256": "14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f"
+  },
+  "windowsSourceEvidence": {
+    "firefoxVersion": "160.0",
+    "notVerified": [
+      "Windows 10 desktop",
+      "Windows 11 desktop",
+      "Codex desktop UI or live model dispatch",
+      "Authenticode and SmartScreen"
+    ],
+    "os": "Windows_NT",
+    "runner": "win22",
+    "signedExtension": "0.4.2",
+    "verified": [
+      "Unicode and spaces install",
+      "official Codex CLI MCP discovery",
+      "actual Codex app-server tool dispatch",
+      "normal Known Folders endpoint without MCP environment overrides",
+      "signed permanent extension",
+      "native messaging + named pipes",
+      "single-profile automatic selection",
+      "extension toolbar Settings in same Firefox profile",
+      "Settings excluded from work tabs",
+      "Settings update response after native reset",
+      "nonselected-profile Settings",
+      "Settings removal response and automatic service shutdown",
+      "read text and status",
+      "click and type",
+      "two-chat isolation",
+      "MCP replacement continuity",
+      "irreversible revoke",
+      "extension UI revoke and pause",
+      "two-profile selection and no offline fallback",
+      "update with running old EXE",
+      "Firefox restart",
+      "uninstall preserves unrelated settings"
+    ]
+  },
+  "windowsExtractedEvidence": {
+    "firefoxVersion": "160.0",
+    "notVerified": [
+      "Windows 10 desktop",
+      "Windows 11 desktop",
+      "Codex desktop UI or live model dispatch",
+      "Authenticode and SmartScreen"
+    ],
+    "os": "Windows_NT",
+    "runner": "win22",
+    "signedExtension": "0.4.2",
+    "verified": [
+      "Unicode and spaces install",
+      "official Codex CLI MCP discovery",
+      "actual Codex app-server tool dispatch",
+      "normal Known Folders endpoint without MCP environment overrides",
+      "signed permanent extension",
+      "native messaging + named pipes",
+      "single-profile automatic selection",
+      "extension toolbar Settings in same Firefox profile",
+      "Settings excluded from work tabs",
+      "Settings update response after native reset",
+      "nonselected-profile Settings",
+      "Settings removal response and automatic service shutdown",
+      "read text and status",
+      "click and type",
+      "two-chat isolation",
+      "MCP replacement continuity",
+      "irreversible revoke",
+      "extension UI revoke and pause",
+      "two-profile selection and no offline fallback",
+      "update with running old EXE",
+      "Firefox restart",
+      "uninstall preserves unrelated settings"
+    ]
+  },
+  "windowsRepairLocks": {
+    "source": {
+      "cases": [
+        {
+          "blockedUntilReleased": true,
+          "contentionObserved": true,
+          "lock": "cleanup-exclusive-share",
+          "repairResumed": true,
+          "unrelatedSettingsPreserved": true
+        },
+        {
+          "blockedUntilReleased": true,
+          "contentionObserved": true,
+          "lock": "installer-byte-range",
+          "repairResumed": true,
+          "unrelatedSettingsPreserved": true
+        }
+      ]
+    },
+    "extracted": {
+      "cases": [
+        {
+          "blockedUntilReleased": true,
+          "contentionObserved": true,
+          "lock": "cleanup-exclusive-share",
+          "repairResumed": true,
+          "unrelatedSettingsPreserved": true
+        },
+        {
+          "blockedUntilReleased": true,
+          "contentionObserved": true,
+          "lock": "installer-byte-range",
+          "repairResumed": true,
+          "unrelatedSettingsPreserved": true
+        }
+      ]
     }
   }
 }
