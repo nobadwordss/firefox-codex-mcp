@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0-beta.3 — Unreleased
+
+- Use ordinary Firefox and its extension for day-to-day management, without extra application-menu launchers or a separate browser profile.
+- Open Settings in the requesting Firefox profile through a capability-checked native control, outside the MCP tool surface.
+- Hide redundant single-profile selection and keep pause/revoke controls in Mozilla-signed extension 0.4.2.
+- Retire receipt-owned old launchers and managed debugging preferences transactionally, preserving deletions, custom edits and original baselines.
+- Keep Linux0.4.1 stable and Windows0.5.0-beta.2 published assets unchanged. The one-time per-user native helper installation remains necessary.
+
 ## 0.5.0-beta.2 — English Windows preview — 2026-11-17
 
 - Wait up to ten seconds for Windows setup/cleanup locks, including exclusive sharing handles from older cleanup workers, before reporting a busy operation.

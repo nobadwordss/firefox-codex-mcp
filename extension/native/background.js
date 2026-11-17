@@ -16,6 +16,8 @@ let port = null,
 let status = "Checking the local helper.",
   retry = null,
   queue = Promise.resolve();
+let settingsSupported = false,
+  pendingSettings = null;
 function revokeOwner(id) {
   const owner = owners.get(id);
   if (!owner) return;
@@ -29,6 +31,12 @@ function revokeAll() {
 function disconnect() {
   epoch++;
   connected = false;
+  settingsSupported = false;
+  if (pendingSettings) {
+    clearTimeout(pendingSettings.timer);
+    pendingSettings.reject(Error("Connection ended. Open Settings again after reconnecting."));
+    pendingSettings = null;
+  }
   revokeAll();
   attachments.clear();
   queue = Promise.resolve();
@@ -339,6 +347,38 @@ function schedule() {
   clearTimeout(retry);
   retry = setTimeout(connect, 2000);
 }
+function settingsUrl(value) {
+  if (typeof value !== "string") throw Error("Invalid Settings address from the local helper.");
+  const match = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})\/#([a-f0-9]{64})$/.exec(value);
+  if (!match || Number(match[1]) > 65535)
+    throw Error("Invalid Settings address from the local helper.");
+  return value;
+}
+async function openSettings() {
+  if (!connected) throw Error("Install the local helper once, then open Settings again.");
+  if (!settingsSupported)
+    throw Error("Update the local helper from a newer download to use Settings in Firefox.");
+  if (pendingSettings) throw Error("Settings is already opening.");
+  const started = epoch;
+  const url = await new Promise((resolve, reject) => {
+    const id = crypto.randomUUID();
+    const timer = setTimeout(() => {
+      if (pendingSettings?.id !== id) return;
+      pendingSettings = null;
+      reject(Error("Settings did not open. Try again or run the downloaded setup program."));
+    }, 15000);
+    pendingSettings = { id, resolve, reject, timer };
+    try { port.postMessage({ kind: "openSettings", id }); }
+    catch (error) {
+      clearTimeout(timer);
+      pendingSettings = null;
+      reject(error);
+    }
+  });
+  if (!connected || epoch !== started) throw Error("Connection changed. Open Settings again.");
+  // This tab deliberately has no chat owner and cannot be adopted by MCP.
+  await browser.tabs.create({ url: settingsUrl(url) });
+}
 function connect() {
   if (port || !profileId) return;
   const current = browser.runtime.connectNative(HOST);
@@ -357,7 +397,17 @@ function connect() {
     if (port !== current || started !== epoch) return;
     if (message.kind === "ready") {
       connected = true;
+      settingsSupported = Array.isArray(message.capabilities) && message.capabilities.includes("settings-ui-v1");
       status = "Connected. Codex can open its own work tabs.";
+      return;
+    }
+    if (message.kind === "settingsResult") {
+      if (!pendingSettings || pendingSettings.id !== message.id) return;
+      const pending = pendingSettings;
+      pendingSettings = null;
+      clearTimeout(pending.timer);
+      if (typeof message.error === "string") pending.reject(Error(message.error.slice(0, 400)));
+      else pending.resolve(message.url);
       return;
     }
     if (message.kind === "configuration") {
@@ -451,6 +501,8 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
     port.postMessage({ kind: "selectProfile" });
   } else if (message.action === "revoke") {
     revokeAll();
+  } else if (message.action === "settings") {
+    await openSettings();
   } else if (message.action === "reset") {
     disconnect();
     profileId = crypto.randomUUID();

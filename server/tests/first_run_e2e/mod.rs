@@ -65,6 +65,8 @@ fn isolated_run() -> Result<()> {
         ".local/lib/firefox-codex-mcp/native-host",
         ".config/mozilla/firefox/profiles.ini",
         ".mozilla/firefox/profiles.ini",
+        ".local/share/applications/firefox-codex-manager.desktop",
+        ".local/share/applications/firefox-codex.desktop",
     ];
     let before: Vec<_> = files
         .iter()
@@ -519,6 +521,13 @@ fn clean_distribution_first_web_task() -> Result<()> {
                 "nativeHost":home.join(".mozilla/native-messaging-hosts/firefox_codex_mcp.json").is_file()
             }),
         )?;
+        for name in ["firefox-codex-manager.desktop", "firefox-codex.desktop"] {
+            ensure!(
+                !home.join(".local/share/applications").join(name).exists(),
+                "Fresh extension installation created an extra app-menu launcher: {name}"
+            );
+        }
+        checkpoint(&out, &mut report, "noExtraAppMenuLaunchers", json!(true))?;
         driver.click("#extension-install")?;
         driver.context("chrome")?;
         for (index, notification) in [

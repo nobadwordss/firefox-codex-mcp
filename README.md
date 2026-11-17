@@ -6,6 +6,13 @@ Let Codex open and use its own work tabs in your everyday Firefox profile, with
 your existing website logins. A Firefox extension and a small local Rust helper
 connect automatically: no pairing codes, tokens, profile paths, or per-tab setup.
 
+**Next release, unreleased 0.5.0-beta.3:** after initial setup, manage the connection
+from ordinary Firefox using the extension's **Settings**. No extra Firefox app-menu
+entries are installed. The helper still needs a one-time installation per OS user;
+the extension cannot install it by itself. See the [new management flow](docs/firefox-only-management.md).
+The download instructions below still describe published Linux **0.4.1** and
+Windows **0.5.0-beta.2**, whose archives are unchanged.
+
 ![Codex Work Tabs cursor](extension/icons/cursor-96.png)
 
 ```text
@@ -146,7 +153,10 @@ running, but helper replacement releases old work-tab access. Install the matchi
 signed XPI to update the extension, then use a fresh Codex chat. Direct-distribution
 XPIs currently have no automatic update channel.
 
-The app-menu entry **Firefox Codex Manager** provides diagnosis, recovery and removal.
+For the published Linux 0.4.1 package, the app-menu entry **Firefox Codex Manager**
+provides diagnosis, recovery and removal. The unreleased next version removes
+that entry and puts management in the extension's **Settings** instead; see the
+[new flow and migration](docs/firefox-only-management.md).
 Removal targets registered MCP settings, installed files and managed blocks while
 preserving user edits, Firefox profiles, logins and result tabs. Remove the Firefox
 extension separately in Add-ons Manager. Local receipts and recovery state live
@@ -162,9 +172,10 @@ under `~/.local/state/firefox-codex-mcp/`.
 ./install.sh --install-bidi /absolute/profile
 ```
 
-WebDriver BiDi remains an advanced option with connection-scoped ownership. Only
-that mode requires the **Firefox (Codex connection)** debug launcher. To migrate a BiDi
-installation, choose the manager's default extension installation.
+WebDriver BiDi remains an advanced option with connection-scoped ownership.
+Published Linux packages include a **Firefox (Codex connection)** debug launcher;
+the next version removes it. Normal extension use needs only ordinary Firefox.
+To migrate a BiDi installation, install the default extension connection.
 
 ## Development and verification
 
@@ -174,6 +185,8 @@ projects and fair test criteria; no comparative performance or security advantag
 has been measured.
 
 Requires Rust 1.89+, Node 24+, and `zip`, `unzip`, `tar` for packaging.
+Signed UI tests and packaging also require a signed XPI matching the current
+extension source; see [signing status](packaging/SIGNING.md).
 
 ```bash
 cargo fmt --all -- --check
@@ -182,7 +195,7 @@ cargo test --workspace --locked
 node --test --test-isolation=none extension/tests/*.test.cjs
 cargo build --release --locked
 FIREFOX_SETUP_CODEX_BINARY=/path/to/codex cargo test --release --test install_e2e -- --ignored
-FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.1.xpi" FIREFOX_SIGNED_UI=1 FIREFOX_GECKODRIVER=/path/to/geckodriver cargo test --release --test firefox_e2e native_e2e:: -- --ignored --nocapture
+FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.2.xpi" FIREFOX_SIGNED_UI=1 FIREFOX_GECKODRIVER=/path/to/geckodriver cargo test --release --test firefox_e2e native_e2e:: -- --ignored --nocapture
 cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist/release
 ```
 

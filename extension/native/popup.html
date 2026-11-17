@@ -7,19 +7,24 @@
     <p id="status" role="status">Checking connection…</p>
     <p id="profile"></p>
     <p id="access"></p>
+    <p id="error" role="alert" hidden></p>
     <button id="permissions" hidden>Allow site access</button
     ><button id="choose">Use this Firefox</button
     ><button id="toggle">Pause</button
-    ><button id="revoke">Revoke all tab access</button>
-    <p>
-      No codes, tokens or profile paths are needed. Local Codex chats can use this
-      profile's website logins in their own work tabs. Only tabs created by Codex
-      can be controlled. Existing tabs are not imported.
-    </p>
-    <p>Work tabs continue across turns in the same chat. Access ends after 24 hours
-      without a request, revocation, pause or Firefox restart. Result tabs stay open.</p>
+    ><button id="revoke">Revoke all tab access</button
+    ><button id="settings">Settings</button>
     <details>
       <summary>Need help connecting?</summary>
+      <p>
+        Use your normal Firefox. No extra launcher or profile is needed. Local
+        Codex chats can use this profile's website logins in their own work tabs.
+        Existing tabs are not imported.
+      </p>
+      <p>
+        Work tabs continue across turns in the same chat. Access ends after 24
+        hours without a request, revocation, pause or Firefox restart. Result tabs
+        stay open.
+      </p>
       <p>
         Install the local helper once. In the downloaded package, open
         firefox-codex-mcp.exe on Windows or run install.sh on Linux. If the selected

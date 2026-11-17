@@ -14,14 +14,11 @@ const HTML: &str = include_str!("../../packaging/manager.html");
 const HTML: &str = include_str!("../../packaging/manager.windows.html");
 
 fn state() -> Result<Value> {
-    let profiles = o::profiles(&o::home()?)?;
-    let selected = lifecycle::installed_profile().or_else(|| o::choose(&profiles).ok());
     let codex = o::codex().is_ok();
     let ready = cfg!(windows) || codex;
     Ok(
         json!({"version":env!("CARGO_PKG_VERSION"),"installedVersion":lifecycle::installed_version(),"installedMode":lifecycle::installed_mode(),"codexAvailable":codex,
-        "profiles":profiles.iter().map(|(p,_)|json!({"id":p,"name":p.file_name().map(|v|v.to_string_lossy()),"path":p,"selected":Some(p)==selected.as_ref()})).collect::<Vec<_>>(),
-        "ready":ready,"platform":std::env::consts::OS,"bidiSupported":cfg!(unix)}),
+        "ready":ready,"platform":std::env::consts::OS}),
     )
 }
 fn action(request: Value) -> Result<Value> {
@@ -30,18 +27,11 @@ fn action(request: Value) -> Result<Value> {
         "doctor" => o::doctor(),
         "repair" => lifecycle::repair(),
         "install" | "update" => {
-            if request["mode"] != "bidi" {
-                return lifecycle::install(None, false);
-            }
-            let list = o::profiles(&o::home()?)?;
-            let selected = request["profile"]
-                .as_str()
-                .and_then(|path| list.iter().find(|(p, _)| p.to_str() == Some(path)))
-                .context("Choose a Firefox profile for advanced BiDi mode")?;
-            lifecycle::install(
-                Some(&selected.0.to_string_lossy()),
-                request["action"] == "update",
-            )
+            ensure!(
+                request["mode"].is_null() || request["mode"] == "extension",
+                "Use the command line for advanced debugging mode"
+            );
+            lifecycle::install(None, false)
         }
         "uninstall" => lifecycle::uninstall(),
         _ => anyhow::bail!("Unknown setup action"),
@@ -105,7 +95,7 @@ async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> 
             &mut stream,
             "200 OK",
             "application/x-xpinstall",
-            include_bytes!("../../packaging/signed/codex-work-tabs-0.4.1.xpi"),
+            include_bytes!("../../packaging/signed/codex-work-tabs-0.4.2.xpi"),
         )
         .await?;
         return Ok(false);

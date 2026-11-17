@@ -729,9 +729,6 @@ pub fn installed_version() -> Option<String> {
 pub fn installed_mode() -> Option<String> {
     installed_version().map(|_| "extension".into())
 }
-pub fn installed_profile() -> Option<PathBuf> {
-    None
-}
 pub fn doctor() -> Result<Value> {
     let prior = receipt()?;
     let root = o::codex_home(&o::home()?);

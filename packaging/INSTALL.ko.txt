@@ -1,5 +1,7 @@
 Firefox Codex MCP — Linux x86_64 (한국어 번역)
 
+다음 패키지 안내: 0.5.0-beta.3, 아직 미배포입니다.
+공개된 Linux 0.4.1 압축 파일은 변경하지 않으며 그 파일에 포함된 안내를 따릅니다.
 English instructions: INSTALL.txt. 한국어 설명: README.ko.md.
 설치 화면과 확장 버튼은 영어입니다. 아래 버튼 이름을 그대로 찾으세요.
 
@@ -18,7 +20,7 @@ Windows/macOS, Snap/Flatpak, Android는 지원 검증하지 않았습니다.
    연결 설정과 브라우저 사용 스킬은 자동으로 설치됩니다. 별도 설치가 필요 없습니다.
 4. 같은 화면의 “Add Codex Work Tabs to Firefox”를 누릅니다.
    Firefox에서 설치 계속 → 추가를 눌러 권한 안내를 확인합니다.
-   Mozilla 서명된 영문 확장 codex-work-tabs-0.4.1.xpi가 포함되어 있습니다.
+   이 패키지에 포함된 Mozilla 서명 영문 XPI를 사용합니다.
    *-unsigned.xpi는 개발/심사 전용입니다. SIGNING.md 참고.
 5. Codex에서 새 채팅을 열고 다음처럼 요청합니다.
    https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.
@@ -33,7 +35,17 @@ Windows/macOS, Snap/Flatpak, Android는 지원 검증하지 않았습니다.
 - 도구 승인이 차단됨: 관리자가 허용한 승인 절차를 사용하세요. 설치기는 승인 정책을 바꾸지 않습니다.
   비대화형 codex exec는 일반 채팅과 승인 방식이 다릅니다. 첫 사용은 Codex 앱 또는 대화형 CLI에서 확인하세요.
 
-단계별 설명: docs/first-install-linux.ko.md
+공개된 Linux 0.4.1 첫 설치 안내: docs/first-install-linux.ko.md
+다음 버전 관리 안내: docs/firefox-only-management.md
+
+일상 사용과 관리
+기존 Firefox와 프로필을 그대로 사용합니다. 별도의 Firefox 앱 메뉴 항목이나
+Codex 전용 프로필을 만들지 않습니다. Firefox의 Codex Work Tabs 버튼에서 Settings를
+열면 연결 진단·복구·제거를 할 수 있습니다. 부가 기능 관리자에서도 확장 화면을 열 수 있습니다.
+연결 프로그램은 OS 사용자별로 한 번 설치해야 하며 확장만으로 설치할 수는 없습니다.
+연결 프로그램이 없거나 응답하지 않으면 이 패키지의 install.sh를 다시 실행합니다.
+확장을 이미 제거해도 install.sh에서 연결 프로그램을 복구하거나 제거할 수 있습니다.
+확장만 제거하면 연결 프로그램과 Codex 연결 설정은 남습니다.
 
 같은 채팅은 다음 메시지에서도 작업 탭을 이어 씁니다. 24시간 무요청, 접근 해제,
 중지, Firefox/연결 프로그램 재시작 시 제어권은 해제되고 결과 탭은 남습니다.
@@ -48,7 +60,7 @@ Firefox 확장에서 ‘Use this Firefox’를 한 번 누릅니다. 선택한 �
 확장 업데이트는 Firefox 부가 기능 관리자에서 새 서명 XPI를 설치합니다.
 직접 배포 XPI에는 자동 업데이트 채널이 없습니다. AMO 목록 배포는 별도 단계입니다.
 
-제거: Firefox Codex Manager → Remove connection. 확장은 Firefox 부가 기능 관리자에서 별도로 제거.
+제거: 확장의 Settings → Remove connection. 확장은 Firefox 부가 기능 관리자에서 별도로 제거.
 Firefox 프로필·로그인·결과 탭과 사용자가 수정한 파일은 보존됩니다.
 기존 Codex 채팅을 종료하면 이전 도구 연결도 끝납니다.
 
@@ -59,8 +71,9 @@ Firefox 프로필·로그인·결과 탭과 사용자가 수정한 파일은 보
 ./install.sh --repair
 
 고급 BiDi: ./install.sh --install-bidi [프로필 절대 경로]
-이 경우에만 작업 저장 후 Firefox (Codex connection) 실행기로 다시 여세요.
-디버깅 옵션은 다음 일반 Firefox 재시작 때 해제됩니다.
+디버깅 앱 메뉴 실행기는 만들지 않습니다. 고급 사용자는 작업을 저장하고 Firefox를 닫은 뒤
+./install.sh --launch-firefox 프로필_절대_경로 를 사용할 수 있습니다.
+일반 Firefox와 확장 Settings로 관리하려면 기본 확장 연결을 설치합니다.
 
 설치 장부/복구: ~/.local/state/firefox-codex-mcp/
 중단된 설치는 --repair. 바뀐 파일은 자동 덮어쓰지 않습니다.

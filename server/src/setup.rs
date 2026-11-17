@@ -80,21 +80,6 @@ pub(crate) fn private_dir(path: &Path) -> Result<()> {
     );
     Ok(())
 }
-pub(crate) fn quote_desktop(value: &str) -> Result<String> {
-    ensure!(
-        !value.chars().any(char::is_control),
-        "Invalid launcher path"
-    );
-    Ok(format!(
-        "\"{}\"",
-        value
-            .replace('\\', "\\\\")
-            .replace('"', "\\\"")
-            .replace('`', "\\`")
-            .replace('$', "\\$")
-            .replace('%', "%%")
-    ))
-}
 pub fn install(profile: &Path) -> Result<Value> {
     let home = PathBuf::from(env::var_os("HOME").context("HOME unavailable")?);
     let folder = home.join(".local/lib/firefox-codex-mcp");
@@ -119,13 +104,8 @@ pub fn install(profile: &Path) -> Result<Value> {
         }
         write_atomic(&user_js,format!("{old}\n// Firefox Codex: keep normal browsing preferences while debugging.\n{line}\n").as_bytes(),0o600)?;
     }
-    let applications = home.join(".local/share/applications");
-    fs::create_dir_all(&applications)?;
-    let launcher = applications.join("firefox-codex.desktop");
-    let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex connection)\nComment=Use AI work tabs in this Firefox profile\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\nStartupNotify=true\n",quote_desktop(&executable.to_string_lossy())?,quote_desktop(&profile.to_string_lossy())?);
-    write_atomic(&launcher, desktop.as_bytes(), 0o644)?;
     Ok(
-        json!({"installed":true,"executable":executable,"launcher":launcher,"profile":profile,"preferencesBackup":backup,"browserRestarted":false}),
+        json!({"installed":true,"executable":executable,"profile":profile,"preferencesBackup":backup,"browserRestarted":false}),
     )
 }
 pub fn launch(profile: &Path) -> Result<Value> {
@@ -152,7 +132,7 @@ pub fn launch(profile: &Path) -> Result<Value> {
                 }
             }
         }
-        bail!("Firefox is already running. Save your work, close Firefox, then open Firefox (Codex connection). Your profile and logins are preserved.");
+        bail!("Firefox is already running. Save your work, close Firefox, then use --launch-firefox PROFILE for advanced debugging. Your profile and logins are preserved.");
     }
     let descriptor = profile.join("WebDriverBiDiServer.json");
     if descriptor.exists() {
@@ -201,14 +181,6 @@ pub fn notify_launch_error(message: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn desktop_arguments_do_not_expand_control_characters_or_placeholders() {
-        assert!(quote_desktop("a\nb").is_err());
-        assert_eq!(
-            quote_desktop("/tmp/a $x %f \"b\"").unwrap(),
-            "\"/tmp/a \\$x %%f \\\"b\\\"\""
-        );
-    }
     #[test]
     fn live_profile_is_detected_without_terminating_it() {
         let root = tempfile::tempdir().unwrap();

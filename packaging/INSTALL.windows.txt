@@ -1,14 +1,18 @@
-Firefox Codex MCP 0.5.0-beta.2 — English Windows preview
+Firefox Codex MCP — English Windows preview
+
+Next package instructions: 0.5.0-beta.3, unreleased.
+The public 0.5.0-beta.2 ZIP is unchanged; use its own bundled instructions.
 
 Target: Windows 10 22H2 and Windows 11, x86-64, desktop Firefox.
 Windows 10/11 desktop validation is pending. CI uses Windows Server.
-The helper EXE is not Authenticode-signed; the Firefox extension IS Mozilla-signed.
+The helper EXE is not Authenticode-signed. Use the Mozilla-signed Firefox extension
+supplied with a completed release package; unsigned XPIs are for development only.
 Do not disable SmartScreen, antivirus, or Windows security to install this preview.
 If Windows blocks it, use the source/build instructions or wait for signed delivery.
 
 1. Install Codex and desktop Firefox from their official sources.
-2. Download the Windows beta.2 ZIP and fully extract it:
-   https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip
+2. Fully extract the Windows ZIP matching the version you intend to install.
+   Do not run setup from inside the ZIP.
 3. Double-click firefox-codex-mcp.exe. Do not run as administrator.
 4. In the local English setup page, choose Install connection, then Continue.
 5. Choose Add Codex Work Tabs to Firefox, then accept Firefox's extension prompt.
@@ -21,15 +25,26 @@ No code, token, profile path, Node.js, Rust, command prompt or debugging flag is
 needed. With several Firefox profiles, choose Use this Firefox in the extension
 in the profile you want. Existing personal tabs are never imported automatically.
 
+Everyday use and management
+Use your ordinary Firefox and its existing profile. No extra Firefox app-menu
+entries or separate Codex browser profile are installed. Open Codex Work Tabs in
+Firefox, then choose Settings for connection checks, repair and removal.
+Firefox's Add-ons Manager can also open the extension controls and Settings button.
+The helper must be installed once per Windows user; the extension cannot install it alone.
+If the helper is absent or unreachable, open this package's EXE again.
+If the extension was already removed, the EXE still opens setup for helper repair
+or removal. Removing the add-on alone leaves the helper and Codex settings.
+
 Update: extract the newer ZIP and open its EXE, then choose Update connection.
 Choose Add Codex Work Tabs to Firefox to install the bundled Mozilla-signed English
-extension 0.4.1 as well. Direct-distribution XPIs have no automatic update channel.
+extension as well. Direct-distribution XPIs have no automatic update channel.
 Updating releases existing work-tab permissions; pages remain open.
 Start a new Codex chat afterwards. Executing an older downloaded EXE installs
 that version, so choose the intended release.
 
-Remove: Windows Settings > Apps > Firefox Codex MCP > Uninstall opens the manager.
-Choose Remove connection. Close the manager and old Codex chats to release files.
+Remove: open the extension's Settings and choose Remove connection.
+Windows Settings > Apps > Firefox Codex MCP > Uninstall is also available.
+Close old Codex chats to release locked files.
 Remove Codex Work Tabs separately in Firefox's Add-ons manager if desired.
 Your Firefox profiles, logins, result tabs and unrelated Codex settings stay intact.
 Files/registry values you modified are preserved. Run --repair after an interrupted
@@ -42,4 +57,5 @@ Scope: local Codex on the same Windows user/logon session. WSL, remote Codex,
 Microsoft Store Firefox, ARM64 and BiDi mode on Windows are not validated.
 
 Source, checksums, release provenance, verification limits and support:
-https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2
+https://github.com/nobadwordss/firefox-codex-mcp
+Next-version management guide: docs/firefox-only-management.md

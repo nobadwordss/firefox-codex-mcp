@@ -37,7 +37,15 @@ If an action times out, inspect before retrying to avoid duplicate submissions.
 
 If no Firefox tools are available, report that this chat needs refreshed tool settings
 (a new local Codex chat or app restart). Do not substitute raw debug scripts or reinstall
-silently. `firefox_status` diagnoses a present but disconnected server. For extension mode, ask the user to install the extension/helper or resume the toolbar connection as indicated. Multiple unselected profiles require one click on **Use this Firefox** in the intended Firefox. Never choose a profile or restart Firefox silently. BiDi is an advanced opt-in mode using **Firefox (Codex connection)**.
+silently. `firefox_status` diagnoses a present but disconnected server. For extension
+mode, the local helper must be installed once per OS user, plus the extension in the
+intended Firefox profile. The extension cannot install the helper itself. Use ordinary
+Firefox; no extra profile or app-menu launcher is needed. The extension's **Settings**
+opens connection checks, repair and removal. If the helper is absent or unreachable,
+ask the user to reopen the downloaded setup package; otherwise resume the toolbar
+connection as indicated. Multiple unselected profiles require one click on **Use this
+Firefox** in the intended Firefox. Never choose a profile or restart Firefox silently.
+BiDi is an advanced command-line opt-in mode, not the ordinary extension setup.
 The installed binary's `--doctor` checks global setup. Linux is stable; Windows x64 extension mode is a preview (BiDi is Linux-only).
 Supported interactions are HTTP(S), top-level DOM controls; iframe editors, file upload, and trusted native input
 are not implemented. Report that limitation rather than inventing successful actions.

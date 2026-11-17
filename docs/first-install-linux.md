@@ -11,6 +11,11 @@ this guide's verification scope.
 English; this page describes their actual button labels. Windows remains a
 separate preview. Older release archives remain available unchanged.
 
+This guide covers that published **0.4.1 archive**. The unreleased
+**0.5.0-beta.3** source removes extra app-menu entries and adds management in the
+extension's **Settings**. See the [next-version management guide](firefox-only-management.md);
+it does not change the installation steps or verification evidence for 0.4.1.
+
 ## Extract and run setup
 
 1. [Download the Linux 0.4.1 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz).

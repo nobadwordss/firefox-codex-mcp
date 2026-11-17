@@ -454,6 +454,71 @@ impl Browser {
         self.call(&format!("/element/{id}/click"), json!({}))?;
         Ok(())
     }
+    fn popup_script(&self, script: &str) -> Result<Value> {
+        self.call("/execute/sync", json!({"script":r#"
+            const {getMarionetteCommandsActorProxy} = ChromeUtils.importESModule('chrome://remote/content/marionette/actors/MarionetteCommandsParent.sys.mjs');
+            const actor = getMarionetteCommandsActorProxy(() => document.querySelector('.webextension-popup-browser').browsingContext);
+            return actor.executeScript(arguments[0], [], {timeout:10000, newSandbox:true});
+        "#,"args":[script]}))
+    }
+    fn popup(&self) -> Result<()> {
+        self.call("/moz/context", json!({"context":"chrome"}))?;
+        let widget = self.script(&format!(r#"
+            const {{CustomizableUI}} = ChromeUtils.importESModule('moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs');
+            const id = '{}'.toLowerCase().replace(/[^a-z0-9_-]/g,'_') + '-browser-action';
+            CustomizableUI.addWidgetToArea(id, CustomizableUI.AREA_NAVBAR);
+            return id;
+        "#, EXT))?;
+        self.click(&format!(
+            "#{} .unified-extensions-item-action-button",
+            widget.as_str().context("toolbar widget")?
+        ))?;
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if self.script("return !!document.querySelector('.webextension-popup-browser');")?
+                == true
+            {
+                break;
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "Extension toolbar popup did not open"
+            );
+            thread::sleep(Duration::from_millis(100));
+        }
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if self
+                .popup_script("return document.querySelector('#status')?.textContent;")?
+                .as_str()
+                .is_some_and(|text| text.contains("Connected"))
+            {
+                break;
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "Extension toolbar popup did not connect"
+            );
+            thread::sleep(Duration::from_millis(100));
+        }
+        Ok(())
+    }
+    fn popup_click(&self, selector: &str) -> Result<()> {
+        self.call("/execute/sync", json!({"script":r#"
+            const {getMarionetteCommandsActorProxy} = ChromeUtils.importESModule('chrome://remote/content/marionette/actors/MarionetteCommandsParent.sys.mjs');
+            const actor = getMarionetteCommandsActorProxy(() => document.querySelector('.webextension-popup-browser').browsingContext);
+            return actor.findElement('css selector', arguments[0], {timeout:5000,all:false})
+                .then(element => actor.clickElement(element, new Map([['moz:accessibilityChecks',false],['moz:webdriverClick',true]])));
+        "#,"args":[selector]}))?;
+        Ok(())
+    }
+    fn close_popup(&self) -> Result<()> {
+        self.call("/moz/context", json!({"context":"chrome"}))?;
+        self.call("/actions",json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}))?;
+        self.call("/moz/context", json!({"context":"content"}))?;
+        self.call("/frame", json!({"id":null}))?;
+        Ok(())
+    }
     fn screenshot(&self, path: &Path) -> Result<()> {
         use base64::Engine;
         let v: Value = self
@@ -477,6 +542,148 @@ impl Drop for Browser {
             .send();
         let _ = self.driver.0.kill();
     }
+}
+fn settings_from_popup(
+    browser: &Browser,
+    client: &mut Mcp,
+    artifacts: &Path,
+    single_profile: bool,
+    action: Option<&str>,
+) -> Result<()> {
+    let handles = || -> Result<Vec<Value>> {
+        let response: Value = browser
+            .client
+            .get(format!(
+                "{}/session/{}/window/handles",
+                browser.base, browser.session
+            ))
+            .send()?
+            .json()?;
+        Ok(response["value"]
+            .as_array()
+            .context("window handles")?
+            .clone())
+    };
+    let original: Value = browser
+        .client
+        .get(format!(
+            "{}/session/{}/window",
+            browser.base, browser.session
+        ))
+        .send()?
+        .json()?;
+    let original = original["value"].clone();
+    let before_handles = handles()?;
+    let before_tabs = client.ok("firefox_tabs", json!({}))?["tabs"].clone();
+    browser.popup()?;
+    if single_profile {
+        ensure!(
+            browser.popup_script("return document.querySelector('#choose').hidden;")? == true,
+            "A single Firefox profile must be selected without an extra choice"
+        );
+    }
+    browser.popup_click("#settings")?;
+    browser.close_popup()?;
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let manager = loop {
+        if let Some(handle) = handles()?
+            .into_iter()
+            .find(|handle| !before_handles.contains(handle))
+        {
+            break handle;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings did not open in this Firefox profile"
+        );
+        thread::sleep(Duration::from_millis(100));
+    };
+    browser.call("/window", json!({"handle":manager}))?;
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        if browser.script("return location.origin.startsWith('http://127.0.0.1:') && !!document.querySelector('#doctor') && !document.querySelector('#doctor').disabled && document.querySelector('#version')?.textContent.includes('Installed');")? == true { break; }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings page did not become ready"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    browser.click("#doctor")?;
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let result = browser.script("return document.querySelector('#result').textContent;")?;
+        if result.as_str().is_some_and(|text| {
+            text.contains("Codex registration: ready") && text.contains("Native connection: ready")
+        }) {
+            break;
+        }
+        ensure!(Instant::now() < deadline, "Settings check failed: {result}");
+        thread::sleep(Duration::from_millis(100));
+    }
+    ensure!(
+        client.ok("firefox_tabs", json!({}))?["tabs"] == before_tabs,
+        "Settings must not become a chat-owned work tab"
+    );
+    browser.screenshot(&artifacts.join("extension-settings-check.png"))?;
+    if let Some(action) = action {
+        browser.click(if action == "uninstall" {
+            "#uninstall"
+        } else {
+            "#install"
+        })?;
+        browser.click("#confirm-yes")?;
+        let expected = if action == "uninstall" {
+            "Connection removed."
+        } else {
+            "Connection installed."
+        };
+        let deadline = Instant::now() + Duration::from_secs(25);
+        loop {
+            let result = browser.script("return document.querySelector('#result').textContent;")?;
+            if result.as_str().is_some_and(|text| text.contains(expected)) {
+                break;
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "Settings {action} response failed: {result}"
+            );
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+    // Windows removal closes its manager automatically after delivering the
+    // response, so locked binaries can be cleaned up. Other paths close via UI.
+    if action != Some("uninstall") {
+        browser.click("#close")?;
+    }
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let result = browser.script("return document.querySelector('#result').textContent;")?;
+        if result
+            .as_str()
+            .is_some_and(|text| text.contains("Setup service closed"))
+        {
+            break;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings service did not close: {result}"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    browser
+        .client
+        .delete(format!(
+            "{}/session/{}/window",
+            browser.base, browser.session
+        ))
+        .send()?
+        .error_for_status()?;
+    browser.call("/window", json!({"handle":original}))?;
+    ensure!(
+        handles()?.len() == before_handles.len(),
+        "Settings left an extra tab"
+    );
+    Ok(())
 }
 fn fixture() -> Result<String> {
     let socket = TcpListener::bind("127.0.0.1:0")?;
@@ -776,8 +983,16 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     )?;
     let url = fixture()?;
     let mut a = Mcp::start(&root, A)?;
+    let b = Mcp::start(&root, B)?;
+    a.connected()?;
+    browser.goto(&url)?;
+    settings_from_popup(&browser, &mut a, &artifacts, true, Some("update"))?;
+    drop(a);
+    drop(b);
+    let mut a = Mcp::start(&root, A)?;
     let mut b = Mcp::start(&root, B)?;
     a.connected()?;
+    ensure!(browser.script("return document.querySelector('#count').textContent;")? == "Count 0");
     let tab = a.ok("firefox_open_tab", json!({"url":url}))?["tabId"].clone();
     let s = snapshot(&mut a)?;
     a.ok("firefox_click", action(&s, "Count 0")?)?;
@@ -896,6 +1111,9 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
         fresh.ok("firefox_status", json!({}))?["profileId"] == original_profile,
         "second profile stole selection"
     );
+    second_browser.goto(&url)?;
+    settings_from_popup(&second_browser, &mut fresh, &artifacts, false, None)?;
+    second_browser.goto(&format!("moz-extension://{UUID}/native/popup.html"))?;
     second_browser.click("#choose")?;
     let until = Instant::now() + Duration::from_secs(10);
     while fresh.ok("firefox_status", json!({}))?["profileId"] == original_profile {
@@ -1016,7 +1234,17 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     let normal_artifacts = artifacts.join("known-folders");
     fs::create_dir_all(&normal_artifacts)?;
     codex_roundtrip(normal.path(), &url, &normal_artifacts, &normal_browser)?;
-    run(&binary, normal.path(), "--uninstall")?;
+    normal_browser.goto(&url)?;
+    settings_from_popup(
+        &normal_browser,
+        &mut normal_mcp,
+        &normal_artifacts,
+        false,
+        Some("uninstall"),
+    )?;
+    ensure!(
+        normal_browser.script("return document.querySelector('#count').textContent;")? == "Count 0"
+    );
     normal_mcp.denied("firefox_snapshot", json!({}))?;
     drop(normal_mcp);
     drop(normal_browser);
@@ -1024,7 +1252,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     fs::write(
         artifacts.join("result.json"),
         serde_json::to_vec_pretty(
-            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":serde_json::from_str::<Value>(include_str!("../../extension/manifest.json"))?["version"],"verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","normal Known Folders endpoint without MCP environment overrides","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke and pause","two-profile selection and no offline fallback","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
+            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":serde_json::from_str::<Value>(include_str!("../../extension/manifest.json"))?["version"],"verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","normal Known Folders endpoint without MCP environment overrides","signed permanent extension","native messaging + named pipes","single-profile automatic selection","extension toolbar Settings in same Firefox profile","Settings excluded from work tabs","Settings update response after native reset","nonselected-profile Settings","Settings removal response and automatic service shutdown","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke and pause","two-profile selection and no offline fallback","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
         )?,
     )?;
     Ok(())

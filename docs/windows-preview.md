@@ -10,6 +10,11 @@ It publishes no Windows installer. Windows remains a separate preview: the
 beta.2 download has its own release page. The earlier beta.1 archive and its 0.4.0
 extension remain available unchanged as historical releases.
 
+This page's download steps and verification evidence cover published **beta.2**.
+The unreleased **0.5.0-beta.3** source moves routine management into the
+extension's **Settings**. See the [next-version management guide](firefox-only-management.md).
+No beta.3 download or Windows desktop acceptance result is claimed here.
+
 ## Install, update and remove
 
 [Download the Windows beta.2 ZIP](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.5.0-beta.2/firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip)

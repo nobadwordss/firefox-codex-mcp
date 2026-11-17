@@ -1,5 +1,7 @@
 Firefox Codex MCP — Linux x86_64
 
+Next package instructions: 0.5.0-beta.3, unreleased.
+The public Linux 0.4.1 archive is unchanged; use its own bundled instructions.
 English instructions: README.md. Korean translation: README.ko.md and INSTALL.ko.txt.
 
 Requirements: ordinary Firefox 140+ and the local Codex app or CLI.
@@ -18,7 +20,7 @@ First installation
    You do not need to install the skill separately or edit configuration files.
 4. Choose Add Codex Work Tabs to Firefox in the same setup page.
    Confirm Firefox's Continue Installation/Allow and Add prompts.
-   The package includes Mozilla-signed codex-work-tabs-0.4.1.xpi.
+   Use the Mozilla-signed XPI bundled with this package.
    The *-unsigned.xpi is for development/review only; see SIGNING.md.
 5. Open a new Codex chat and try:
    Open https://example.com in the browser, click Learn more, and tell me the destination page title.
@@ -34,7 +36,18 @@ If something goes wrong
   Setup never changes approval policy. Non-interactive codex exec has different
   approval behavior; first try the Codex app or interactive CLI.
 
-Step-by-step guide: docs/first-install-linux.md
+Published Linux 0.4.1 first-install guide: docs/first-install-linux.md
+Next-version management guide: docs/firefox-only-management.md
+
+Everyday use and management
+Use your ordinary Firefox and its existing profile. No extra Firefox app-menu
+entries or separate Codex browser profile are installed. Open Codex Work Tabs in
+Firefox, then choose Settings for connection checks, repair and removal.
+Firefox's Add-ons Manager can also open the extension controls and Settings button.
+The helper must be installed once per OS user; the extension cannot install it alone.
+If the helper is absent or unreachable, open this package's install.sh again.
+If the extension was already removed, install.sh still opens setup for helper
+repair or removal. Removing the add-on alone leaves the helper and Codex settings.
 
 In the same chat, work tabs continue across turns. Access ends after 24 hours without
 a request, explicit revocation, pause or a Firefox/helper restart. Result tabs stay open.
@@ -49,7 +62,7 @@ Firefox stays open. Previous work-tab access is revoked; start a new chat afterw
 To update the extension, install the new signed XPI through Firefox's Add-ons Manager.
 Direct-distribution XPIs do not currently have an automatic update channel.
 
-Remove: open Firefox Codex Manager and choose Remove connection.
+Remove: open the extension's Settings and choose Remove connection.
 Remove the extension separately in Firefox Add-ons Manager.
 Firefox profiles, logins, result tabs and user changes are preserved.
 Close existing Codex chats to end their already-running tool connections.
@@ -60,9 +73,11 @@ Close existing Codex chats to end their already-running tool connections.
 ./install.sh --uninstall
 ./install.sh --repair
 
-Advanced BiDi: ./install.sh --install-bidi [ABSOLUTE_PROFILE_PATH]
-Only this mode may require saving your work and reopening Firefox with
-Firefox (Codex connection). Debugging options end on the next normal Firefox restart.
+Advanced BiDi remains a command-line compatibility option:
+./install.sh --install-bidi [ABSOLUTE_PROFILE_PATH]
+No debugging app-menu launcher is created. After saving your work and closing
+Firefox, advanced users can run ./install.sh --launch-firefox ABSOLUTE_PROFILE_PATH.
+Use the default extension connection for ordinary Firefox and extension Settings.
 
 Installation receipts and recovery: ~/.local/state/firefox-codex-mcp/
 Run --repair after an interrupted installation. Modified files are not overwritten.

@@ -4,6 +4,23 @@ The `*-unsigned.xpi` in this package is a review/development artifact. It is NOT
 an installable permanent add-on for standard Firefox. Do not present temporary
 `about:debugging` loading as normal installation or as a persistent restart test.
 
+## 0.4.2 signed Firefox management build
+
+Mozilla approved Codex Work Tabs 0.4.2 for unlisted/direct distribution on
+2026-11-17. It adds Settings in the trusted extension controls and simplifies
+single-profile use. The extension ID and permissions are unchanged. The optional
+native Settings control requires the matching new helper; old helpers show an
+upgrade message. It is separate from MCP browser tools.
+AMO version: 6720969; file: 5265052. Readable source, helper source and reproduction
+instructions were provided for review.
+Signed artifact: `codex-work-tabs-0.4.2.xpi`.
+SHA256: `14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f`.
+
+Current source builds embed this artifact and compare all runtime files before
+packaging. Helper 0.5.0-beta.3 remains unreleased; published Linux 0.4.1 and
+Windows 0.5.0-beta.2 assets remain unchanged. Source/test approval is separate
+from a public release or Windows 10/11 desktop acceptance.
+
 ## 0.4.1 signed English build
 
 Mozilla approved Codex Work Tabs 0.4.1 for unlisted/direct distribution on
@@ -14,8 +31,8 @@ privacy policy and reproduction instructions was provided for review.
 Signed artifact: `codex-work-tabs-0.4.1.xpi`.
 SHA256: `4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc`.
 
-Current source builds embed this artifact and compare every runtime file against
-it before packaging. Linux helper 0.4.1 is the English stable release. Windows
+Published Linux helper 0.4.1 and Windows preview beta.2 embed this artifact.
+Linux helper 0.4.1 is the English stable release. Windows
 remains a separate preview; Linux release status does not establish Windows desktop support.
 Permanent installation through Firefox's actual confirmation controls, restart,
 two profiles, chat continuity and irreversible revocation passed on Linux with

@@ -12,6 +12,12 @@ Codex가 사용 중인 Firefox의 로그인 상태로 **자신의 작업 탭을 
 기본 연결은 Firefox 확장 + 로컬 연결 프로그램입니다. 코드·토큰·프로필 경로를 입력하거나
 탭마다 허용할 필요가 없습니다. 기존 WebDriver BiDi 방식은 고급 옵션으로 유지합니다.
 
+**다음 버전 0.5.0-beta.3은 아직 미배포입니다.** 별도의 Firefox 앱 메뉴 항목을 없애고
+일반 Firefox와 확장의 **Settings**에서 관리하도록 변경하고 있습니다. 로컬 연결 프로그램은
+OS 사용자별로 한 번 설치해야 하며 확장만으로 설치할 수는 없습니다.
+[새 관리 흐름](docs/firefox-only-management.md)을 참고하세요. 아래 다운로드 안내는
+기존 Linux **0.4.1**과 Windows **0.5.0-beta.2**를 설명하며 공개된 압축 파일은 변경하지 않습니다.
+
 ```text
 Codex 채팅 A ─ MCP stdio ─┐                       ┌─ A의 새 작업 탭
                          ├─ Rust 로컬 라우터 ─ 확장 ┤
@@ -134,7 +140,9 @@ BiDi는 Linux 전용이며 WSL·Store Firefox·ARM64·관리자/다른 계정 �
 확장은 Firefox 부가 기능 관리자에서 업데이트/제거합니다. 직접 배포한 서명 XPI에는 별도의
 자동 업데이트 URL이 없으므로 새 서명 XPI 설치가 필요합니다. AMO 목록 배포는 추후 단계입니다.
 
-앱 메뉴의 **Firefox Codex Manager**에서 진단·복구·제거할 수 있습니다. 제거는 전역 MCP 등록과
+공개된 Linux 0.4.1에서는 앱 메뉴의 **Firefox Codex Manager**에서 진단·복구·제거할 수 있습니다.
+다음 버전은 이 항목을 없애고 확장의 **Settings**에서 관리합니다.
+[새 흐름과 이전 설치 처리](docs/firefox-only-management.md)를 참고하세요. 제거는 전역 MCP 등록과
 설치한 파일/관리 블록만 대상으로 하며 사용자 수정, Firefox 프로필·로그인·결과 탭은 보존합니다.
 기존 채팅을 종료하면 남아 있는 연결도 끝납니다. 확장은 별도로 제거하세요.
 설치 장부와 복구 정보는 `~/.local/state/firefox-codex-mcp/`입니다.
@@ -150,12 +158,14 @@ BiDi는 Linux 전용이며 WSL·Store Firefox·ARM64·관리자/다른 계정 �
 ```
 
 관리 화면 기본 선택은 확장입니다. 기존 BiDi 설치를 확장으로 바꾸려면 기본 설치를 실행하세요.
-기존 BiDi 실행기/설정의 설치 장부는 유지해 이후 제거할 수 있습니다. BiDi를 쓰는 경우에만
-저장 후 **Firefox (Codex connection)**으로 실행해야 합니다. 앱을 강제 종료하지 않습니다.
+공개된 Linux 버전에는 BiDi용 **Firefox (Codex connection)** 실행기가 있지만 다음 버전부터는
+제공하지 않습니다. 일반 확장 연결은 기존 Firefox만 실행하면 됩니다. 앱을 강제 종료하지 않습니다.
 
 ## 개발·검증·패키징
 
 Rust 1.89+, Node 24+ 및 패키징용 `zip`, `unzip`, `tar`가 필요합니다.
+서명 확장 UI 시험과 패키징에는 현재 확장 소스와 일치하는 서명 XPI도 필요합니다.
+[서명 상태](packaging/SIGNING.md)를 확인하세요.
 
 ```bash
 cargo fmt --all -- --check
@@ -164,7 +174,7 @@ cargo test --workspace --locked
 node --test --test-isolation=none extension/tests/*.test.cjs
 cargo build --release --locked
 FIREFOX_SETUP_CODEX_BINARY=/path/to/codex cargo test --release --test install_e2e -- --ignored
-FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.1.xpi" FIREFOX_SIGNED_UI=1 FIREFOX_GECKODRIVER=/path/to/geckodriver cargo test --release --test firefox_e2e native_e2e:: -- --ignored --nocapture
+FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.2.xpi" FIREFOX_SIGNED_UI=1 FIREFOX_GECKODRIVER=/path/to/geckodriver cargo test --release --test firefox_e2e native_e2e:: -- --ignored --nocapture
 cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist/release
 ```
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Codex Work Tabs",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Unofficial local bridge for Codex work tabs. No codes, tokens or profile paths.",
   "browser_specific_settings": {
     "gecko": {

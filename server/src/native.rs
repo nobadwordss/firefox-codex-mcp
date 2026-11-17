@@ -14,8 +14,8 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
-    process::Command,
+    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader},
+    process::{Child, Command},
     sync::{mpsc, oneshot, Mutex, Notify},
     time::{sleep, timeout},
 };
@@ -209,6 +209,177 @@ async fn read_frame(input: &mut (impl AsyncRead + Unpin)) -> Result<Option<Value
     input.read_exact(&mut bytes).await?;
     Ok(Some(serde_json::from_slice(&bytes)?))
 }
+fn valid_settings_id(value: &str) -> bool {
+    (value.len() == 32 && value.bytes().all(|b| b.is_ascii_hexdigit()))
+        || (value.len() == 36
+            && value.bytes().enumerate().all(|(i, b)| {
+                if [8, 13, 18, 23].contains(&i) {
+                    b == b'-'
+                } else {
+                    b.is_ascii_hexdigit()
+                }
+            }))
+}
+pub(crate) fn valid_settings_url(value: &str) -> bool {
+    let Some(rest) = value.strip_prefix("http://127.0.0.1:") else {
+        return false;
+    };
+    let Some((port, token)) = rest.split_once("/#") else {
+        return false;
+    };
+    let valid_port = port
+        .parse::<u16>()
+        .is_ok_and(|number| number > 0 && number.to_string() == port);
+    valid_port
+        && token.len() == 64
+        && token
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+async fn read_settings_url(input: &mut (impl AsyncRead + Unpin)) -> Result<String> {
+    // The helper prints exactly one bounded startup line. Never pass arbitrary
+    // subprocess output to Firefox as a URL or into the native stdout stream.
+    let mut line = Vec::new();
+    loop {
+        ensure!(line.len() < 256, "Invalid Settings startup response");
+        let byte = input.read_u8().await?;
+        if byte == b'\n' {
+            break;
+        }
+        line.push(byte);
+    }
+    if line.last() == Some(&b'\r') {
+        line.pop();
+    }
+    let line = std::str::from_utf8(&line)?;
+    let url = line
+        .strip_prefix("Firefox Codex setup: ")
+        .filter(|value| valid_settings_url(value))
+        .context("Invalid Settings startup response")?;
+    Ok(url.into())
+}
+struct RunningSettings {
+    url: String,
+    alive: Arc<AtomicBool>,
+}
+struct StartingSettings(Option<Child>);
+impl Drop for StartingSettings {
+    fn drop(&mut self) {
+        if let Some(mut child) = self.0.take() {
+            // Cancelling the startup future must stop an unseen manager before
+            // this dedicated native host exits. After validation, ownership is
+            // explicitly transferred to the detached manager's reaper below.
+            let _ = child.start_kill();
+            if let Ok(runtime) = tokio::runtime::Handle::try_current() {
+                runtime.spawn(async move {
+                    let _ = child.wait().await;
+                });
+            }
+        }
+    }
+}
+#[derive(Default)]
+struct Settings {
+    running: Option<RunningSettings>,
+}
+impl Settings {
+    async fn open(&mut self) -> Result<String> {
+        if let Some(running) = &self.running {
+            if running.alive.load(Ordering::SeqCst) {
+                return Ok(running.url.clone());
+            }
+        }
+        self.running = None;
+        // The extension opens this URL using browser.tabs.create, preserving
+        // the profile that requested Settings. Never launch Firefox here.
+        let mut command = Command::new(env::current_exe()?);
+        crate::transport::detach(&mut command);
+        let mut starting = StartingSettings(Some(
+            command
+                .arg("--manage-no-open")
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()
+                .context("Could not start connection settings")?,
+        ));
+        let startup = async {
+            let child = starting.0.as_mut().context("Missing Settings process")?;
+            let mut output = child
+                .stdout
+                .take()
+                .context("Missing Settings startup pipe")?;
+            let url = timeout(Duration::from_secs(10), read_settings_url(&mut output))
+                .await
+                .context("Connection settings did not start in time")??;
+            ensure!(
+                child.try_wait()?.is_none(),
+                "Connection settings closed during startup"
+            );
+            Ok::<_, anyhow::Error>((url, output))
+        }
+        .await;
+        let (url, mut output) = match startup {
+            Ok(value) => value,
+            Err(error) => {
+                if let Some(child) = &mut starting.0 {
+                    let _ = child.kill().await;
+                    let _ = child.wait().await;
+                }
+                return Err(error);
+            }
+        };
+        let mut child = starting.0.take().context("Missing Settings process")?;
+        let alive = Arc::new(AtomicBool::new(true));
+        let watching = alive.clone();
+        tokio::spawn(async move {
+            let wait = async {
+                let _ = child.wait().await;
+                watching.store(false, Ordering::SeqCst);
+            };
+            let drain = async {
+                let _ = tokio::io::copy(&mut output, &mut tokio::io::sink()).await;
+            };
+            tokio::join!(wait, drain);
+        });
+        // Do not kill Settings when Native Messaging disconnects: installing
+        // or removing the connection resets that port during the HTTP action.
+        // The manager already has its own fixed 20-minute lifetime.
+        self.running = Some(RunningSettings {
+            url: url.clone(),
+            alive,
+        });
+        Ok(url)
+    }
+}
+fn settings_capability(mut value: Value) -> Value {
+    if value["kind"] == "ready" {
+        let mut capabilities = value["capabilities"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        if !capabilities.iter().any(|item| item == "settings-ui-v1") {
+            capabilities.push(json!("settings-ui-v1"));
+        }
+        value["capabilities"] = json!(capabilities);
+    }
+    value
+}
+async fn write_frames(
+    output: &mut (impl AsyncWrite + Unpin),
+    messages: &mut mpsc::Receiver<Value>,
+) -> Result<()> {
+    while let Some(value) = messages.recv().await {
+        let bytes = serde_json::to_vec(&value)?;
+        ensure!(bytes.len() < crate::LIMIT, "Native reply too large");
+        output
+            .write_all(&(bytes.len() as u32).to_ne_bytes())
+            .await?;
+        output.write_all(&bytes).await?;
+        output.flush().await?;
+    }
+    Ok(())
+}
 pub async fn host() -> Result<()> {
     // Firefox passes host manifest path and the permitted extension ID.
     ensure!(
@@ -229,27 +400,49 @@ pub async fn host() -> Result<()> {
         .write_all(format!("{first}\n").as_bytes())
         .await?;
     let (read, mut write) = tokio::io::split(socket.into_inner());
+    let (outgoing, mut messages) = mpsc::channel::<Value>(128);
+    let (settings_requests, mut requests) = mpsc::channel::<String>(4);
+    let up_outgoing = outgoing.clone();
     let up = async {
         while let Some(value) = read_frame(&mut input).await? {
-            write.write_all(format!("{value}\n").as_bytes()).await?;
+            if value["kind"] == "openSettings" {
+                let id = value["id"]
+                    .as_str()
+                    .filter(|id| valid_settings_id(id))
+                    .context("Invalid Settings request ID")?;
+                if settings_requests.try_send(id.into()).is_err() {
+                    up_outgoing
+                        .send(json!({"kind":"settingsResult","id":id,
+                        "error":"Settings is already opening. Try again."}))
+                        .await?;
+                }
+            } else {
+                write.write_all(format!("{value}\n").as_bytes()).await?;
+            }
         }
         Ok::<(), anyhow::Error>(())
     };
+    let down_outgoing = outgoing.clone();
     let down = async {
         let mut read = BufReader::new(read);
-        let mut output = tokio::io::stdout();
         while let Some(value) = crate::mcp::read_line(&mut read).await? {
-            let bytes = serde_json::to_vec(&value)?;
-            ensure!(bytes.len() < crate::LIMIT, "Native reply too large");
-            output
-                .write_all(&(bytes.len() as u32).to_ne_bytes())
-                .await?;
-            output.write_all(&bytes).await?;
-            output.flush().await?;
+            down_outgoing.send(settings_capability(value)).await?;
         }
         Ok::<(), anyhow::Error>(())
     };
-    tokio::select! {r=up=>r,r=down=>r}
+    let settings = async {
+        let mut settings = Settings::default();
+        while let Some(id) = requests.recv().await {
+            let response = match settings.open().await {
+                Ok(url) => json!({"kind":"settingsResult","id":id,"url":url}),
+                Err(error) => json!({"kind":"settingsResult","id":id,"error":error.to_string()}),
+            };
+            outgoing.send(response).await?;
+        }
+        Ok::<(), anyhow::Error>(())
+    };
+    let output = async { write_frames(&mut tokio::io::stdout(), &mut messages).await };
+    tokio::select! {r=up=>r,r=down=>r,r=settings=>r,r=output=>r}
 }
 async fn launch_if_needed(state: &Arc<Mutex<Router>>) -> Result<()> {
     let mut s = state.lock().await;
@@ -544,6 +737,150 @@ mod tests {
         assert!(read_frame(&mut bytes).await.is_err());
         let mut partial = &[1, 0][..];
         assert!(read_frame(&mut partial).await.is_err());
+    }
+    #[test]
+    fn settings_controls_are_separate_from_mcp_tools() {
+        assert!(crate::mcp::validate("openSettings", &json!({})).is_err());
+        assert!(crate::mcp::validate("firefox_open_settings", &json!({})).is_err());
+        assert!(valid_settings_id("d735d44e-1234-4567-8901-f6bd1d255cb3"));
+        assert!(valid_settings_id("0123456789abcdef0123456789abcdef"));
+        for invalid in [
+            "",
+            "settings",
+            "../profile",
+            "d735d44ex1234-4567-8901-f6bd1d255cb3",
+        ] {
+            assert!(!valid_settings_id(invalid));
+        }
+    }
+    #[test]
+    fn settings_urls_allow_only_the_canonical_loopback_manager() {
+        let token = "a".repeat(64);
+        assert!(valid_settings_url(&format!("http://127.0.0.1:1/#{token}")));
+        assert!(valid_settings_url(&format!(
+            "http://127.0.0.1:65535/#{token}"
+        )));
+        for invalid in [
+            format!("https://127.0.0.1:1234/#{token}"),
+            format!("http://localhost:1234/#{token}"),
+            format!("http://127.0.0.1.evil:1234/#{token}"),
+            format!("http://user@127.0.0.1:1234/#{token}"),
+            format!("http://127.0.0.1:0/#{token}"),
+            format!("http://127.0.0.1:01234/#{token}"),
+            format!("http://127.0.0.1:65536/#{token}"),
+            format!("http://127.0.0.1:1234/other/#{token}"),
+            format!("http://127.0.0.1:1234/?q=value#{token}"),
+            format!("http://127.0.0.1:1234/#{token}\n"),
+            "http://127.0.0.1:1234/#short".into(),
+            format!("http://127.0.0.1:1234/#{}", "g".repeat(64)),
+        ] {
+            assert!(!valid_settings_url(&invalid), "accepted {invalid}");
+        }
+    }
+    #[tokio::test]
+    async fn settings_startup_output_is_bounded_and_requires_the_fixed_prefix() -> Result<()> {
+        let url = format!("http://127.0.0.1:1234/#{}", "a".repeat(64));
+        for ending in ["\n", "\r\n"] {
+            let line = format!("Firefox Codex setup: {url}{ending}");
+            assert_eq!(read_settings_url(&mut line.as_bytes()).await?, url);
+        }
+        for line in [
+            format!("{url}\n"),
+            format!("Firefox Codex setup: {url}"),
+            "Firefox Codex setup: http://example.com/\n".into(),
+            "x".repeat(300),
+        ] {
+            assert!(read_settings_url(&mut line.as_bytes()).await.is_err());
+        }
+        Ok(())
+    }
+    #[test]
+    fn settings_capability_is_added_by_this_host_without_changing_broker_state() {
+        let ready = settings_capability(json!({"kind":"ready","epoch":"old-broker"}));
+        assert_eq!(ready["epoch"], "old-broker");
+        assert_eq!(ready["capabilities"], json!(["settings-ui-v1"]));
+        let ready = settings_capability(json!({"kind":"ready","capabilities":["other"]}));
+        assert_eq!(ready["capabilities"], json!(["other", "settings-ui-v1"]));
+        assert_eq!(settings_capability(ready.clone()), ready);
+        let configuration = json!({"kind":"configuration","selected":true});
+        assert_eq!(settings_capability(configuration.clone()), configuration);
+    }
+    #[tokio::test]
+    async fn opening_settings_reuses_the_running_manager() -> Result<()> {
+        let url = format!("http://127.0.0.1:1234/#{}", "a".repeat(64));
+        let mut settings = Settings {
+            running: Some(RunningSettings {
+                url: url.clone(),
+                alive: Arc::new(AtomicBool::new(true)),
+            }),
+        };
+        assert_eq!(settings.open().await?, url);
+        assert_eq!(settings.open().await?, url);
+        Ok(())
+    }
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn cancelling_settings_startup_kills_the_unseen_process() -> Result<()> {
+        let child = Command::new("sleep")
+            .arg("60")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
+        let pid = child.id().context("Missing child process ID")?;
+        let (started, ready) = oneshot::channel();
+        let work = tokio::spawn(async move {
+            let _starting = StartingSettings(Some(child));
+            let _ = started.send(());
+            std::future::pending::<()>().await;
+        });
+        ready.await?;
+        work.abort();
+        let error = work.await.expect_err("cancelled startup completed");
+        assert!(error.is_cancelled());
+        timeout(Duration::from_secs(2), async {
+            while unsafe { libc::kill(pid as libc::pid_t, 0) } == 0 {
+                sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .context("Cancelled Settings startup left its child running")?;
+        Ok(())
+    }
+    #[tokio::test]
+    async fn one_native_writer_preserves_frames_from_broker_and_settings() -> Result<()> {
+        let (mut input, mut output) = tokio::io::duplex(64);
+        let (tx, mut messages) = mpsc::channel(4);
+        let broker = tx.clone();
+        let settings = tx.clone();
+        drop(tx);
+        let writer = tokio::spawn(async move { write_frames(&mut output, &mut messages).await });
+        let first = tokio::spawn(async move {
+            for id in 0..32 {
+                broker.send(json!({"kind":"request","id":id})).await?;
+            }
+            Ok::<(), anyhow::Error>(())
+        });
+        let second = tokio::spawn(async move {
+            for id in 0..32 {
+                settings
+                    .send(json!({"kind":"settingsResult","id":id}))
+                    .await?;
+            }
+            Ok::<(), anyhow::Error>(())
+        });
+        let mut seen = HashSet::new();
+        for _ in 0..64 {
+            let frame = read_frame(&mut input)
+                .await?
+                .context("Missing native frame")?;
+            assert!(seen.insert((frame["kind"].to_string(), frame["id"].to_string())));
+        }
+        assert!(read_frame(&mut input).await?.is_none());
+        first.await??;
+        second.await??;
+        writer.await??;
+        Ok(())
     }
     #[test]
     fn identity_validation() {

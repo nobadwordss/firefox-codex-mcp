@@ -9,6 +9,11 @@ Snap/Flatpak Firefox와 다른 운영체제의 설치 흐름은 이 안내의 �
 **Linux 0.4.1은 영문 정식판입니다.** 설치 화면과 확장은 영어이며 아래 버튼 이름은
 실제 화면과 같습니다. Windows는 별도 프리뷰이고 과거 배포 파일은 그대로 남깁니다.
 
+이 문서는 공개된 **0.4.1 압축 파일**을 설명합니다. 아직 미배포인 **0.5.0-beta.3**
+소스에서는 별도 앱 메뉴 항목을 없애고 확장의 **Settings**에서 관리하도록 바뀝니다.
+[다음 버전 관리 안내](firefox-only-management.md)는 0.4.1의 설치 순서나 과거 검증 결과를
+변경하는 문서가 아닙니다.
+
 ## 배포 파일 실행
 
 1. [Linux 0.4.1 압축 파일](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz)을 받습니다.

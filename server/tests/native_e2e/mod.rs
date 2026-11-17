@@ -328,6 +328,201 @@ fn wait_snapshot(server: &mut Server) -> Result<Value> {
         thread::sleep(Duration::from_millis(100));
     }
 }
+fn capture_native(driver: &Driver, out: &Path, seq: u64, view: &str) -> Result<()> {
+    use base64::Engine;
+    fs::create_dir_all(out)?;
+    let path = out.join(format!("step-{seq}-{view}.png"));
+    if driver.popup_open.get() {
+        // A remote extension popup is omitted from the ordinary browser
+        // screenshot. Ask its WebDriver actor to capture the rendered popup.
+        let png = driver.popup_command(
+            "return actor.takeScreenshot(null, 0, true, false);",
+            json!([]),
+        )?;
+        fs::write(
+            path.with_extension("png.b64"),
+            png.as_str().context("popup screenshot")?,
+        )?;
+    } else {
+        save_desktop_screenshot(driver, out, seq, view)?;
+    }
+    let encoded = fs::read_to_string(path.with_extension("png.b64"))?;
+    fs::write(
+        path,
+        base64::engine::general_purpose::STANDARD.decode(encoded.trim())?,
+    )?;
+    Ok(())
+}
+fn settings_from_popup(
+    browser: &Browser,
+    client: &mut Server,
+    original: &str,
+    single_profile: bool,
+    action: Option<&str>,
+) -> Result<()> {
+    let handles = || -> Result<Vec<Value>> {
+        let response: Value = browser
+            .driver
+            .client
+            .get(format!(
+                "{}/session/{}/window/handles",
+                browser.driver.base, browser.driver.session
+            ))
+            .send()?
+            .json()?;
+        Ok(response["value"]
+            .as_array()
+            .context("window handles")?
+            .clone())
+    };
+    let before_handles = handles()?;
+    let before_tabs = client.ok("firefox_tabs", json!({}))?["tabs"].clone();
+    let artifacts = env::var_os("FIREFOX_NATIVE_ARTIFACTS").map(PathBuf::from);
+    let view = action.unwrap_or(if single_profile {
+        "single-profile"
+    } else {
+        "nonselected-profile"
+    });
+    browser.popup()?;
+    if single_profile {
+        ensure!(
+            browser.driver.script(
+                "return document.querySelector('#choose').hidden;",
+                json!([])
+            )? == true,
+            "A single Firefox profile must be selected without an extra choice"
+        );
+    }
+    if let Some(out) = &artifacts {
+        capture_native(&browser.driver, out, 10, &format!("{view}-popup"))?;
+    }
+    browser.driver.click("#settings")?;
+    browser.driver.close_popup()?;
+    let deadline = Instant::now() + Duration::from_secs(15);
+    let manager_handle = loop {
+        if let Some(handle) = handles()?
+            .into_iter()
+            .find(|handle| !before_handles.contains(handle))
+        {
+            break handle;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings did not open in this Firefox profile"
+        );
+        thread::sleep(Duration::from_millis(100));
+    };
+    browser
+        .driver
+        .call("/window", json!({"handle":manager_handle}))?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let ready = browser.driver.script("return location.origin.startsWith('http://127.0.0.1:') && !!document.querySelector('#doctor') && !document.querySelector('#doctor').disabled && document.querySelector('#version')?.textContent.includes('Installed');", json!([]))?;
+        if ready == true {
+            break;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings page did not become ready"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    if let Some(out) = &artifacts {
+        capture_native(&browser.driver, out, 11, &format!("{view}-settings"))?;
+    }
+    browser.driver.click("#doctor")?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let result = browser.driver.script(
+            "return document.querySelector('#result').textContent;",
+            json!([]),
+        )?;
+        if result.as_str().is_some_and(|text| {
+            text.contains("Codex connection: registered")
+                && text.contains("Local helper: registered")
+        }) {
+            break;
+        }
+        ensure!(Instant::now() < deadline, "Settings check failed: {result}");
+        thread::sleep(Duration::from_millis(100));
+    }
+    if let Some(out) = &artifacts {
+        browser.driver.script(
+            "document.querySelector('#result').scrollIntoView({block:'center'});",
+            json!([]),
+        )?;
+        capture_native(&browser.driver, out, 12, &format!("{view}-check-result"))?;
+    }
+    ensure!(
+        client.ok("firefox_tabs", json!({}))?["tabs"] == before_tabs,
+        "Settings must not become a chat-owned work tab"
+    );
+    if let Some(action) = action {
+        browser.driver.click(if action == "uninstall" {
+            "#uninstall"
+        } else {
+            "#install"
+        })?;
+        browser.driver.click("#confirm-yes")?;
+        let expected = if action == "uninstall" {
+            "Connection removed."
+        } else {
+            "Connection installed."
+        };
+        let deadline = Instant::now() + Duration::from_secs(20);
+        loop {
+            let result = browser.driver.script(
+                "return document.querySelector('#result').textContent;",
+                json!([]),
+            )?;
+            if result.as_str().is_some_and(|text| text.contains(expected)) {
+                break;
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "Settings {action} response failed: {result}"
+            );
+            thread::sleep(Duration::from_millis(100));
+        }
+        if let Some(out) = &artifacts {
+            capture_native(&browser.driver, out, 13, &format!("{view}-response"))?;
+        }
+    }
+    browser.driver.click("#close")?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let result = browser.driver.script(
+            "return document.querySelector('#result').textContent;",
+            json!([]),
+        )?;
+        if result
+            .as_str()
+            .is_some_and(|text| text.contains("Setup service closed"))
+        {
+            break;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Settings service did not close: {result}"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    browser
+        .driver
+        .client
+        .delete(format!(
+            "{}/session/{}/window",
+            browser.driver.base, browser.driver.session
+        ))
+        .send()?
+        .error_for_status()?;
+    browser.driver.call("/window", json!({"handle":original}))?;
+    ensure!(
+        handles()?.len() == before_handles.len(),
+        "Settings left an extra tab"
+    );
+    Ok(())
+}
 #[test]
 #[ignore = "launches actual Firefox with system access in disposable profiles"]
 fn extension_first_install_multi_profile_and_restart() -> Result<()> {
@@ -398,6 +593,13 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
             json!([])
         )? == "Count 0"
     );
+    settings_from_popup(&browser, &mut a, &baseline, true, None)?;
+    ensure!(
+        browser.driver.script(
+            "return document.querySelector('#count').textContent;",
+            json!([])
+        )? == "Count 0"
+    );
     a.ok(
         "firefox_navigate",
         json!({"url":format!("{}/next",fixture.url)}),
@@ -433,6 +635,21 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     let mut a = server(home)?;
     let b = server(home)?;
     a.wait_connected(true)?;
+    browser.driver.call("/window", json!({"handle":baseline}))?;
+    settings_from_popup(&browser, &mut a, &baseline, true, Some("update"))?;
+    ensure!(
+        browser.driver.script(
+            "return document.querySelector('#count').textContent;",
+            json!([])
+        )? == "Count 0"
+    );
+    // Updates revoke running tool connections. A new chat/process reconnects;
+    // the Settings HTTP response and unrelated browser page already survived.
+    drop(a);
+    drop(b);
+    let mut a = server(home)?;
+    let b = server(home)?;
+    a.wait_connected(true)?;
     ensure!(a.ok("firefox_status", json!({}))?["ownedTabs"] == 0);
     a.ok("firefox_open_tab", json!({"url":fixture.url}))?;
     wait_snapshot(&mut a)?;
@@ -444,6 +661,9 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     // Second profile does not steal the selected connection.
     let second = Browser::start(home, &home.join("profile-b"))?;
     second.addon()?;
+    second.driver.goto(&fixture.url)?;
+    let second_baseline = second.driver.handle()?;
+    settings_from_popup(&second, &mut a, &second_baseline, false, None)?;
     second.popup()?;
     second.driver.click("#choose")?;
     second.driver.close_popup()?;
@@ -476,15 +696,42 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     if let Ok(out) = env::var("FIREFOX_NATIVE_ARTIFACTS") {
         let out = PathBuf::from(out);
         fs::create_dir_all(&out)?;
-        save_desktop_screenshot(&restarted.driver, &out, 1, "native-popup")?;
+        capture_native(&restarted.driver, &out, 1, "native-popup")?;
         fs::write(
             out.join("result.json"),
             serde_json::to_vec_pretty(
-                &json!({"firstInstall":true,"signedInstallUi":env::var_os("FIREFOX_SIGNED_UI").is_some(),"twoChats":true,"multiProfile":true,"offlineNoFallback":true,"restartReconnect":true,"temporaryAddonReloaded":env::var_os("FIREFOX_SIGNED_XPI").is_none(),"permanentSignedRestartVerified":env::var_os("FIREFOX_SIGNED_XPI").is_some()}),
+                &json!({"firstInstall":true,"signedInstallUi":env::var_os("FIREFOX_SIGNED_UI").is_some(),"singleProfileAutomaticSelection":true,"extensionSettingsInSameFirefoxProfile":true,"settingsExcludedFromWorkTabs":true,"settingsUpdateResponseSurvivesNativeReset":true,"nonselectedProfileSettings":true,"twoChats":true,"multiProfile":true,"offlineNoFallback":true,"restartReconnect":true,"temporaryAddonReloaded":env::var_os("FIREFOX_SIGNED_XPI").is_none(),"permanentSignedRestartVerified":env::var_os("FIREFOX_SIGNED_XPI").is_some()}),
             )?,
         )?;
     }
     restarted.driver.close_popup()?;
+    restarted.driver.goto(&fixture.url)?;
+    let restarted_baseline = restarted.driver.handle()?;
+    settings_from_popup(
+        &restarted,
+        &mut a,
+        &restarted_baseline,
+        false,
+        Some("uninstall"),
+    )?;
+    ensure!(
+        restarted.driver.script(
+            "return document.querySelector('#count').textContent;",
+            json!([])
+        )? == "Count 0"
+    );
+    ensure!(!home
+        .join(".local/lib/firefox-codex-mcp/firefox-codex-mcp")
+        .exists());
+    ensure!(!fs::read_to_string(home.join(".codex/config.toml"))?.contains("mcp_servers.firefox"));
+    if let Ok(out) = env::var("FIREFOX_NATIVE_ARTIFACTS") {
+        fs::write(
+            Path::new(&out).join("settings-removal-result.json"),
+            serde_json::to_vec_pretty(
+                &json!({"responseDeliveredAfterNativeReset":true,"serviceClosed":true,"firefoxFixturePreserved":true,"registrationRemoved":true}),
+            )?,
+        )?;
+    }
     drop(restarted);
     drop(browser);
     drop(a);

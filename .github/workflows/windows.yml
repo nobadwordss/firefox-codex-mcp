@@ -43,7 +43,7 @@ jobs:
           "FIREFOX_SETUP_CODEX_BINARY=$($codex.FullName)" >> $env:GITHUB_ENV
           "FIREFOX_GECKODRIVER=$env:RUNNER_TEMP\geckodriver\geckodriver.exe" >> $env:GITHUB_ENV
           "FIREFOX_BINARY=$env:ProgramFiles\Mozilla Firefox\firefox.exe" >> $env:GITHUB_ENV
-          "FIREFOX_SIGNED_XPI=$env:GITHUB_WORKSPACE\packaging\signed\codex-work-tabs-0.4.1.xpi" >> $env:GITHUB_ENV
+          "FIREFOX_SIGNED_XPI=$env:GITHUB_WORKSPACE\packaging\signed\codex-work-tabs-0.4.2.xpi" >> $env:GITHUB_ENV
           "FIREFOX_WINDOWS_ARTIFACTS=$env:GITHUB_WORKSPACE\windows-evidence" >> $env:GITHUB_ENV
           "FIREFOX_MCP_WINDOWS_E2E=1" >> $env:GITHUB_ENV
       - name: Real install, running update, removal and signed Firefox E2E

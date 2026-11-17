@@ -1,7 +1,40 @@
 #![cfg(unix)]
 use anyhow::{ensure, Context, Result};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde_json::Value;
 use std::{env, fs, path::Path, process::Command};
+
+// Reproduce a receipt written by a release that owned app-menu shortcuts. The
+// current installer must retire only those recorded files, not sweep the menu.
+fn seed_legacy_launcher(
+    home: &Path,
+    name: &str,
+    before: Option<&str>,
+    current: Option<&str>,
+) -> Result<()> {
+    let path = home.join(".local/share/applications").join(name);
+    fs::create_dir_all(path.parent().context("launcher parent")?)?;
+    if let Some(current) = current {
+        fs::write(&path, current)?;
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+    } else if path.exists() {
+        fs::remove_file(&path)?;
+    }
+    let receipt_path = home.join(".local/state/firefox-codex-mcp/install.json");
+    let mut receipt: Value = serde_json::from_slice(&fs::read(&receipt_path)?)?;
+    let files = receipt["files"].as_array_mut().context("receipt files")?;
+    files.retain(|file| file["path"] != path.to_string_lossy().as_ref());
+    let snapshot = |value: &str| serde_json::json!({"bytes":STANDARD.encode(value),"mode":0o600});
+    files.push(serde_json::json!({
+        "path":path,
+        "before":before.map(snapshot),
+        "installed":snapshot("Legacy managed shortcut.\n"),
+        "block":null
+    }));
+    fs::write(receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    Ok(())
+}
 
 #[test]
 #[ignore = "uses the installed Codex CLI with an isolated HOME to test global setup"]
@@ -9,6 +42,8 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     let codex = env::var("FIREFOX_SETUP_CODEX_BINARY").context("Set FIREFOX_SETUP_CODEX_BINARY")?;
     let root = tempfile::tempdir()?;
     let home = root.path();
+    let manager = home.join(".local/share/applications/firefox-codex-manager.desktop");
+    let launcher = home.join(".local/share/applications/firefox-codex.desktop");
     let config = home.join(".codex");
     fs::create_dir_all(&config)?;
     fs::write(
@@ -55,6 +90,9 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
         "{}",
         String::from_utf8_lossy(&first.stderr)
     );
+    if upgrade_from.is_none() {
+        ensure!(!manager.exists() && !launcher.exists());
+    }
     let installed = home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp");
     let initial_version = run(&installed, &["--version"])?;
     ensure!(initial_version.status.success());
@@ -85,15 +123,12 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
     ensure!(installed_version.status.success() && target_version.status.success());
     ensure!(installed_version.stdout == target_version.stdout);
     ensure!(fs::read(&installed)? == fs::read(executable)?);
+    ensure!(!manager.exists() && !launcher.exists());
     if upgrade_from.is_some() {
         ensure!(
             fs::read_to_string(config.join("skills/firefox-browser/SKILL.md"))?
-                .contains("Use this Firefox")
+                == include_str!("../../skills/firefox-browser/SKILL.md")
         );
-        ensure!(fs::read_to_string(
-            home.join(".local/share/applications/firefox-codex-manager.desktop")
-        )?
-        .contains("Name=Firefox Codex Manager"));
     }
     ensure!(
         config_once.contains("test-model")
@@ -194,12 +229,91 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
         String::from_utf8_lossy(&advanced.stderr)
     );
     ensure!(fs::read_to_string(config.join("config.toml"))?.contains("--bidi"));
+    ensure!(!manager.exists() && !launcher.exists());
     ensure!(run(executable, &["--update"])?.status.success());
     ensure!(fs::read_to_string(config.join("config.toml"))?.contains("--bidi"));
+
+    // The extension migration removes old receipt-owned shortcuts, restores an
+    // original shortcut baseline, and removes only our known preference block.
+    seed_legacy_launcher(
+        home,
+        "firefox-codex-manager.desktop",
+        None,
+        Some("Legacy managed shortcut.\n"),
+    )?;
+    seed_legacy_launcher(
+        home,
+        "firefox-codex.desktop",
+        Some("Original shortcut.\n"),
+        Some("Legacy managed shortcut.\n"),
+    )?;
+    let pref_path = firefox.join("main/user.js");
+    fs::write(
+        &pref_path,
+        format!(
+            "{}user_pref(\"example.during_bidi\", true);\n",
+            fs::read_to_string(&pref_path)?
+        ),
+    )?;
+    fs::set_permissions(&pref_path, fs::Permissions::from_mode(0o640))?;
+    let lock = firefox.join("main/lock");
+    let lock_target = format!("localhost:+{}", std::process::id());
+    std::os::unix::fs::symlink(&lock_target, &lock)?;
     ensure!(run(executable, &["--install"])?.status.success());
     let migrated = fs::read_to_string(config.join("config.toml"))?;
     ensure!(migrated.contains("--extension") && !migrated.contains("FIREFOX_MCP_PROFILE"));
+    ensure!(!manager.exists());
+    ensure!(fs::read_to_string(&launcher)? == "Original shortcut.\n");
+    let prefs = fs::read_to_string(&pref_path)?;
+    ensure!(prefs.contains("example.during_bidi") && !prefs.contains("remote.prefs.recommended"));
+    ensure!(!prefs.contains("firefox-codex-mcp:start"));
+    ensure!(fs::metadata(&pref_path)?.permissions().mode() & 0o777 == 0o640);
+    ensure!(fs::read_link(&lock)? == Path::new(&lock_target));
+
+    // Deleted and edited shortcuts remain user-owned after migration and later
+    // removal. In particular, uninstall must not resurrect their old baselines.
+    seed_legacy_launcher(
+        home,
+        "firefox-codex-manager.desktop",
+        Some("Deleted original shortcut.\n"),
+        None,
+    )?;
+    seed_legacy_launcher(
+        home,
+        "firefox-codex.desktop",
+        Some("Original shortcut.\n"),
+        Some("My edited shortcut.\n"),
+    )?;
+    ensure!(run(executable, &["--update"])?.status.success());
+    ensure!(!manager.exists());
+    ensure!(fs::read_to_string(&launcher)? == "My edited shortcut.\n");
     ensure!(run(executable, &["--uninstall"])?.status.success());
+    ensure!(!manager.exists());
+    ensure!(fs::read_to_string(&launcher)? == "My edited shortcut.\n");
+    ensure!(fs::read_link(&lock)? == Path::new(&lock_target));
+
+    // A same-named, unowned shortcut and an existing standalone preference are
+    // outside the receipt. Neither a fresh install nor migration may adopt them.
+    let user_pref = format!(
+        "{}user_pref(\"remote.prefs.recommended\", false);\n",
+        fs::read_to_string(&pref_path)?
+    );
+    fs::write(&pref_path, &user_pref)?;
+    ensure!(run(
+        executable,
+        &[
+            "--install-bidi",
+            firefox.join("main").to_str().context("profile")?
+        ]
+    )?
+    .status
+    .success());
+    ensure!(run(executable, &["--install"])?.status.success());
+    ensure!(run(executable, &["--uninstall"])?.status.success());
+    ensure!(fs::read_to_string(&pref_path)? == user_pref);
+    ensure!(!manager.exists());
+    ensure!(fs::read_to_string(&launcher)? == "My edited shortcut.\n");
+    ensure!(fs::read_link(&lock)? == Path::new(&lock_target));
     if let Some(out) = env::var_os("FIREFOX_UPGRADE_ARTIFACTS") {
         fs::create_dir_all(&out)?;
         fs::write(
@@ -210,7 +324,10 @@ fn global_install_preserves_config_and_repeats() -> Result<()> {
                 "publishedSourceProvided":upgrade_from.is_some(),
                 "installedBinaryMatchesTarget":true,
                 "unrelatedConfigurationPreserved":true,
-                "englishSkillAndLauncher":upgrade_from.is_some(),
+                "englishSkill":upgrade_from.is_some(),
+                "noAppMenuLaunchers":true,
+                "legacyLauncherMigrationPreservesUserChanges":true,
+                "foreignLauncherAndPreferencePreserved":true,
                 "repeatedInstallUpdateRemoval":true,
                 "userEditsPreserved":true,
                 "advancedModeMigration":true

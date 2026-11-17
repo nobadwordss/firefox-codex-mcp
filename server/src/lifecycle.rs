@@ -220,6 +220,39 @@ fn text(value: &Option<Snapshot>) -> Result<String> {
         .map(|v| String::from_utf8(v.bytes.clone()).map_err(Into::into))
         .unwrap_or_else(|| Ok(String::new()))
 }
+fn restore_managed_file(file: &Managed, preserved: &mut Vec<String>) -> Result<Option<Change>> {
+    let current = snapshot(&file.path)?;
+    // A user deletion is a change too. Never restore an older baseline over it.
+    if current.is_none() {
+        return Ok(None);
+    }
+    let after = if current.as_ref() == Some(&file.installed) {
+        file.before.clone()
+    } else if let Some(block) = &file.block {
+        let content = text(&current)?;
+        if content.matches(block).count() != 1 {
+            preserved.push(file.path.display().to_string());
+            return Ok(None);
+        }
+        Some(Snapshot {
+            bytes: content.replacen(block, "", 1).into_bytes(),
+            mode: current.as_ref().map_or(0o600, |s| s.mode),
+        })
+    } else {
+        preserved.push(file.path.display().to_string());
+        return Ok(None);
+    };
+    Ok((after != current).then(|| Change {
+        path: file.path.clone(),
+        before: current,
+        after,
+    }))
+}
+fn legacy_launcher(home: &Path, path: &Path) -> bool {
+    let applications = home.join(".local/share/applications");
+    path == applications.join("firefox-codex-manager.desktop")
+        || path == applications.join("firefox-codex.desktop")
+}
 fn generated(path: PathBuf, bytes: Vec<u8>, mode: u32) -> Result<Change> {
     Ok(Change {
         before: snapshot(&path)?,
@@ -361,10 +394,6 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         text(&current_agents)?
     };
     let agents_bytes = o::guidance(&baseline)?.into_bytes();
-    let management = layout
-        .home
-        .join(".local/share/applications/firefox-codex-manager.desktop");
-    let manager=format!("[Desktop Entry]\nType=Application\nName=Firefox Codex Manager\nExec={} --manage\nIcon=firefox\nTerminal=false\nCategories=Settings;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?);
     let mut entries = vec![
         (
             agents,
@@ -376,7 +405,6 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             o::SKILL.as_bytes().to_vec(),
             None,
         ),
-        (management, manager.into_bytes(), None),
     ];
     let mut has_existing_pref = false;
     if extension {
@@ -432,14 +460,6 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
                 }
             )
         };
-        let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex connection)\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?,setup::quote_desktop(&profile.to_string_lossy())?);
-        entries.push((
-            layout
-                .home
-                .join(".local/share/applications/firefox-codex.desktop"),
-            desktop.into_bytes(),
-            None,
-        ));
         entries.push((
             pref,
             pref_text.into_bytes(),
@@ -510,13 +530,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
                     bytes: clean.into_bytes(),
                     mode: before.as_ref().map_or(0o600, |s| s.mode),
                 });
-            } else if path.ends_with("SKILL.md") && text(&before)? == o::SKILL
-                || path.ends_with("firefox-codex.desktop")
-                    && text(&before)?.contains(&format!(
-                        "Exec={} --launch-firefox ",
-                        setup::quote_desktop(&layout.executable.to_string_lossy())?
-                    ))
-            {
+            } else if path.ends_with("SKILL.md") && text(&before)? == o::SKILL {
                 original = None;
             }
         }
@@ -532,11 +546,23 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             after: Some(installed),
         });
     }
-    // Retain receipts for inactive advanced-mode files so later removal remains complete.
+    // Retire old app-menu entries, and undo only our known debugging preference
+    // when switching to extension mode. Keep everything in the same transaction
+    // as configuration and receipt changes; custom edits remain the user's files.
     if let Some(prior) = &prior {
         for old in &prior.files {
             if !files.iter().any(|f| f.path == old.path) {
-                files.push(old.clone());
+                if legacy_launcher(&layout.home, &old.path)
+                    || extension
+                        && old.path.ends_with("user.js")
+                        && old.block.as_deref() == Some(PREF_BLOCK)
+                {
+                    if let Some(change) = restore_managed_file(old, &mut preserved)? {
+                        changes.push(change);
+                    }
+                } else {
+                    files.push(old.clone());
+                }
             }
         }
     }
@@ -563,7 +589,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             .output()
             .is_ok_and(|o| o.status.success());
     Ok(
-        json!({"restartRequired":restart_required,"installed":true,"version":receipt.version,"mode":receipt.mode,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":if extension {"Connection installed. Choose Add Codex Work Tabs to Firefox, then request a browser task in a new Codex chat. No code, token or profile path is needed. Updates revoke previous work-tab access and keep Firefox running. Remove the extension separately in Firefox Add-ons."} else {"Installation complete. Request a browser task in a new Codex chat. If ordinary Firefox is running, save your work and reopen it once with Firefox (Codex connection). Use Firefox Codex Manager for diagnosis and removal. Open setup from a newer package to update."}}),
+        json!({"restartRequired":restart_required,"installed":true,"version":receipt.version,"mode":receipt.mode,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":if extension {"Connection installed. Add Codex Work Tabs to Firefox, then use ordinary Firefox and request a browser task in a new Codex chat. No separate Firefox launcher, code, token or profile path is needed. Updates revoke previous work-tab access and keep Firefox running. Remove the extension separately in Firefox Add-ons."} else {"Advanced debugging connection installed. No app-menu launcher was created. If ordinary Firefox is running, save your work and close it before using --launch-firefox PROFILE. Use --doctor or --uninstall for diagnosis or removal."}}),
     )
 }
 pub fn uninstall() -> Result<Value> {
@@ -591,31 +617,9 @@ pub fn uninstall() -> Result<Value> {
         preserved.push("Modified or missing Firefox MCP registration".into());
     }
     for file in &receipt.files {
-        let current = snapshot(&file.path)?;
-        let after = if current.as_ref() == Some(&file.installed) {
-            file.before.clone()
-        } else if let Some(block) = &file.block {
-            let content = text(&current)?;
-            if content.matches(block).count() == 1 {
-                Some(Snapshot {
-                    bytes: content.replacen(block, "", 1).into_bytes(),
-                    mode: current.as_ref().map_or(0o600, |s| s.mode),
-                })
-            } else {
-                preserved.push(file.path.display().to_string());
-                continue;
-            }
-        } else {
-            if current.is_some() {
-                preserved.push(file.path.display().to_string());
-            }
-            continue;
-        };
-        changes.push(Change {
-            path: file.path.clone(),
-            before: current,
-            after,
-        });
+        if let Some(change) = restore_managed_file(file, &mut preserved)? {
+            changes.push(change);
+        }
     }
     let executable = snapshot(&layout.executable)?;
     if executable
@@ -663,18 +667,15 @@ pub fn installed_mode() -> Option<String> {
         .ok()
         .map(|r| r.mode)
 }
-pub fn installed_profile() -> Option<PathBuf> {
-    let home = o::home().ok()?;
-    let data = fs::read(home.join(".local/state/firefox-codex-mcp/install.json")).ok()?;
-    serde_json::from_slice::<Receipt>(&data)
-        .ok()
-        .filter(|r| r.mode == "bidi")
-        .map(|r| r.profile)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn contents(bytes: &str, mode: u32) -> Snapshot {
+        Snapshot {
+            bytes: bytes.as_bytes().to_vec(),
+            mode,
+        }
+    }
     fn layout(root: &Path) -> Layout {
         Layout {
             home: root.into(),
@@ -729,5 +730,83 @@ mod tests {
         std::os::unix::fs::symlink(&target, &link).unwrap();
         assert!(generated(link, b"change".to_vec(), 0o600).is_err());
         assert_eq!(fs::read_to_string(target).unwrap(), "untouched");
+    }
+    #[test]
+    fn shortcut_retirement_rolls_back_with_the_receipt() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let layout = layout(temp.path());
+        let path = temp.path().join("firefox-codex.desktop");
+        let installed = contents("Managed shortcut\n", 0o600);
+        let original = contents("Original shortcut\n", 0o644);
+        put(&path, &Some(installed.clone()))?;
+        let managed = Managed {
+            path: path.clone(),
+            before: Some(original.clone()),
+            installed: installed.clone(),
+            block: None,
+        };
+        let mut preserved = Vec::new();
+        let changes = vec![
+            restore_managed_file(&managed, &mut preserved)?.context("retirement")?,
+            generated(layout.receipt.clone(), b"new receipt".to_vec(), 0o600)?,
+        ];
+        setup::write_atomic(&layout.pending, &serde_json::to_vec(&changes)?, 0o600)?;
+        put(&path, &changes[0].after)?;
+        // A crash before committing the new receipt must restore the old pair.
+        recover(&layout)?;
+        assert!(snapshot(&path)? == Some(installed));
+        assert!(!layout.receipt.exists());
+        transact(&layout, changes)?;
+        assert!(snapshot(&path)? == Some(original));
+        assert!(preserved.is_empty());
+        Ok(())
+    }
+    #[test]
+    fn managed_removal_preserves_deleted_and_customized_files() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("firefox-codex-manager.desktop");
+        let managed = Managed {
+            path: path.clone(),
+            before: Some(contents("Original shortcut\n", 0o600)),
+            installed: contents("Managed shortcut\n", 0o600),
+            block: None,
+        };
+        let mut preserved = Vec::new();
+        // Deleting an installed shortcut must not resurrect an older original.
+        assert!(restore_managed_file(&managed, &mut preserved)?.is_none());
+        fs::write(&path, "My edited shortcut\n")?;
+        assert!(restore_managed_file(&managed, &mut preserved)?.is_none());
+        assert_eq!(fs::read_to_string(&path)?, "My edited shortcut\n");
+        assert_eq!(preserved, [path.display().to_string()]);
+        Ok(())
+    }
+    #[test]
+    fn preference_retirement_preserves_edits_outside_the_known_block() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("user.js");
+        let baseline = "user_pref(\"example.original\", true);\n";
+        let installed = contents(&format!("{baseline}{PREF_BLOCK}"), 0o600);
+        let managed = Managed {
+            path: path.clone(),
+            before: Some(contents(baseline, 0o600)),
+            installed,
+            block: Some(PREF_BLOCK.into()),
+        };
+        let edited = format!("{baseline}{PREF_BLOCK}user_pref(\"example.later\", true);\n");
+        setup::write_atomic(&path, edited.as_bytes(), 0o640)?;
+        let mut preserved = Vec::new();
+        let change =
+            restore_managed_file(&managed, &mut preserved)?.context("preference removal")?;
+        put(&path, &change.after)?;
+        assert_eq!(
+            fs::read_to_string(&path)?,
+            format!("{baseline}user_pref(\"example.later\", true);\n")
+        );
+        assert_eq!(snapshot(&path)?.context("preferences")?.mode, 0o640);
+        let user_block = edited.replace("recommended\", false", "recommended\", true");
+        fs::write(&path, &user_block)?;
+        assert!(restore_managed_file(&managed, &mut preserved)?.is_none());
+        assert_eq!(fs::read_to_string(&path)?, user_block);
+        Ok(())
     }
 }
