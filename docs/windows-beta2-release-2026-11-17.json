@@ -1,0 +1,218 @@
+{
+  "date": "2026-11-17",
+  "release": "0.5.0-beta.2",
+  "status": "Published Windows prerelease; Windows desktop acceptance pending",
+  "buildCommit": "0cf57de14c0a5a88ec91bd2c09145c883b677837",
+  "repairFixCommit": "187b18abd60698f0f89bd4260ff4b99ca4b289d9",
+  "workflows": {
+    "windows": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44027724885",
+    "checks": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44027724792",
+    "linux": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44027724971"
+  },
+  "environment": {
+    "os": "Windows Server 2022 x64 (GitHub windows-2022)",
+    "firefox": "160.0, headless disposable profiles",
+    "codex": "Official native Codex CLI/app-server; version not separately captured",
+    "modelCredentials": "None sent to CI; app-server dispatch is not model-driven verification"
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "msvcClippyWarningsDenied": "passed",
+    "windowsUnitTests": 25,
+    "javascriptTests": 64,
+    "sourceBuildE2ETests": 2,
+    "sourceBuildSeconds": 36.74,
+    "extractedZipE2ETests": 2,
+    "extractedZipSeconds": 32.78,
+    "actualRepairContentionCases": 4,
+    "checksums": "passed",
+    "githubProvenance": "Verified exact build commit, refs/heads/main and Windows workflow",
+    "packagedGuideLinks": "Direct beta.2 URL present; all relative README and Windows-guide targets exist in ZIP",
+    "signedExtension": "0.4.1 with English popup; packaged XPI matches standalone signed bytes",
+    "localRust": "Local temporary toolchain unavailable; Rust checks performed in CI"
+  },
+  "sourceRepair": {
+    "cases": [
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "cleanup-exclusive-share",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      },
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "installer-byte-range",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      }
+    ]
+  },
+  "extractedRepair": {
+    "cases": [
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "cleanup-exclusive-share",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      },
+      {
+        "blockedUntilReleased": true,
+        "contentionObserved": true,
+        "lock": "installer-byte-range",
+        "repairResumed": true,
+        "unrelatedSettingsPreserved": true
+      }
+    ]
+  },
+  "sourceLifecycle": {
+    "firefoxVersion": "160.0",
+    "notVerified": [
+      "Windows 10 desktop",
+      "Windows 11 desktop",
+      "Codex desktop UI or live model dispatch",
+      "Authenticode and SmartScreen"
+    ],
+    "os": "Windows_NT",
+    "runner": "win22",
+    "signedExtension": "0.4.1",
+    "verified": [
+      "Unicode and spaces install",
+      "official Codex CLI MCP discovery",
+      "actual Codex app-server tool dispatch",
+      "normal Known Folders endpoint without MCP environment overrides",
+      "signed permanent extension",
+      "native messaging + named pipes",
+      "read text and status",
+      "click and type",
+      "two-chat isolation",
+      "MCP replacement continuity",
+      "irreversible revoke",
+      "extension UI revoke and pause",
+      "two-profile selection and no offline fallback",
+      "update with running old EXE",
+      "Firefox restart",
+      "uninstall preserves unrelated settings"
+    ]
+  },
+  "extractedLifecycle": {
+    "firefoxVersion": "160.0",
+    "notVerified": [
+      "Windows 10 desktop",
+      "Windows 11 desktop",
+      "Codex desktop UI or live model dispatch",
+      "Authenticode and SmartScreen"
+    ],
+    "os": "Windows_NT",
+    "runner": "win22",
+    "signedExtension": "0.4.1",
+    "verified": [
+      "Unicode and spaces install",
+      "official Codex CLI MCP discovery",
+      "actual Codex app-server tool dispatch",
+      "normal Known Folders endpoint without MCP environment overrides",
+      "signed permanent extension",
+      "native messaging + named pipes",
+      "read text and status",
+      "click and type",
+      "two-chat isolation",
+      "MCP replacement continuity",
+      "irreversible revoke",
+      "extension UI revoke and pause",
+      "two-profile selection and no offline fallback",
+      "update with running old EXE",
+      "Firefox restart",
+      "uninstall preserves unrelated settings"
+    ]
+  },
+  "artifact": {
+    "archive": "firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip",
+    "archiveSha256": "a118f86e9ecdfef8fa589d39dcebe32ac6ad507fe6d147d1597791ad313ccb3f",
+    "binarySha256": "ce64f46577a35ba14c32901238db885f51534efe6cc7fd9de9267289a9af1e7a",
+    "signedExtensionSha256": "4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc",
+    "build": {
+      "binarySha256": "ce64f46577a35ba14c32901238db885f51534efe6cc7fd9de9267289a9af1e7a",
+      "commit": "0cf57de14c0a5a88ec91bd2c09145c883b677837",
+      "runner": "Windows",
+      "target": "x86_64-pc-windows-msvc",
+      "version": "0.5.0-beta.2"
+    },
+    "packageArtifactId": 14303633379,
+    "evidenceArtifactId": 14304410905
+  },
+  "releasePolicy": {
+    "prerelease": true,
+    "makeLatest": false,
+    "windowsAssetsOnly": true,
+    "linuxStable": "0.4.1",
+    "linuxStableReleaseId": 448085306,
+    "linuxAssetDigestsBefore": [
+      {
+        "name": "codex-work-tabs-0.4.1.xpi",
+        "digest": "sha256:4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc"
+      },
+      {
+        "name": "firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz",
+        "digest": "sha256:0b39ef35064773ce7ac224193598282921fb08cd733b8698f73eace029689683"
+      },
+      {
+        "name": "linux-attestation.jsonl",
+        "digest": "sha256:4c80d63603101c3731a20cbe0d14d43017acb95d28af2b29c0bf3396efe26cbb"
+      },
+      {
+        "name": "linux-evidence.zip",
+        "digest": "sha256:d4d7d40e021cfe8b6b6dc33a51215044effe170859cc25b2372f0ccd511d3f38"
+      },
+      {
+        "name": "provenance-verification.json",
+        "digest": "sha256:5d808549f5e9fc329891de528b1d1bf59edf953e8d9497d85c559c7565859dfa"
+      },
+      {
+        "name": "release-verification.json",
+        "digest": "sha256:d1d49d6251b7457212cbfacfec2dbc219ae19ba17971bda4dfa984ac1c8446d5"
+      },
+      {
+        "name": "SHA256SUMS",
+        "digest": "sha256:71098ca36db417b01a40d7f62c2870c7b3ddb3bc1f686c8450662d1dfa5c7330"
+      }
+    ]
+  },
+  "notVerified": [
+    "Windows 10/11 desktop clean non-administrator installation",
+    "Actual Windows Codex desktop GUI, model-driven selection and app restart/job-object lifetime",
+    "Authenticode and downloaded-file SmartScreen flow",
+    "Real interactive cross-user/session rejection",
+    "Store Firefox, ARM64, WSL and elevated/mixed-user operation"
+  ],
+  "review": {
+    "scope": "Independent documentation and package-link audit; prior Gemini review of the repair fix. Advisory only, execution evidence is from CI.",
+    "stableReadmeSectionsUnchanged": true
+  },
+  "publication": {
+    "stage": "Published and anonymously verified",
+    "checkedAtUtc": "2026-11-17T06:09:22.066Z",
+    "url": "https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2",
+    "prerelease": true,
+    "draft": false,
+    "makeLatest": false,
+    "anonymousAssetsHttp200": 7,
+    "publicAssetBytesMatchUploads": true,
+    "publishedChecksumsPassed": true,
+    "publicArchiveMatchesTestedCiArchive": true,
+    "linuxLatestTag": "v0.4.1",
+    "linuxStableUnchanged": true,
+    "linuxStableTagCommit": "920795cb154f68feab20ef17f8a16872a7938d48",
+    "linuxStableReleaseId": 448085306,
+    "linuxStableAssetCount": 7,
+    "note": "Attached release-verification.json preserves pre-publication executable validation. This main record adds successful public downloads and stable-preservation checks."
+  },
+  "nextValidation": [
+    "Clean non-administrator Windows 10/11 desktop tests using the public downloaded ZIP and real Codex GUI/model, including restart, continuity, revocation, update and removal",
+    "Record downloaded-file SmartScreen behavior and assess Authenticode delivery without bypassing Windows security"
+  ],
+  "screenshots": [
+    "assets/windows-beta2-setup-2026-11-17.png"
+  ]
+}

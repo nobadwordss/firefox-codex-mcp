@@ -1,5 +1,8 @@
 # Validation history
 
+Windows 0.5.0-beta.2 preview: [published downloads](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.2), [exact ZIP, public downloads and unchanged Linux stable verification](windows-beta2-release-2026-11-17.json).
+The earlier repair record below predates this publication and preserves its own CI scope.
+
 Windows repair lock fix: [deterministic sharing/byte-range contention and lifecycle ZIP verification](windows-repair-e2e-2026-11-17.json).
 This remains Windows Server preview evidence; Windows 10/11 desktop acceptance is separate.
 
