@@ -114,7 +114,7 @@ impl Mcp {
         Ok(s)
     }
     fn rpc(&mut self, method: &str, params: Value) -> Result<Value> {
-        eprintln!("Codex app-server: {method}");
+        eprintln!("Raw MCP client: {method}");
         self.id += 1;
         writeln!(
             self.input,
@@ -222,6 +222,7 @@ impl Codex {
         Ok(server)
     }
     fn rpc(&mut self, method: &str, params: Value) -> Result<Value> {
+        eprintln!("Codex app-server: {method}");
         self.seq += 1;
         writeln!(
             self.input,

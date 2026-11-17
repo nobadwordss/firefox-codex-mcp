@@ -507,8 +507,20 @@ pub async fn reset() -> Result<()> {
         }
     }
     for path in paths {
-        let Ok(stream) = crate::transport::connect(&path).await else {
-            continue;
+        let stream = match crate::transport::connect(&path).await {
+            Ok(stream) => stream,
+            Err(error) => {
+                #[cfg(windows)]
+                if !error
+                    .downcast_ref::<std::io::Error>()
+                    .is_some_and(|e| e.kind() == std::io::ErrorKind::NotFound)
+                {
+                    return Err(error);
+                }
+                #[cfg(unix)]
+                let _ = error;
+                continue;
+            }
         };
         let mut stream = BufReader::new(stream);
         stream

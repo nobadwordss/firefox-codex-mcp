@@ -27,9 +27,25 @@ pub fn endpoint() -> Result<PathBuf> {
 }
 pub async fn connect(path: &Path) -> Result<Stream> {
     // Identification only: a server must never impersonate a connecting client.
-    let socket = ClientOptions::new()
-        .security_qos_flags(0x0010_0000 | 0x0001_0000)
-        .open(path)?;
+    // Between connect and accept, the pipe can exist without a free instance.
+    // Retry only that pre-connection condition, never a dispatched request.
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+    let socket = loop {
+        match ClientOptions::new()
+            .security_qos_flags(0x0010_0000 | 0x0001_0000)
+            .open(path)
+        {
+            Ok(socket) => break socket,
+            Err(error)
+                if error.raw_os_error()
+                    == Some(windows_sys::Win32::Foundation::ERROR_PIPE_BUSY as i32)
+                    && tokio::time::Instant::now() < deadline =>
+            {
+                tokio::time::sleep(std::time::Duration::from_millis(20)).await
+            }
+            Err(error) => return Err(error.into()),
+        }
+    };
     let mut pid = 0;
     check(unsafe { GetNamedPipeServerProcessId(socket.as_raw_handle(), &mut pid) })?;
     ensure!(
@@ -150,6 +166,23 @@ pub async fn terminate() {
 mod tests {
     use super::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    #[tokio::test]
+    async fn busy_pipe_waits_for_the_next_server_instance() {
+        let path = PathBuf::from(format!(
+            r"\\.\pipe\firefox-codex-busy-{}",
+            crate::random_hex(16).unwrap()
+        ));
+        let mut listener = Listener::bind(&path).unwrap();
+        let first = connect(&path).await.unwrap();
+        let second_path = path.clone();
+        let second = tokio::spawn(async move { connect(&second_path).await });
+        tokio::time::sleep(std::time::Duration::from_millis(60)).await;
+        assert!(!second.is_finished(), "Busy pipe should wait for accept");
+        let accepted_first = listener.accept().await.unwrap();
+        let second = second.await.unwrap().unwrap();
+        let accepted_second = listener.accept().await.unwrap();
+        drop((first, second, accepted_first, accepted_second));
+    }
     #[tokio::test]
     async fn pipe_roundtrip_is_session_scoped_and_single_broker() {
         let path = PathBuf::from(format!(

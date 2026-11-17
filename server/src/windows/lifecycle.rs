@@ -350,8 +350,9 @@ fn reset(executable: &Path) -> bool {
                 std::thread::sleep(std::time::Duration::from_millis(50))
             }
             _ => {
-                let _ = child.kill();
-                let _ = child.wait();
+                if child.kill().is_ok() {
+                    let _ = child.wait();
+                }
                 return false;
             }
         }
