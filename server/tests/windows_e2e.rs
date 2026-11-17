@@ -43,12 +43,14 @@ fn cmd(binary: &Path, root: &Path) -> Command {
     c
 }
 fn run(binary: &Path, root: &Path, arg: &str) -> Result<String> {
+    eprintln!("Windows lifecycle {arg}: {}", root.display());
     let output = cmd(binary, root).arg(arg).output()?;
     ensure!(
         output.status.success(),
         "{arg} failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+    eprintln!("Windows lifecycle {arg}: complete");
     Ok(String::from_utf8(output.stdout)?)
 }
 fn installed(root: &Path) -> Result<PathBuf> {
@@ -102,6 +104,7 @@ impl Mcp {
         Ok(s)
     }
     fn rpc(&mut self, method: &str, params: Value) -> Result<Value> {
+        eprintln!("Codex app-server: {method}");
         self.id += 1;
         writeln!(
             self.input,
@@ -255,7 +258,7 @@ impl Codex {
         )?)
     }
 }
-fn codex_roundtrip(root: &Path, url: &str, artifacts: &Path) -> Result<()> {
+fn codex_roundtrip(root: &Path, url: &str, artifacts: &Path, browser: &Browser) -> Result<()> {
     let mut app = Codex::start(root)?;
     let a = app.thread(root)?;
     let b = app.thread(root)?;
@@ -299,6 +302,32 @@ fn codex_roundtrip(root: &Path, url: &str, artifacts: &Path) -> Result<()> {
     let mut typing = action(&s, "Message")?;
     typing["text"] = json!("Codex app-server Windows");
     app.ok(&a, "firefox_type", typing)?;
+    // Verify actual effects independently of the MCP success response.
+    let handles: Value = browser
+        .client
+        .get(format!(
+            "{}/session/{}/window/handles",
+            browser.base, browser.session
+        ))
+        .send()?
+        .json()?;
+    let mut verified = false;
+    for handle in handles["value"]
+        .as_array()
+        .context("Codex window handles")?
+    {
+        browser.call("/window", json!({"handle":handle}))?;
+        if browser.script("return location.href;")? == format!("{url}/codex-app-server") {
+            let dom = browser.script("return {count:document.querySelector('#count').textContent,message:document.querySelector('#message').value};")?;
+            ensure!(
+                dom["count"] == "Count 1" && dom["message"] == "Codex app-server Windows",
+                "Codex action readback failed: {dom}"
+            );
+            browser.screenshot(&artifacts.join("codex-app-server-actions.png"))?;
+            verified = true;
+        }
+    }
+    ensure!(verified, "Codex action tab missing");
     ensure!(
         app.raw(&b, "firefox_select_tab", json!({"tabId":tab}))?["isError"] == true,
         "Codex chat isolation failed"
@@ -311,7 +340,7 @@ fn codex_roundtrip(root: &Path, url: &str, artifacts: &Path) -> Result<()> {
     fs::write(
         artifacts.join("codex-app-server-result.json"),
         serde_json::to_vec_pretty(
-            &json!({"actualCodexProcess":true,"actualFirefox":true,"read":true,"click":true,"type":true,"chatIsolation":true,"revoke":true,"desktopUi":false,"llmDispatch":false}),
+            &json!({"actualCodexProcess":true,"actualFirefox":true,"read":true,"click":true,"type":true,"independentDomReadback":true,"chatIsolation":true,"revoke":true,"desktopUi":false,"llmDispatch":false}),
         )?,
     )?;
     Ok(())
@@ -325,6 +354,7 @@ struct Browser {
 }
 impl Browser {
     fn start(root: &Path, profile: &Path) -> Result<Self> {
+        eprintln!("Starting disposable Firefox: {}", profile.display());
         fs::create_dir_all(profile)?;
         let sock = TcpListener::bind("127.0.0.1:0")?;
         let port = sock.local_addr()?.port();
@@ -422,7 +452,10 @@ fn fixture() -> Result<String> {
     thread::spawn(move || {
         for mut stream in socket.incoming().flatten() {
             let mut scratch = [0u8; 4096];
-            let _ = stream.read(&mut scratch);
+            let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
+            if !matches!(stream.read(&mut scratch), Ok(n) if n > 0) {
+                continue;
+            }
             let body = r##"<!doctype html><html><head><title>Windows Firefox E2E</title></head><body><h1>Firefox Windows work tab</h1><p>Observation code: WINDOWS-NATIVE-42</p><button id='count' onclick='this.textContent="Count "+(++window.counter);document.querySelector("#status").textContent="Count updated to "+window.counter'>Count 0</button><label>Message<input id='message'></label><p id='status' role='status'>Ready</p><script>window.counter=0</script><div style='height:1800px'>Scroll target</div></body></html>"##;
             let _=write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
         }
@@ -666,7 +699,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
         thread::sleep(Duration::from_millis(100));
     }
     a.denied("firefox_select_tab", json!({"tabId":paused_tab}))?;
-    codex_roundtrip(&root, &url, &artifacts)?;
+    codex_roundtrip(&root, &url, &artifacts, &browser)?;
     // A different build payload rotates immutable paths while old MCP EXEs run.
     let candidate = root.join("update candidate.exe");
     let mut bytes = fs::read(&binary)?;
@@ -816,7 +849,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     normal_mcp.connected()?;
     let normal_artifacts = artifacts.join("known-folders");
     fs::create_dir_all(&normal_artifacts)?;
-    codex_roundtrip(normal.path(), &url, &normal_artifacts)?;
+    codex_roundtrip(normal.path(), &url, &normal_artifacts, &normal_browser)?;
     run(&binary, normal.path(), "--uninstall")?;
     normal_mcp.denied("firefox_snapshot", json!({}))?;
     drop(normal_mcp);

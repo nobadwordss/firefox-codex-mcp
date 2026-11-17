@@ -139,7 +139,8 @@ pub fn known_folder(id: &windows_sys::core::GUID) -> Result<PathBuf> {
     Ok(result)
 }
 pub fn local_root() -> Result<PathBuf> {
-    // Explicit override is for isolated tests and portable installations only.
+    // Developer/test override: both Firefox and Codex's MCP child must receive it.
+    // Normal installs always use Known Folders and require no environment setup.
     let root = std::env::var_os("FIREFOX_MCP_INSTALL_ROOT")
         .map(PathBuf::from)
         .unwrap_or(

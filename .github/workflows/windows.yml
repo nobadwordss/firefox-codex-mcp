@@ -45,16 +45,19 @@ jobs:
           "FIREFOX_WINDOWS_ARTIFACTS=$env:GITHUB_WORKSPACE\windows-evidence" >> $env:GITHUB_ENV
           "FIREFOX_MCP_WINDOWS_E2E=1" >> $env:GITHUB_ENV
       - name: Real install, running update, removal and signed Firefox E2E
+        timeout-minutes: 6
         run: cargo test --release --test windows_e2e --locked -- --ignored --nocapture --test-threads=1
       - run: cargo fetch --locked
       - name: Package EXE, ZIP, dependency notices and SBOM
         run: cargo run --release --locked --bin package -- target/release/firefox-codex-mcp.exe dist-windows
       - name: Test extracted distribution outside repository
+        timeout-minutes: 6
         shell: pwsh
         run: |
           $archive = Get-ChildItem dist-windows/*-windows-x86_64.zip | Select-Object -First 1
           Expand-Archive $archive.FullName "$env:RUNNER_TEMP\extracted-package"
           $env:FIREFOX_SETUP_SERVER_BINARY = (Get-ChildItem "$env:RUNNER_TEMP\extracted-package" -Filter firefox-codex-mcp.exe -Recurse | Select-Object -First 1).FullName
+          $env:FIREFOX_WINDOWS_ARTIFACTS = "$env:GITHUB_WORKSPACE\windows-evidence\extracted"
           cargo test --release --test windows_e2e --locked -- --ignored --nocapture --test-threads=1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/attest-build-provenance@v2
