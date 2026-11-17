@@ -8,16 +8,20 @@ use tokio::{
     net::{TcpListener, TcpStream},
     time::timeout,
 };
+#[cfg(unix)]
 const HTML: &str = include_str!("../../packaging/manager.html");
+#[cfg(windows)]
+const HTML: &str = include_str!("../../packaging/manager.windows.html");
 
 fn state() -> Result<Value> {
     let profiles = o::profiles(&o::home()?)?;
     let selected = lifecycle::installed_profile().or_else(|| o::choose(&profiles).ok());
     let codex = o::codex().is_ok();
+    let ready = cfg!(windows) || codex;
     Ok(
         json!({"version":env!("CARGO_PKG_VERSION"),"installedVersion":lifecycle::installed_version(),"installedMode":lifecycle::installed_mode(),"codexAvailable":codex,
         "profiles":profiles.iter().map(|(p,_)|json!({"id":p,"name":p.file_name().map(|v|v.to_string_lossy()),"path":p,"selected":Some(p)==selected.as_ref()})).collect::<Vec<_>>(),
-        "ready":codex}),
+        "ready":ready,"platform":std::env::consts::OS,"bidiSupported":cfg!(unix)}),
     )
 }
 fn action(request: Value) -> Result<Value> {
@@ -162,14 +166,17 @@ pub async fn serve(no_open: bool) -> Result<()> {
     let url = format!("http://{host}/#{token}");
     println!("Firefox Codex 관리: {url}");
     if !no_open {
-        let _ = std::process::Command::new(
-            std::env::var_os("FIREFOX_BINARY").unwrap_or_else(|| "/usr/bin/firefox".into()),
-        )
-        .arg(&url)
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn();
+        #[cfg(unix)]
+        {
+            let _ = std::process::Command::new(crate::transport::firefox()?)
+                .arg(&url)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn();
+        }
+        #[cfg(windows)]
+        crate::windows::open_manager(&url)?;
     }
     let deadline = tokio::time::Instant::now() + Duration::from_secs(1200);
     while let Ok(Ok((stream, _))) = tokio::time::timeout_at(deadline, listener.accept()).await {

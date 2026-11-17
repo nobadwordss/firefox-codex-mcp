@@ -1,0 +1,35 @@
+Firefox Codex MCP — Windows preview
+
+Target: Windows 10 22H2 and Windows 11, x86-64, desktop Firefox.
+Windows 10/11 desktop validation is pending. CI uses Windows Server.
+The helper EXE is not Authenticode-signed; the Firefox extension IS Mozilla-signed.
+Do not disable SmartScreen, antivirus, or Windows security to install this preview.
+If Windows blocks it, use the source/build instructions or wait for signed delivery.
+
+1. Install Codex and desktop Firefox from their official sources.
+2. Download the setup EXE from this project's GitHub release, or extract this ZIP.
+3. Double-click firefox-codex-mcp.exe. Do not run as administrator.
+4. In the local setup page, choose Install connection.
+5. Choose Add Codex Work Tabs to Firefox, then accept Firefox's extension prompt.
+6. Start a new Codex chat and request a browser task. It opens its own work tab.
+
+No code, token, profile path, Node.js, Rust, command prompt or debugging flag is
+needed. With several Firefox profiles, choose Use this Firefox in the extension
+in the profile you want. Existing personal tabs are never imported automatically.
+
+Update: download the newer EXE and open it, then choose Update connection.
+The signed extension bundled here remains 0.4.0. This update changes the helper.
+Updating releases existing work-tab permissions; pages remain open.
+
+Remove: Windows Settings > Apps > Firefox Codex MCP > Uninstall opens the manager.
+Choose Remove connection. Close the manager and old Codex chats to release files.
+Remove Codex Work Tabs separately in Firefox's Add-ons manager if desired.
+Your Firefox profiles, logins, result tabs and unrelated Codex settings stay intact.
+Files/registry values you modified are preserved. Run --repair after an interrupted
+setup. Installation and recovery state is under LocalAppData\FirefoxCodexMCP.
+
+Scope: local Codex on the same Windows user/logon session. WSL, remote Codex,
+Microsoft Store Firefox, ARM64 and BiDi mode on Windows are not validated.
+
+Source, checksums, release provenance, verification limits and support:
+https://github.com/nobadwordss/firefox-codex-mcp

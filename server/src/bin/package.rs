@@ -2,9 +2,10 @@
 use anyhow::{ensure, Context, Result};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{
-    collections::HashSet, env, fs, os::unix::fs::PermissionsExt, path::Path, process::Command,
-};
+use std::{collections::HashSet, env, fs, path::Path, process::Command};
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 const RUNTIME_FILES: &[&str] = &[
     "manifest.json",
@@ -23,6 +24,7 @@ const RUNTIME_FILES: &[&str] = &[
     "icons/cursor-128.png",
 ];
 
+#[cfg(unix)]
 fn run(command: &mut Command) -> Result<()> {
     ensure!(command.status()?.success(), "Packaging command failed");
     Ok(())
@@ -51,16 +53,30 @@ fn main() -> Result<()> {
     let out = Path::new(&args[2]);
     fs::create_dir_all(out)?;
     let name = format!(
-        "firefox-codex-mcp-{}-linux-x86_64",
-        env!("CARGO_PKG_VERSION")
+        "firefox-codex-mcp-{}-{}-x86_64",
+        env!("CARGO_PKG_VERSION"),
+        std::env::consts::OS
     );
     let stage = out.join(&name);
     ensure!(!stage.exists(), "Use an empty output directory");
     fs::create_dir(&stage)?;
-    fs::copy(&binary, stage.join("firefox-codex-mcp"))?;
+    fs::copy(
+        &binary,
+        stage.join(if cfg!(windows) {
+            "firefox-codex-mcp.exe"
+        } else {
+            "firefox-codex-mcp"
+        }),
+    )?;
     for (source, target) in [
-        ("packaging/install.sh", "install.sh"),
-        ("packaging/INSTALL.txt", "INSTALL.txt"),
+        (
+            if cfg!(windows) {
+                "packaging/INSTALL.windows.txt"
+            } else {
+                "packaging/INSTALL.txt"
+            },
+            "INSTALL.txt",
+        ),
         ("LICENSE", "LICENSE"),
         ("README.md", "README.md"),
         ("README.ko.md", "README.ko.md"),
@@ -71,6 +87,8 @@ fn main() -> Result<()> {
         fs::copy(source, stage.join(target))
             .with_context(|| format!("Required package file: {source}"))?;
     }
+    #[cfg(unix)]
+    fs::copy("packaging/install.sh", stage.join("install.sh"))?;
     copy_directory(Path::new("docs"), &stage.join("docs"))?;
     copy_directory(Path::new("extension/icons"), &stage.join("extension/icons"))?;
     fs::create_dir_all(stage.join("packaging"))?;
@@ -79,20 +97,18 @@ fn main() -> Result<()> {
     let signed = Path::new("packaging/signed").join(signed_name);
     let expected_manifest: Value = serde_json::from_slice(&fs::read("extension/manifest.json")?)?;
     for &file in RUNTIME_FILES {
-        let output = Command::new("unzip")
-            .args(["-p"])
-            .arg(&signed)
-            .arg(file)
-            .output()?;
-        ensure!(output.status.success(), "Cannot inspect signed XPI");
+        use std::io::Read;
+        let mut archive = zip::ZipArchive::new(fs::File::open(&signed)?)?;
+        let mut output = Vec::new();
+        archive.by_name(file)?.read_to_end(&mut output)?;
         if file == "manifest.json" {
             ensure!(
-                serde_json::from_slice::<Value>(&output.stdout)? == expected_manifest,
+                serde_json::from_slice::<Value>(&output)? == expected_manifest,
                 "Signed manifest differs from source"
             );
         } else {
             ensure!(
-                output.stdout == fs::read(Path::new("extension").join(file))?,
+                output == fs::read(Path::new("extension").join(file))?,
                 "Signed extension source mismatch: {file}"
             );
         }
@@ -100,6 +116,7 @@ fn main() -> Result<()> {
     fs::copy(&signed, stage.join(signed_name))?;
     fs::copy(&signed, out.join(signed_name))?;
     // Archives retain executable bits even if the source checkout lost them.
+    #[cfg(unix)]
     for file in ["firefox-codex-mcp", "install.sh"] {
         fs::set_permissions(stage.join(file), fs::Permissions::from_mode(0o755))?;
     }
@@ -109,11 +126,19 @@ fn main() -> Result<()> {
         env!("CARGO_PKG_VERSION")
     );
     let xpi = out.canonicalize()?.join(&xpi_name);
-    run(Command::new("zip")
-        .current_dir("extension")
-        .args(["-q", "-X"])
-        .arg(&xpi)
-        .args(RUNTIME_FILES))?;
+    let mut unsigned = zip::ZipWriter::new(fs::File::create(&xpi)?);
+    for &file in RUNTIME_FILES {
+        unsigned.start_file(
+            file,
+            zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated),
+        )?;
+        std::io::copy(
+            &mut fs::File::open(Path::new("extension").join(file))?,
+            &mut unsigned,
+        )?;
+    }
+    unsigned.finish()?;
     fs::copy(&xpi, stage.join(&xpi_name))?;
     let metadata = Command::new(env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
         .args([
@@ -123,7 +148,11 @@ fn main() -> Result<()> {
             "--format-version",
             "1",
             "--filter-platform",
-            "x86_64-unknown-linux-gnu",
+            if cfg!(windows) {
+                "x86_64-pc-windows-msvc"
+            } else {
+                "x86_64-unknown-linux-gnu"
+            },
         ])
         .output()?;
     ensure!(metadata.status.success(), "Cargo metadata failed");
@@ -166,7 +195,7 @@ fn main() -> Result<()> {
         }
     }
     let mut components = Vec::new();
-    let mut notices = String::from("Linux production and build dependency inventory from Cargo.lock.\nLicense expressions are provided by each upstream crate. Copies of shipped upstream notices follow under licenses/.\n\n");
+    let mut notices = String::from("Production and build dependency inventory from Cargo.lock.\nLicense expressions are provided by each upstream crate. Copies of shipped upstream notices follow under licenses/.\n\n");
     for package in metadata["packages"]
         .as_array()
         .context("Missing package metadata")?
@@ -222,25 +251,55 @@ fn main() -> Result<()> {
     fs::write(
         stage.join("BUILD.json"),
         serde_json::to_vec_pretty(
-            &json!({"version":env!("CARGO_PKG_VERSION"),"target":"x86_64-unknown-linux-gnu","binarySha256":digest,"commit":env::var("GITHUB_SHA").ok(),"runner":env::var("RUNNER_OS").ok()}),
+            &json!({"version":env!("CARGO_PKG_VERSION"),"target":if cfg!(windows) {"x86_64-pc-windows-msvc"} else {"x86_64-unknown-linux-gnu"},"binarySha256":digest,"commit":env::var("GITHUB_SHA").ok(),"runner":env::var("RUNNER_OS").ok()}),
         )?,
     )?;
+    let suffix = if cfg!(windows) { "zip" } else { "tar.gz" };
+    let archive_path = out.join(format!("{name}.{suffix}"));
+    #[cfg(unix)]
     run(Command::new("tar")
         .arg("-czf")
-        .arg(out.join(format!("{name}.tar.gz")))
+        .arg(&archive_path)
         .arg("-C")
         .arg(out)
         .arg(&name))?;
-    let archive = fs::read(out.join(format!("{name}.tar.gz")))?;
-    fs::write(
-        out.join("SHA256SUMS"),
-        format!(
-            "{:x}  {name}.tar.gz\n{:x}  {xpi_name}\n{:x}  {signed_name}\n",
-            Sha256::digest(&archive),
-            Sha256::digest(fs::read(xpi)?),
-            Sha256::digest(fs::read(signed)?)
-        ),
-    )?;
-    println!("{}", out.join(format!("{name}.tar.gz")).display());
+    #[cfg(windows)]
+    {
+        fn add(writer: &mut zip::ZipWriter<fs::File>, path: &Path, root: &Path) -> Result<()> {
+            for entry in fs::read_dir(path)? {
+                let entry = entry?;
+                if entry.file_type()?.is_dir() {
+                    add(writer, &entry.path(), root)?;
+                } else {
+                    writer.start_file(
+                        entry
+                            .path()
+                            .strip_prefix(root)?
+                            .to_string_lossy()
+                            .replace('\\', "/"),
+                        zip::write::SimpleFileOptions::default()
+                            .compression_method(zip::CompressionMethod::Deflated),
+                    )?;
+                    std::io::copy(&mut fs::File::open(entry.path())?, writer)?;
+                }
+            }
+            Ok(())
+        }
+        let mut writer = zip::ZipWriter::new(fs::File::create(&archive_path)?);
+        add(&mut writer, &stage, out)?;
+        writer.finish()?;
+        fs::copy(&binary, out.join(format!("{name}-setup.exe")))?;
+    }
+    let mut sums = format!(
+        "{:x}  {name}.{suffix}\n{:x}  {xpi_name}\n{:x}  {signed_name}\n",
+        Sha256::digest(fs::read(&archive_path)?),
+        Sha256::digest(fs::read(xpi)?),
+        Sha256::digest(fs::read(signed)?)
+    );
+    if cfg!(windows) {
+        sums.push_str(&format!("{digest}  {name}-setup.exe\n"));
+    }
+    fs::write(out.join("SHA256SUMS"), sums)?;
+    println!("{}", archive_path.display());
     Ok(())
 }

@@ -4,7 +4,7 @@ use anyhow::{bail, ensure, Context, Result};
 use serde_json::{json, Value};
 use std::{
     collections::{HashMap, HashSet},
-    env, fs,
+    env,
     path::PathBuf,
     process::Stdio,
     sync::{
@@ -15,7 +15,6 @@ use std::{
 };
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
-    net::{UnixListener, UnixStream},
     process::Command,
     sync::{mpsc, oneshot, Mutex, Notify},
     time::{sleep, timeout},
@@ -30,15 +29,10 @@ fn valid_id(value: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'-')
 }
 fn socket_path() -> Result<PathBuf> {
-    // Desktop MCP children may omit XDG_RUNTIME_DIR while Firefox inherits it.
-    // Both sides must choose the same endpoint without sharing launch environments.
-    let directory = env::var_os("FIREFOX_MCP_RUNTIME_DIR")
-        .map(PathBuf::from)
-        .unwrap_or(crate::onboarding::home()?.join(".local/state/firefox-codex-mcp/runtime"));
-    Ok(crate::debug::private_runtime_directory(directory)?.join("extension-v1.sock"))
+    crate::transport::endpoint()
 }
 fn settings_path() -> Result<PathBuf> {
-    let dir = crate::onboarding::home()?.join(".local/state/firefox-codex-mcp");
+    let dir = crate::transport::state_dir()?;
     crate::setup::private_dir(&dir)?;
     Ok(dir.join("profiles.json"))
 }
@@ -69,29 +63,7 @@ impl Router {
     }
     fn load() -> Result<Self> {
         let mut state = Self::default();
-        use std::{
-            io::Read,
-            os::unix::fs::{MetadataExt, OpenOptionsExt},
-        };
-        let read = || -> Result<Option<Vec<u8>>> {
-            let file = match fs::OpenOptions::new()
-                .read(true)
-                .custom_flags(libc::O_NOFOLLOW)
-                .open(settings_path()?)
-            {
-                Ok(f) => f,
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-                Err(e) => return Err(e.into()),
-            };
-            let meta = file.metadata()?;
-            ensure!(
-                meta.is_file() && meta.uid() == unsafe { libc::geteuid() } && meta.len() < 65536,
-                "Unsafe profile configuration"
-            );
-            let mut bytes = Vec::new();
-            file.take(65536).read_to_end(&mut bytes)?;
-            Ok(Some(bytes))
-        };
+        let read = || crate::transport::read_private(&settings_path()?, 65536);
         if let Some(bytes) = read()? {
             let value: Value = serde_json::from_slice(&bytes)?;
             state.selected = value["selected"].as_str().map(str::to_owned);
@@ -179,7 +151,7 @@ impl Peer {
         }
     }
 }
-pub async fn chat_client(identity: Option<&str>) -> Result<BufReader<UnixStream>> {
+pub async fn chat_client(identity: Option<&str>) -> Result<BufReader<crate::transport::Stream>> {
     let mut socket = connect().await?;
     socket
         .get_mut()
@@ -191,21 +163,22 @@ pub async fn chat_client(identity: Option<&str>) -> Result<BufReader<UnixStream>
             .as_bytes(),
         )
         .await?;
-    let hello = timeout(Duration::from_secs(5), crate::debug::read_line(&mut socket)).await??;
+    let hello = timeout(Duration::from_secs(5), crate::mcp::read_line(&mut socket)).await??;
     ensure!(
         hello.is_some_and(|v| v["ready"] == VERSION),
         "Extension broker version mismatch. Close old Firefox MCP chats and reopen Firefox."
     );
     Ok(socket)
 }
-async fn connect() -> Result<BufReader<UnixStream>> {
+async fn connect() -> Result<BufReader<crate::transport::Stream>> {
     let path = socket_path()?;
-    if let Ok(stream) = crate::debug::connect_socket(&path).await {
+    if let Ok(stream) = crate::transport::connect(&path).await {
         return Ok(BufReader::new(stream));
     }
-    let mut child = Command::new(env::current_exe()?)
+    let mut command = Command::new(env::current_exe()?);
+    crate::transport::detach(&mut command);
+    let mut child = command
         .arg("--extension-broker")
-        .process_group(0)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -215,7 +188,7 @@ async fn connect() -> Result<BufReader<UnixStream>> {
     });
     for _ in 0..80 {
         sleep(Duration::from_millis(50)).await;
-        if let Ok(s) = crate::debug::connect_socket(&path).await {
+        if let Ok(s) = crate::transport::connect(&path).await {
             return Ok(BufReader::new(s));
         }
     }
@@ -255,7 +228,7 @@ pub async fn host() -> Result<()> {
         .get_mut()
         .write_all(format!("{first}\n").as_bytes())
         .await?;
-    let (read, mut write) = socket.into_inner().into_split();
+    let (read, mut write) = tokio::io::split(socket.into_inner());
     let up = async {
         while let Some(value) = read_frame(&mut input).await? {
             write.write_all(format!("{value}\n").as_bytes()).await?;
@@ -265,7 +238,7 @@ pub async fn host() -> Result<()> {
     let down = async {
         let mut read = BufReader::new(read);
         let mut output = tokio::io::stdout();
-        while let Some(value) = crate::debug::read_line(&mut read).await? {
+        while let Some(value) = crate::mcp::read_line(&mut read).await? {
             let bytes = serde_json::to_vec(&value)?;
             ensure!(bytes.len() < crate::LIMIT, "Native reply too large");
             output
@@ -285,14 +258,13 @@ async fn launch_if_needed(state: &Arc<Mutex<Router>>) -> Result<()> {
             .is_none_or(|t| t.elapsed() > Duration::from_secs(30))
     {
         s.last_launch = Some(tokio::time::Instant::now());
-        let mut child = Command::new(
-            env::var_os("FIREFOX_BINARY").unwrap_or_else(|| "/usr/bin/firefox".into()),
-        )
-        .process_group(0)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
+        let mut command = Command::new(crate::transport::firefox()?);
+        crate::transport::detach(&mut command);
+        let mut child = command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
         tokio::spawn(async move {
             let _ = child.wait().await;
         });
@@ -307,7 +279,7 @@ async fn launch_if_needed(state: &Arc<Mutex<Router>>) -> Result<()> {
     Ok(())
 }
 async fn chat(
-    mut socket: BufReader<UnixStream>,
+    mut socket: BufReader<crate::transport::Stream>,
     state: Arc<Mutex<Router>>,
     identity: Option<&str>,
 ) -> Result<()> {
@@ -340,14 +312,14 @@ async fn chat(
         return Err(error.into());
     }
     let buffered = socket.buffer().to_vec();
-    let (read, mut write) = socket.into_inner().into_split();
+    let (read, mut write) = tokio::io::split(socket.into_inner());
     let mut read = BufReader::new(std::io::Cursor::new(buffered).chain(read));
     let (tx, mut requests) = mpsc::channel(32);
     let (ended, closed) = oneshot::channel();
     let reader_state = state.clone();
     let reader_attachment = a.clone();
     let reader = tokio::spawn(async move {
-        while let Ok(Some(request)) = crate::debug::read_line(&mut read).await {
+        while let Ok(Some(request)) = crate::mcp::read_line(&mut read).await {
             if tx.try_send(request).is_err() {
                 break;
             }
@@ -361,7 +333,7 @@ async fn chat(
             let name = request["name"].as_str().unwrap_or("");
             let args = request["args"].clone();
             let result = async {
-                crate::debug::validate(name, &args)?;
+                crate::mcp::validate(name, &args)?;
                 if name == "firefox_open_tab" && state.lock().await.peers.is_empty() { launch_if_needed(&state).await?; }
                 let mut s = state.lock().await;
                 s.chats.touch(&a)?;
@@ -423,7 +395,7 @@ async fn chat(
     result
 }
 async fn extension(
-    socket: BufReader<UnixStream>,
+    socket: BufReader<crate::transport::Stream>,
     hello: Value,
     state: Arc<Mutex<Router>>,
 ) -> Result<()> {
@@ -462,13 +434,13 @@ async fn extension(
         s.broadcast();
     }
     let buffered = socket.buffer().to_vec();
-    let (read, mut write) = socket.into_inner().into_split();
+    let (read, mut write) = tokio::io::split(socket.into_inner());
     let mut read = BufReader::new(std::io::Cursor::new(buffered).chain(read));
     let work=async {
         loop {if !peer.alive.load(Ordering::SeqCst){break;} tokio::select!{
             _=peer.closed.notified()=>break,
             message=rx.recv()=>{let Some(message)=message else {break;};write.write_all(format!("{message}\n").as_bytes()).await?;},
-            message=crate::debug::read_line(&mut read)=>{let Some(message)=message? else{break;};
+            message=crate::mcp::read_line(&mut read)=>{let Some(message)=message? else{break;};
                 match message["kind"].as_str(){
                     Some("response")=>{if let Some(id)=message["id"].as_str(){if let Some(waiter)=peer.pending.lock().await.remove(id){let _=waiter.send(message);}}},
                     Some("selectProfile")=>{state.lock().await.select(&id)?;},
@@ -490,50 +462,44 @@ async fn extension(
     work
 }
 pub async fn broker() -> Result<()> {
-    use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
     let path = socket_path()?;
-    let _lock = crate::debug::broker_lock(&path.with_extension("lock"))?;
-    if let Ok(meta) = fs::symlink_metadata(&path) {
-        ensure!(
-            meta.file_type().is_socket() && meta.uid() == unsafe { libc::geteuid() },
-            "Unsafe router socket"
-        );
-        fs::remove_file(&path)?;
-    }
-    let listener = UnixListener::bind(&path)?;
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+    let mut listener = crate::transport::Listener::bind(&path)?;
     let state = Arc::new(Mutex::new(Router::load()?));
     let shutdown = state.lock().await.shutdown.clone();
     let mut tasks = tokio::task::JoinSet::new();
-    let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    let terminate = crate::transport::terminate();
+    tokio::pin!(terminate);
     let mut expiry = tokio::time::interval(Duration::from_secs(60));
     loop {
         tokio::select! {
             _=expiry.tick()=>state.lock().await.expire(),
             _=shutdown.notified()=>break,
-            _=term.recv()=>break,
+            _= &mut terminate=>break,
             _=tokio::signal::ctrl_c()=>break,
             Some(_)=tasks.join_next(),if !tasks.is_empty()=>{},
             accepted=timeout(Duration::from_secs(10),listener.accept())=>match accepted {
-                Ok(Ok((socket,_)))=>{ensure!(socket.peer_cred()?.uid()==unsafe{libc::geteuid()},"Unexpected router peer");let state=state.clone();tasks.spawn(async move {
+                Ok(Ok(socket))=>{let state=state.clone();tasks.spawn(async move {
                     let mut socket=BufReader::new(socket);
-                    let work=async {let hello=timeout(Duration::from_secs(5),crate::debug::read_line(&mut socket)).await??.context("Missing hello")?;ensure!(hello["version"]==VERSION,"Unsupported router version");match hello["role"].as_str(){Some("chat")=>chat(socket,state,hello["identity"].as_str()).await,Some("extension")=>extension(socket,hello,state).await,Some("reload")=>{socket.get_mut().write_all(b"{\"reloading\":true}\n").await?;state.lock().await.shutdown.notify_one();Ok(())},_=>bail!("Unknown peer")}}.await;
+                    let work=async {let hello=timeout(Duration::from_secs(5),crate::mcp::read_line(&mut socket)).await??.context("Missing hello")?;ensure!(hello["version"]==VERSION,"Unsupported router version");match hello["role"].as_str(){Some("chat")=>chat(socket,state,hello["identity"].as_str()).await,Some("extension")=>extension(socket,hello,state).await,Some("reload")=>{socket.get_mut().write_all(b"{\"reloading\":true}\n").await?;state.lock().await.shutdown.notify_one();Ok(())},_=>bail!("Unknown peer")}}.await;
                     if let Err(e)=work {eprintln!("Firefox extension connection: {e}");}
                 });},
-                Ok(Err(e))=>return Err(e.into()),Err(_)=>if tasks.is_empty(){break;}
+                Ok(Err(e))=>return Err(e),Err(_)=>if tasks.is_empty(){break;}
             }
         }
     }
     tasks.abort_all();
     while tasks.join_next().await.is_some() {}
-    fs::remove_file(path)?;
     Ok(())
 }
 /// Update/remove hook. Close only our private transport, never Firefox itself.
 pub async fn reset() -> Result<()> {
+    #[cfg(unix)]
     let mut paths = vec![socket_path()?];
+    #[cfg(windows)]
+    let paths = vec![socket_path()?];
     // Migrate a running 0.3.0 native host from its old XDG endpoint as well.
     // An explicit test endpoint must never reach the real user's router.
+    #[cfg(unix)]
     if env::var_os("FIREFOX_MCP_RUNTIME_DIR").is_none() {
         let legacy = crate::debug::runtime_directory()?.join("extension-v1.sock");
         if !paths.contains(&legacy) {
@@ -541,7 +507,7 @@ pub async fn reset() -> Result<()> {
         }
     }
     for path in paths {
-        let Ok(stream) = crate::debug::connect_socket(&path).await else {
+        let Ok(stream) = crate::transport::connect(&path).await else {
             continue;
         };
         let mut stream = BufReader::new(stream);
@@ -549,7 +515,7 @@ pub async fn reset() -> Result<()> {
             .get_mut()
             .write_all(format!("{}\n", json!({"role":"reload","version":VERSION})).as_bytes())
             .await?;
-        let reply = timeout(Duration::from_secs(3), crate::debug::read_line(&mut stream)).await??;
+        let reply = timeout(Duration::from_secs(3), crate::mcp::read_line(&mut stream)).await??;
         ensure!(
             reply.is_some_and(|v| v["reloading"] == true),
             "Old extension connection must be closed manually"
@@ -608,14 +574,14 @@ mod tests {
             ..Default::default()
         };
         router.peers.insert(p.id.clone(), p);
-        let (client, server) = UnixStream::pair().unwrap();
+        let (client, server) = tokio::io::duplex(65536);
         let mut client = BufReader::new(client);
         let work = tokio::spawn(chat(
-            BufReader::new(server),
+            BufReader::new(Box::new(server)),
             Arc::new(Mutex::new(router)),
             None,
         ));
-        crate::debug::read_line(&mut client).await.unwrap();
+        crate::mcp::read_line(&mut client).await.unwrap();
         client
             .get_mut()
             .write_all(b"{\"name\":\"firefox_snapshot\",\"args\":{}}\n")
@@ -644,13 +610,14 @@ mod tests {
         router.peers.insert(p.id.clone(), p);
         let identity = "a".repeat(64);
         let old = router.chats.attach(Some(&identity)).unwrap();
-        let (client, server) = UnixStream::pair().unwrap();
+        let (client, server) = tokio::io::duplex(65536);
         let mut client = BufReader::new(client);
         let state = Arc::new(Mutex::new(router));
         let copy = state.clone();
-        let work =
-            tokio::spawn(async move { chat(BufReader::new(server), copy, Some(&identity)).await });
-        crate::debug::read_line(&mut client).await.unwrap();
+        let work = tokio::spawn(async move {
+            chat(BufReader::new(Box::new(server)), copy, Some(&identity)).await
+        });
+        crate::mcp::read_line(&mut client).await.unwrap();
         let suspended = timeout(Duration::from_secs(1), messages.recv())
             .await
             .unwrap()

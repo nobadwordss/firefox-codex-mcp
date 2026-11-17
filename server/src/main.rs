@@ -1,12 +1,20 @@
 //! Firefox MCP: BiDi work tabs, plus the legacy authenticated extension bridge.
+#[cfg_attr(windows, allow(dead_code))]
 mod bidi;
 mod continuity;
+#[cfg(unix)]
 mod debug;
+#[cfg_attr(windows, path = "windows/lifecycle.rs")]
 mod lifecycle;
 mod manager;
+mod mcp;
 mod native;
 mod onboarding;
+#[cfg_attr(windows, path = "windows/setup.rs")]
 mod setup;
+mod transport;
+#[cfg(windows)]
+mod windows;
 use anyhow::{bail, Context, Result};
 use futures_util::{SinkExt, StreamExt};
 use hmac::{Hmac, Mac};
@@ -14,7 +22,6 @@ use serde_json::{json, Value};
 use sha2::Sha256;
 use std::{
     env,
-    io::Read,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -59,7 +66,7 @@ impl Identity {
 
 fn random_hex(bytes: usize) -> Result<String> {
     let mut value = vec![0u8; bytes];
-    std::fs::File::open("/dev/urandom")?.read_exact(&mut value)?;
+    getrandom::fill(&mut value).map_err(|e| anyhow::anyhow!("OS randomness unavailable: {e}"))?;
     Ok(value.iter().map(|b| format!("{b:02x}")).collect())
 }
 
@@ -395,6 +402,22 @@ async fn rpc(
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    #[cfg(windows)]
+    if !env::args().nth(1).is_some_and(|v| v.starts_with("--"))
+        && env::current_exe()?
+            .file_stem()
+            .is_some_and(|v| v == "firefox-codex-native-host")
+    {
+        let result = native::host().await;
+        if let Err(error) = &result {
+            eprintln!("Native connection ended: {error:#}");
+        }
+        std::process::exit(if result.is_ok() { 0 } else { 1 });
+    }
+    #[cfg(windows)]
+    if env::args_os().len() == 1 {
+        return manager::serve(false).await;
+    }
     match env::args().nth(1).as_deref() {
         Some("--install-ui" | "--manage") => return manager::serve(false).await,
         Some("--manage-no-open") => return manager::serve(true).await,
@@ -447,7 +470,7 @@ async fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&onboarding::doctor()?)?);
             return Ok(());
         }
-        Some("--extension") => return debug::stdio_mode(true).await,
+        Some("--extension") => return mcp::stdio_mode(true).await,
         Some("--native-host") => {
             let result = native::host().await;
             if let Err(error) = &result {
@@ -461,7 +484,8 @@ async fn main() -> Result<()> {
         }
         Some("--extension-reset") => return native::reset().await,
         Some("--extension-broker") => return native::broker().await,
-        Some("--bidi") => return debug::stdio().await,
+        Some("--bidi") => return mcp::stdio().await,
+        #[cfg(unix)]
         Some("--bidi-broker") => return debug::broker().await,
         Some("--install-debug" | "--launch-firefox") => {
             let args: Vec<String> = env::args().collect();
@@ -484,7 +508,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         None if env::var_os("FIREFOX_MCP_TOKEN_FILE").is_none() => {
-            return debug::stdio_mode(true).await
+            return mcp::stdio_mode(true).await
         }
         _ => {}
     }

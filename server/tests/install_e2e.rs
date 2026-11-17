@@ -1,3 +1,4 @@
+#![cfg(unix)]
 use anyhow::{ensure, Context, Result};
 use serde_json::Value;
 use std::{env, fs, path::Path, process::Command};

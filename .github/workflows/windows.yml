@@ -1,0 +1,66 @@
+name: Windows preview
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: node --test --test-isolation=none extension/tests/*.test.cjs
+      - run: cargo build --release --locked
+      - name: Install official Firefox, geckodriver and Codex CLI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-WebRequest 'https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US' -OutFile "$env:RUNNER_TEMP\FirefoxSetup.exe"
+          Start-Process "$env:RUNNER_TEMP\FirefoxSetup.exe" -ArgumentList '/S' -Wait
+          $release = Invoke-RestMethod 'https://api.github.com/repos/mozilla/geckodriver/releases/latest'
+          $asset = $release.assets | Where-Object name -Match 'win64.zip$' | Select-Object -First 1
+          Invoke-WebRequest $asset.browser_download_url -OutFile "$env:RUNNER_TEMP\geckodriver.zip"
+          Expand-Archive "$env:RUNNER_TEMP\geckodriver.zip" "$env:RUNNER_TEMP\geckodriver"
+          npm install --global @openai/codex
+          if ($LASTEXITCODE -ne 0) { throw 'Codex install failed' }
+          $codex = Get-ChildItem (npm root -g) -Filter codex.exe -Recurse | Select-Object -First 1
+          if (!$codex) { throw 'Native Codex executable not found' }
+          "FIREFOX_SETUP_CODEX_BINARY=$($codex.FullName)" >> $env:GITHUB_ENV
+          "FIREFOX_GECKODRIVER=$env:RUNNER_TEMP\geckodriver\geckodriver.exe" >> $env:GITHUB_ENV
+          "FIREFOX_BINARY=$env:ProgramFiles\Mozilla Firefox\firefox.exe" >> $env:GITHUB_ENV
+          "FIREFOX_SIGNED_XPI=$env:GITHUB_WORKSPACE\packaging\signed\codex-work-tabs-0.4.0.xpi" >> $env:GITHUB_ENV
+          "FIREFOX_WINDOWS_ARTIFACTS=$env:GITHUB_WORKSPACE\windows-evidence" >> $env:GITHUB_ENV
+          "FIREFOX_MCP_WINDOWS_E2E=1" >> $env:GITHUB_ENV
+      - name: Real install, running update, removal and signed Firefox E2E
+        run: cargo test --release --test windows_e2e --locked -- --ignored --nocapture --test-threads=1
+      - name: Package EXE, ZIP, dependency notices and SBOM
+        run: cargo run --release --locked --bin package -- target/release/firefox-codex-mcp.exe dist-windows
+      - name: Test extracted distribution outside repository
+        shell: pwsh
+        run: |
+          $archive = Get-ChildItem dist-windows/*-windows-x86_64.zip | Select-Object -First 1
+          Expand-Archive $archive.FullName "$env:RUNNER_TEMP\extracted-package"
+          $env:FIREFOX_SETUP_SERVER_BINARY = (Get-ChildItem "$env:RUNNER_TEMP\extracted-package" -Filter firefox-codex-mcp.exe -Recurse | Select-Object -First 1).FullName
+          cargo test --release --test windows_e2e --locked -- --ignored --nocapture --test-threads=1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-preview-evidence
+          path: windows-evidence/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firefox-codex-mcp-windows-x86_64
+          path: |
+            dist-windows/*.zip
+            dist-windows/*.exe
+            dist-windows/*.xpi
+            dist-windows/SHA256SUMS

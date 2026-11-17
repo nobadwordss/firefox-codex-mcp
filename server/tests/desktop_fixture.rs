@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! An opt-in local page for real desktop chats in the user's existing Firefox.
 //! Never launches, adopts or debugs a browser. Only this page reports its own DOM.
 use anyhow::{ensure, Context, Result};

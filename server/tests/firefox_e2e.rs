@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Opt-in real Firefox integration test. Uses a throwaway WebDriver profile.
 mod debug_e2e;
 mod native_e2e;

@@ -1,13 +1,19 @@
 //! Repeatable user-level setup. Delegate TOML edits to the official Codex CLI.
 use crate::setup;
-use anyhow::{bail, ensure, Context, Result};
-use serde_json::{json, Value};
+#[cfg(unix)]
+use anyhow::ensure;
+use anyhow::{bail, Context, Result};
+#[cfg(unix)]
+use serde_json::json;
+use serde_json::Value;
+#[cfg(unix)]
+use std::collections::BTreeMap;
 use std::{
-    collections::BTreeMap,
-    env, fs,
+    env,
     path::{Path, PathBuf},
-    process::Command,
 };
+#[cfg(unix)]
+use std::{fs, process::Command};
 
 pub(crate) const SKILL: &str = include_str!("../../skills/firefox-browser/SKILL.md");
 pub(crate) const START: &str = "<!-- firefox-codex-mcp:start -->";
@@ -15,9 +21,16 @@ pub(crate) const END: &str = "<!-- firefox-codex-mcp:end -->";
 pub(crate) const GUIDANCE: &str = "For tasks needing browser interaction, rendered-page checks, or a website workflow on this computer, proactively consider the installed Firefox MCP and firefox-browser skill even when Firefox is not named. Respect an explicit browser choice; use specialized connectors or web search when they better fit. Create your own work tabs with firefox_open_tab. Follow the user's scope and normal approvals; tool availability does not grant blanket permission.\n";
 
 pub(crate) fn home() -> Result<PathBuf> {
-    Ok(PathBuf::from(
-        env::var_os("HOME").context("HOME is unavailable")?,
-    ))
+    #[cfg(unix)]
+    {
+        Ok(PathBuf::from(
+            env::var_os("HOME").context("HOME is unavailable")?,
+        ))
+    }
+    #[cfg(windows)]
+    {
+        crate::windows::known_folder(&windows_sys::Win32::UI::Shell::FOLDERID_Profile)
+    }
 }
 pub(crate) fn codex_home(home: &Path) -> PathBuf {
     env::var_os("CODEX_HOME")
@@ -30,7 +43,10 @@ pub(crate) fn codex() -> Result<PathBuf> {
         candidates.push(PathBuf::from(path));
     }
     if let Some(path) = env::var_os("PATH") {
-        candidates.extend(env::split_paths(&path).map(|path| path.join("codex")));
+        candidates.extend(
+            env::split_paths(&path)
+                .map(|path| path.join(if cfg!(windows) { "codex.exe" } else { "codex" })),
+        );
     }
     candidates.push(PathBuf::from("/usr/lib/chatgpt/resources/codex"));
     candidates
@@ -38,6 +54,7 @@ pub(crate) fn codex() -> Result<PathBuf> {
         .find(|path| path.is_file())
         .context("Codex를 먼저 설치하세요. Codex CLI 실행 파일을 찾지 못했습니다")
 }
+#[cfg(unix)]
 fn cli(binary: &Path, root: &Path, args: &[&str]) -> Result<std::process::Output> {
     Command::new(binary)
         .current_dir(root)
@@ -46,6 +63,7 @@ fn cli(binary: &Path, root: &Path, args: &[&str]) -> Result<std::process::Output
         .output()
         .context("Cannot run Codex configuration command")
 }
+#[cfg(unix)]
 pub(crate) fn configured(binary: &Path, root: &Path) -> Result<Option<Value>> {
     let result = cli(binary, root, &["mcp", "list", "--json"])?;
     ensure!(
@@ -56,6 +74,7 @@ pub(crate) fn configured(binary: &Path, root: &Path) -> Result<Option<Value>> {
     let values: Vec<Value> = serde_json::from_slice(&result.stdout)?;
     Ok(values.into_iter().find(|value| value["name"] == "firefox"))
 }
+#[cfg(unix)]
 fn ini(text: &str) -> Vec<(String, BTreeMap<String, String>)> {
     let mut sections = Vec::new();
     for line in text.lines().map(str::trim) {
@@ -73,50 +92,58 @@ fn ini(text: &str) -> Vec<(String, BTreeMap<String, String>)> {
     sections
 }
 pub(crate) fn profiles(home: &Path) -> Result<Vec<(PathBuf, bool)>> {
-    let mut found = BTreeMap::<PathBuf, bool>::new();
-    for location in [
-        ".config/mozilla/firefox",
-        ".mozilla/firefox",
-        "snap/firefox/common/.mozilla/firefox",
-        ".var/app/org.mozilla.firefox/.mozilla/firefox",
-    ] {
-        let root = home.join(location);
-        let path = root.join("profiles.ini");
-        if !path.is_file() {
-            continue;
-        }
-        let sections = ini(&fs::read_to_string(path)?);
-        let installation_defaults: Vec<_> = sections
-            .iter()
-            .filter(|(name, _)| name.starts_with("Install"))
-            .filter_map(|(_, fields)| fields.get("Default"))
-            .collect();
-        for (name, fields) in &sections {
-            if !name.starts_with("Profile") {
-                continue;
-            }
-            let Some(value) = fields.get("Path") else {
-                continue;
-            };
-            let path = if fields.get("IsRelative").is_some_and(|v| v == "1") {
-                root.join(value)
-            } else {
-                PathBuf::from(value)
-            };
-            if let Ok(path) = setup::profile(&path.to_string_lossy()) {
-                let default = if installation_defaults.is_empty() {
-                    fields.get("Default").is_some_and(|v| v == "1")
-                } else {
-                    installation_defaults.contains(&value)
-                };
-                found
-                    .entry(path)
-                    .and_modify(|existing| *existing |= default)
-                    .or_insert(default);
-            }
-        }
+    #[cfg(windows)]
+    {
+        let _ = home;
+        Ok(Vec::new())
     }
-    Ok(found.into_iter().collect())
+    #[cfg(unix)]
+    {
+        let mut found = BTreeMap::<PathBuf, bool>::new();
+        for location in [
+            ".config/mozilla/firefox",
+            ".mozilla/firefox",
+            "snap/firefox/common/.mozilla/firefox",
+            ".var/app/org.mozilla.firefox/.mozilla/firefox",
+        ] {
+            let root = home.join(location);
+            let path = root.join("profiles.ini");
+            if !path.is_file() {
+                continue;
+            }
+            let sections = ini(&fs::read_to_string(path)?);
+            let installation_defaults: Vec<_> = sections
+                .iter()
+                .filter(|(name, _)| name.starts_with("Install"))
+                .filter_map(|(_, fields)| fields.get("Default"))
+                .collect();
+            for (name, fields) in &sections {
+                if !name.starts_with("Profile") {
+                    continue;
+                }
+                let Some(value) = fields.get("Path") else {
+                    continue;
+                };
+                let path = if fields.get("IsRelative").is_some_and(|v| v == "1") {
+                    root.join(value)
+                } else {
+                    PathBuf::from(value)
+                };
+                if let Ok(path) = setup::profile(&path.to_string_lossy()) {
+                    let default = if installation_defaults.is_empty() {
+                        fields.get("Default").is_some_and(|v| v == "1")
+                    } else {
+                        installation_defaults.contains(&value)
+                    };
+                    found
+                        .entry(path)
+                        .and_modify(|existing| *existing |= default)
+                        .or_insert(default);
+                }
+            }
+        }
+        Ok(found.into_iter().collect())
+    }
 }
 pub(crate) fn choose(candidates: &[(PathBuf, bool)]) -> Result<PathBuf> {
     let active: Vec<_> = candidates
@@ -158,6 +185,7 @@ pub(crate) fn guidance(old: &str) -> Result<String> {
         _ => bail!("Firefox instruction markers are incomplete; preserving AGENTS.md"),
     }
 }
+#[cfg(unix)]
 pub(crate) fn read_optional(path: &Path) -> Result<String> {
     match fs::read_to_string(path) {
         Ok(value) => Ok(value),
@@ -168,6 +196,7 @@ pub(crate) fn read_optional(path: &Path) -> Result<String> {
 pub fn install(explicit: Option<&str>) -> Result<Value> {
     crate::lifecycle::install(explicit, false)
 }
+#[cfg(unix)]
 pub fn doctor() -> Result<Value> {
     let home = home()?;
     let root = codex_home(&home);
@@ -212,6 +241,11 @@ pub fn doctor() -> Result<Value> {
     )
 }
 
+#[cfg(windows)]
+pub fn doctor() -> Result<Value> {
+    crate::lifecycle::doctor()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,6 +258,7 @@ mod tests {
         assert!(guidance(&format!("{START} incomplete")).is_err());
     }
     #[test]
+    #[cfg(unix)]
     fn discovery_prefers_install_default_over_legacy_default() {
         let home = tempfile::tempdir().unwrap();
         let root = home.path().join(".config/mozilla/firefox");
