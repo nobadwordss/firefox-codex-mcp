@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0-beta.1 — Windows preview
+
+- Add Windows local Named Pipes with logon-session ACLs, remote-client rejection,
+  peer token checks and exclusive broker creation. Keep the common chat protocol.
+- Add a double-click EXE and English manager for per-user install/update/removal.
+- Register Native Messaging in HKCU and Codex globally without profile paths,
+  tokens, a CLI dependency, elevation or browser debugging.
+- Use immutable versioned EXEs, journaled file/registry changes, conflict-preserving
+  recovery and bounded deferred deletion of unchanged program files.
+- Add Windows native Firefox and official Codex app-server integration tests,
+  extracted-package testing and Windows ZIP/EXE artifacts with license notices.
+- Keep the Mozilla-signed extension at 0.4.0 and retain Linux-only advanced BiDi.
+- Windows 10/11 desktop, live model/desktop UI and Authenticode/SmartScreen validation
+  are pending. Windows Server CI is not a substitute for those checks.
+
 ## 0.4.0 — 2026-11-17
 
 - Preserve work tabs across turns and MCP process replacement using Codex host

@@ -1,6 +1,7 @@
 # Windows 10 / 11 지원 계약
 
-상태: 설계 요구사항. 0.3.x 실행 파일은 Linux 전용이며 Windows 지원을 주장하지 않는다.
+상태: 0.5.0-beta.1에 Windows 어댑터와 설치기를 구현했습니다. 아래는 정식 지원을 위한 검증 기준입니다.
+[프리뷰 구현과 현재 검증 범위](windows-preview.md)를 확인하세요. 0.4.x 실행 파일은 Linux 전용입니다.
 첫 대상은 Windows 10 22H2 / Windows 11의 x86_64, 일반 Win32 Firefox와 로컬 Codex다.
 각 OS에서 실제 설치와 데스크톱 E2E를 통과해야 지원 목록에 추가한다.
 Store/MSIX Firefox와 ARM64는 별도 검증 전까지 포함하지 않는다.

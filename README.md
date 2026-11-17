@@ -11,7 +11,7 @@ connect automatically: no pairing codes, tokens, profile paths, or per-tab setup
 ```text
 Codex chat A ─ MCP stdio ─┐                       ┌─ A's work tabs
                          ├─ Local Rust router ─ Extension
-Codex chat B ─ MCP stdio ─┘   private Unix socket  └─ B's work tabs
+Codex chat B ─ MCP stdio ─┘   Unix socket / Windows pipe  └─ B's work tabs
                               Native Messaging
 ```
 
@@ -19,8 +19,8 @@ Codex chat B ─ MCP stdio ─┘   private Unix socket  └─ B's work tabs
 
 Supported: **Linux x86_64**, ordinary Firefox 140+, and local Codex desktop/CLI.
 The package runs without Rust or Node installed. It targets Ubuntu 22.04
-(glibc 2.35) or newer. Windows, macOS, Snap/Flatpak Firefox and Android are not yet
-validated. [Windows 10/11 porting plan](docs/windows-support-plan.md).
+(glibc 2.35) or newer. Windows has a separate preview below. macOS,
+Snap/Flatpak Firefox and Android are not validated.
 
 1. Download the [0.4.0 Linux package](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0), extract it, and run `install.sh`.
 2. In the local manager, choose **설치 (Install)**, then **진행 (Continue)**.
@@ -43,6 +43,33 @@ consider Firefox when a real browser is useful. They do not force every model or
 every web search to use it. Existing chats may need a new chat or an app restart;
 project configuration and administrator policy take precedence. Cloud chats are
 outside this local integration. Codex's built-in **Computer Use** list is not patched.
+
+## Windows preview
+
+The [0.5.0-beta.1 preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.1)
+targets **Windows 10 22H2 / Windows 11 x64** with desktop Firefox. It is not yet a
+fully validated Windows desktop release: automated verification uses Windows
+Server 2022. See the exact [Windows verification scope](docs/windows-preview.md).
+
+1. Install desktop Firefox and Codex from their official sources.
+2. Download the Windows `*-setup.exe` and double-click it. Do not run as administrator.
+3. Choose **Install connection**, then **Continue** in the local English setup page.
+4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's prompt.
+5. Start a new Codex chat and ask for a browser task.
+
+No terminal, Rust, Node, pairing code, token or profile path is needed. A ZIP with
+licenses, SBOM and the same EXE is also available. The helper is **not
+Authenticode-signed**; the extension remains Mozilla-signed at 0.4.0. We have not
+validated SmartScreen's downloaded-file flow. Do not disable Windows security to
+install the preview; if blocked, wait for signed delivery or review/build the source.
+
+Update by downloading and opening the newer EXE. Remove via **Windows Settings →
+Apps → Firefox Codex MCP → Uninstall**, then **Remove connection** in the manager.
+The manager exits after removal. Close old Codex chats to release locked program
+files. Modified files and unrelated Codex settings are preserved; remove the
+extension separately in Firefox. See [installation details](packaging/INSTALL.windows.txt).
+BiDi remains Linux-only; WSL, Store Firefox, ARM64 and elevated/mixed-user operation
+are outside this preview's validation scope.
 
 ## Continue the same tab across turns
 

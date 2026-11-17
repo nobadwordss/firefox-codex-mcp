@@ -737,7 +737,13 @@ mod tests {
             Some(Path::new(r"C:\Users\한글 user\mcp.exe")),
         )
         .unwrap();
-        assert!(prepared.after.as_ref().unwrap().starts_with(original));
+        let after = prepared.after.as_ref().unwrap();
+        assert!(after.contains("# keep"), "{after}");
+        let parsed = after.parse::<toml_edit::DocumentMut>().unwrap();
+        assert_eq!(
+            parsed["mcp_servers"]["other"]["command"].as_str(),
+            Some("other.exe")
+        );
         assert_eq!(
             fs::read_to_string(layout.codex.join("config.toml")).unwrap(),
             original
