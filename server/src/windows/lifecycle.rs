@@ -262,8 +262,11 @@ fn config(layout: &Layout, old: Option<&Receipt>, exe: Option<&Path>) -> Result<
         let mut args = toml_edit::Array::new();
         args.push("--extension");
         document["mcp_servers"]["firefox"]["args"] = toml_edit::value(args);
-        document["mcp_servers"]["firefox"]["startup_timeout_sec"] = toml_edit::value(20);
-        document["mcp_servers"]["firefox"]["tool_timeout_sec"] = toml_edit::value(70);
+        for (key, value) in [("startup_timeout_sec", 20), ("tool_timeout_sec", 70)] {
+            if document["mcp_servers"]["firefox"].get(key).is_none() {
+                document["mcp_servers"]["firefox"][key] = toml_edit::value(value);
+            }
+        }
     } else if let Some(servers) = document
         .get_mut("mcp_servers")
         .and_then(|v| v.as_table_like_mut())
@@ -572,7 +575,7 @@ $root={root}; $base=[IO.Path]::GetDirectoryName($root);
 function SafePath($p) {{
   if(!$p.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){{return $false}}
   $at=$p;
-  while($at) {{if(Test-Path -LiteralPath $at){{$node=Get-Item -LiteralPath $at -Force;if($node.Attributes -band [IO.FileAttributes]::ReparsePoint){{return $false}}}};$at=[IO.Path]::GetDirectoryName($at)}}
+  while($at) {{if(Test-Path -LiteralPath $at){{$node=Get-Item -LiteralPath $at -Force -ErrorAction Stop;if($node.Attributes -band [IO.FileAttributes]::ReparsePoint){{return $false}}}};$at=[IO.Path]::GetDirectoryName($at)}}
   return $true
 }}
 for($i=0;$i -lt 120;$i++){{
@@ -580,7 +583,7 @@ for($i=0;$i -lt 120;$i++){{
  try {{$guard=[IO.File]::Open((Join-Path $base 'install.lock'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}}catch{{continue}}
  try {{
  if(Test-Path -LiteralPath (Join-Path $base 'install.json')){{break}}
- $items=(Get-Content -LiteralPath (Join-Path $base 'cleanup.json') -Raw | ConvertFrom-Json).files;
+ $items=(Get-Content -LiteralPath (Join-Path $base 'cleanup.json') -Encoding UTF8 -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).files;
  foreach($item in $items){{$p=$item.path; if(@('firefox-codex-mcp.exe','firefox-codex-native-host.exe') -notcontains [IO.Path]::GetFileName($p)){{continue}};
   if((Test-Path -LiteralPath $p) -and (SafePath $p)){{try{{
    if((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -eq $item.sha256){{Remove-Item -LiteralPath $p -ErrorAction Stop}}

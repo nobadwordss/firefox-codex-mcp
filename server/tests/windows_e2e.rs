@@ -773,6 +773,14 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     );
     drop(after_restart);
     drop(browser);
+    let until = Instant::now() + Duration::from_secs(30);
+    while first.exists() || second.exists() {
+        ensure!(
+            Instant::now() < until,
+            "Deferred removal did not delete unlocked EXEs (Unicode path)"
+        );
+        thread::sleep(Duration::from_millis(200));
+    }
     run(&binary, &root, "--repair")?;
     // Normal production endpoint: neither Firefox nor Codex gets an endpoint
     // override. Only Codex's standard CODEX_HOME remains isolated for CI.
