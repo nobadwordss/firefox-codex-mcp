@@ -7,7 +7,7 @@ Do not disable SmartScreen, antivirus, or Windows security to install this previ
 If Windows blocks it, use the source/build instructions or wait for signed delivery.
 
 1. Install Codex and desktop Firefox from their official sources.
-2. Download the setup EXE from this project's GitHub release, or extract this ZIP.
+2. Download the Windows ZIP from this project's GitHub release and extract it.
 3. Double-click firefox-codex-mcp.exe. Do not run as administrator.
 4. In the local setup page, choose Install connection.
 5. Choose Add Codex Work Tabs to Firefox, then accept Firefox's extension prompt.
@@ -17,7 +17,7 @@ No code, token, profile path, Node.js, Rust, command prompt or debugging flag is
 needed. With several Firefox profiles, choose Use this Firefox in the extension
 in the profile you want. Existing personal tabs are never imported automatically.
 
-Update: download the newer EXE and open it, then choose Update connection.
+Update: extract the newer ZIP and open its EXE, then choose Update connection.
 The signed extension bundled here remains 0.4.0. This update changes the helper.
 Updating releases existing work-tab permissions; pages remain open.
 

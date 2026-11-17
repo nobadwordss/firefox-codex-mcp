@@ -144,9 +144,17 @@ struct Codex {
 }
 impl Codex {
     fn start(root: &Path) -> Result<Self> {
+        // Codex filters inherited environment variables for MCP children. These
+        // overrides isolate this test's alternate root; normal installation uses
+        // Windows Known Folders on both sides and needs no such configuration.
+        let isolation = format!(
+            "mcp_servers.firefox.env={{FIREFOX_MCP_INSTALL_ROOT={},FIREFOX_MCP_RUNTIME_DIR={}}}",
+            serde_json::to_string(&root.join("helper"))?,
+            serde_json::to_string(&root.join("runtime"))?
+        );
         let mut process = Process(
             cmd(Path::new(&env::var("FIREFOX_SETUP_CODEX_BINARY")?), root)
-                .arg("app-server")
+                .args(["app-server", "-c", &isolation])
                 .current_dir(root)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -519,7 +527,19 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     browser.click("#close")?;
     drop(manager);
     let first = installed(&root)?;
-    let doctor: Value = serde_json::from_str(&run(&binary, &root, "--doctor")?)?;
+    let discovered = cmd(&binary, &root)
+        .env_remove("FIREFOX_BINARY")
+        .arg("--doctor")
+        .output()?;
+    ensure!(
+        discovered.status.success(),
+        "normal Firefox discovery failed"
+    );
+    let doctor: Value = serde_json::from_slice(&discovered.stdout)?;
+    ensure!(
+        doctor["firefoxAvailable"] == true,
+        "App Paths Firefox discovery failed: {doctor}"
+    );
     ensure!(
         doctor["nativeHostRegistered"] == true && doctor["globalMcpRegistered"] == true,
         "{doctor}"
@@ -608,6 +628,22 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     browser.click("#revoke")?;
     b.denied("firefox_snapshot", json!({}))?;
     browser.screenshot(&artifacts.join("extension-revoked.png"))?;
+    let paused_tab = a.ok("firefox_open_tab", json!({"url":url}))?["tabId"].clone();
+    snapshot(&mut a)?;
+    browser.click("#toggle")?;
+    let until = Instant::now() + Duration::from_secs(8);
+    while a.ok("firefox_status", json!({}))?["enabled"] != false {
+        ensure!(Instant::now() < until, "pause not applied");
+        thread::sleep(Duration::from_millis(100));
+    }
+    a.denied("firefox_snapshot", json!({}))?;
+    browser.click("#toggle")?;
+    let until = Instant::now() + Duration::from_secs(8);
+    while a.ok("firefox_status", json!({}))?["enabled"] != true {
+        ensure!(Instant::now() < until, "resume not applied");
+        thread::sleep(Duration::from_millis(100));
+    }
+    a.denied("firefox_select_tab", json!({"tabId":paused_tab}))?;
     codex_roundtrip(&root, &url, &artifacts)?;
     // A different build payload rotates immutable paths while old MCP EXEs run.
     let candidate = root.join("update candidate.exe");
@@ -627,6 +663,55 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     fresh.denied("firefox_select_tab", json!({"tabId":tab}))?;
     fresh.ok("firefox_open_tab", json!({"url":url}))?;
     snapshot(&mut fresh)?;
+    let original_profile = fresh.ok("firefox_status", json!({}))?["profileId"].clone();
+    let second_browser = Browser::start(&root, &root.join("profile-b"))?;
+    second_browser.call(
+        "/moz/addon/install",
+        json!({"path":env::var("FIREFOX_SIGNED_XPI")?,"temporary":false}),
+    )?;
+    second_browser.goto(&format!("moz-extension://{UUID}/native/popup.html"))?;
+    let until = Instant::now() + Duration::from_secs(15);
+    loop {
+        if second_browser
+            .script("return document.querySelector('#status').textContent;")?
+            .as_str()
+            .is_some_and(|v| v.contains("연결됨"))
+        {
+            break;
+        }
+        ensure!(Instant::now() < until, "second profile did not connect");
+        thread::sleep(Duration::from_millis(100));
+    }
+    ensure!(
+        fresh.ok("firefox_status", json!({}))?["profileId"] == original_profile,
+        "second profile stole selection"
+    );
+    second_browser.click("#choose")?;
+    let until = Instant::now() + Duration::from_secs(10);
+    while fresh.ok("firefox_status", json!({}))?["profileId"] == original_profile {
+        ensure!(Instant::now() < until, "profile choice not applied");
+        thread::sleep(Duration::from_millis(100));
+    }
+    fresh.denied("firefox_snapshot", json!({}))?;
+    fresh.ok("firefox_open_tab", json!({"url":url}))?;
+    snapshot(&mut fresh)?;
+    drop(second_browser);
+    let until = Instant::now() + Duration::from_secs(15);
+    while fresh.ok("firefox_status", json!({}))?["connected"] != false {
+        ensure!(
+            Instant::now() < until,
+            "selected profile did not disconnect"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+    fresh.denied("firefox_open_tab", json!({"url":url}))?;
+    browser.goto(&format!("moz-extension://{UUID}/native/popup.html"))?;
+    browser.click("#choose")?;
+    fresh.connected()?;
+    ensure!(
+        fresh.ok("firefox_status", json!({}))?["profileId"] == original_profile,
+        "original profile selection failed"
+    );
     drop(fresh);
     // Permanent signed extension and selected profile survive normal Firefox restart.
     let version = browser.version.clone();
@@ -643,6 +728,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     after_restart.ok("firefox_open_tab", json!({"url":url}))?;
     snapshot(&mut after_restart)?;
     run(&candidate, &root, "--uninstall")?;
+    after_restart.denied("firefox_snapshot", json!({}))?;
     let mut after_remove = Mcp::start(&root, A).err();
     ensure!(
         after_remove.take().is_some(),
@@ -669,7 +755,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     fs::write(
         artifacts.join("result.json"),
         serde_json::to_vec_pretty(
-            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":"0.4.0","verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
+            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":"0.4.0","verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke and pause","two-profile selection and no offline fallback","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
         )?,
     )?;
     Ok(())

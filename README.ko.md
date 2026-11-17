@@ -55,7 +55,7 @@ Windows 10 22H2·Windows 11 x64와 일반 데스크톱 Firefox를 대상으로 �
 아직 완료하지 않았습니다.** [검증 범위](docs/windows-preview.md)를 확인하세요.
 
 1. 공식 배포처에서 Codex와 Firefox를 설치합니다.
-2. Windows `*-setup.exe`를 받아 더블클릭합니다. 관리자 권한으로 실행하지 않습니다.
+2. Windows ZIP을 받아 압축을 풀고 `firefox-codex-mcp.exe`를 더블클릭합니다. 관리자 권한으로 실행하지 않습니다.
 3. 영어 관리 화면의 **Install connection → Continue**를 누릅니다.
 4. **Add Codex Work Tabs to Firefox**를 누르고 Firefox의 확장 설치를 확인합니다.
 5. 새 Codex 채팅에서 브라우저 작업을 요청합니다.
@@ -65,7 +65,7 @@ Windows 10 22H2·Windows 11 x64와 일반 데스크톱 Firefox를 대상으로 �
 다운로드 설치 흐름은 미검증입니다. 보안 기능을 끄지 마세요. 차단된다면 서명 배포를
 기다리거나 소스를 검토해 직접 빌드해야 합니다.
 
-업데이트는 새 EXE를 받아 실행합니다. 제거는 **Windows 설정 → 앱 → Firefox Codex MCP →
+업데이트는 새 ZIP을 풀고 그 안의 EXE를 실행합니다. 제거는 **Windows 설정 → 앱 → Firefox Codex MCP →
 제거**에서 관리 화면을 연 뒤 **Remove connection**을 누릅니다. 관리 프로그램은 자동
 종료하며, 실행 파일 잠금 해제를 위해 기존 Codex 채팅을 닫아야 합니다. Firefox 프로필·로그인·
 결과 탭·무관한 설정은 보존합니다. 확장은 Firefox에서 별도로 제거합니다.

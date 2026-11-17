@@ -6,11 +6,16 @@ jobs:
   windows:
     runs-on: windows-2022
     timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -41,6 +46,7 @@ jobs:
           "FIREFOX_MCP_WINDOWS_E2E=1" >> $env:GITHUB_ENV
       - name: Real install, running update, removal and signed Firefox E2E
         run: cargo test --release --test windows_e2e --locked -- --ignored --nocapture --test-threads=1
+      - run: cargo fetch --locked
       - name: Package EXE, ZIP, dependency notices and SBOM
         run: cargo run --release --locked --bin package -- target/release/firefox-codex-mcp.exe dist-windows
       - name: Test extracted distribution outside repository
@@ -51,6 +57,10 @@ jobs:
           $env:FIREFOX_SETUP_SERVER_BINARY = (Get-ChildItem "$env:RUNNER_TEMP\extracted-package" -Filter firefox-codex-mcp.exe -Recurse | Select-Object -First 1).FullName
           cargo test --release --test windows_e2e --locked -- --ignored --nocapture --test-threads=1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/attest-build-provenance@v2
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-path: dist-windows/*.zip
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -61,6 +71,5 @@ jobs:
           name: firefox-codex-mcp-windows-x86_64
           path: |
             dist-windows/*.zip
-            dist-windows/*.exe
             dist-windows/*.xpi
             dist-windows/SHA256SUMS

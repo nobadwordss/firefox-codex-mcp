@@ -288,17 +288,13 @@ fn main() -> Result<()> {
         let mut writer = zip::ZipWriter::new(fs::File::create(&archive_path)?);
         add(&mut writer, &stage, out)?;
         writer.finish()?;
-        fs::copy(&binary, out.join(format!("{name}-setup.exe")))?;
     }
-    let mut sums = format!(
+    let sums = format!(
         "{:x}  {name}.{suffix}\n{:x}  {xpi_name}\n{:x}  {signed_name}\n",
         Sha256::digest(fs::read(&archive_path)?),
         Sha256::digest(fs::read(xpi)?),
         Sha256::digest(fs::read(signed)?)
     );
-    if cfg!(windows) {
-        sums.push_str(&format!("{digest}  {name}-setup.exe\n"));
-    }
     fs::write(out.join("SHA256SUMS"), sums)?;
     println!("{}", archive_path.display());
     Ok(())

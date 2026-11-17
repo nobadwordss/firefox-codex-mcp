@@ -52,18 +52,17 @@ fully validated Windows desktop release: automated verification uses Windows
 Server 2022. See the exact [Windows verification scope](docs/windows-preview.md).
 
 1. Install desktop Firefox and Codex from their official sources.
-2. Download the Windows `*-setup.exe` and double-click it. Do not run as administrator.
+2. Download and extract the Windows ZIP, then double-click `firefox-codex-mcp.exe`. Do not run as administrator.
 3. Choose **Install connection**, then **Continue** in the local English setup page.
 4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's prompt.
 5. Start a new Codex chat and ask for a browser task.
 
-No terminal, Rust, Node, pairing code, token or profile path is needed. A ZIP with
-licenses, SBOM and the same EXE is also available. The helper is **not
+No terminal, Rust, Node, pairing code, token or profile path is needed. The ZIP includes the EXE, dependency licenses and an SBOM. The helper is **not
 Authenticode-signed**; the extension remains Mozilla-signed at 0.4.0. We have not
 validated SmartScreen's downloaded-file flow. Do not disable Windows security to
 install the preview; if blocked, wait for signed delivery or review/build the source.
 
-Update by downloading and opening the newer EXE. Remove via **Windows Settings →
+Update by extracting the newer ZIP and opening its EXE. Remove via **Windows Settings →
 Apps → Firefox Codex MCP → Uninstall**, then **Remove connection** in the manager.
 The manager exits after removal. Close old Codex chats to release locked program
 files. Modified files and unrelated Codex settings are preserved; remove the

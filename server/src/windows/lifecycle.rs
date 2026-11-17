@@ -516,10 +516,18 @@ pub fn uninstall() -> Result<Value> {
     )?);
     changes.push(change(file(layout.receipt.clone()), None)?);
     transact(&layout, changes)?;
-    let reset_ok = reset(&prior.executable);
-    let deferred = cleanup(&layout.root, &prior.binaries)?;
+    let reset_ok = reset(&std::env::current_exe()?);
+    let (deferred, cleanup_warning) = match cleanup(&layout.root, &prior.binaries) {
+        Ok(pending) => (pending, None),
+        Err(error) => (
+            true,
+            Some(format!(
+                "Connection removed; some program files need manual cleanup: {error}"
+            )),
+        ),
+    };
     Ok(
-        json!({"removed":true,"preservedModifiedFiles":preserved,"deferredCleanup":deferred,"restartRequired":!reset_ok,"nextStep":"Connection removed. Close this manager and existing Codex chats to release running files. Firefox, your profiles, logins and result tabs are preserved. Remove Codex Work Tabs separately in Firefox Add-ons. Unmodified program files are cleaned up after the manager exits; modified files are preserved."}),
+        json!({"removed":true,"preservedModifiedFiles":preserved,"deferredCleanup":deferred,"cleanupWarning":cleanup_warning,"restartRequired":!reset_ok,"nextStep":"Connection removed. Close this manager and existing Codex chats to release running files. Firefox, your profiles, logins and result tabs are preserved. Remove Codex Work Tabs separately in Firefox Add-ons. Unmodified program files are cleaned up after the manager exits; modified files are preserved."}),
     )
 }
 fn cleanup(root: &Path, binaries: &[(PathBuf, String)]) -> Result<bool> {
@@ -653,6 +661,23 @@ mod tests {
             journal: root.join("transaction.json"),
             _lock: File::create(root.join("lock")).unwrap(),
         }
+    }
+    #[test]
+    fn cleanup_preserves_changed_files_and_a_reinstalled_payload() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("versions/test/firefox-codex-mcp.exe");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, b"original").unwrap();
+        let rows = vec![(path.clone(), digest(b"original"))];
+        fs::write(temp.path().join("install.json"), "new installation").unwrap();
+        assert!(!cleanup(temp.path(), &rows).unwrap());
+        assert!(path.exists());
+        fs::remove_file(temp.path().join("install.json")).unwrap();
+        fs::write(&path, b"user changed").unwrap();
+        assert!(!cleanup(temp.path(), &rows).unwrap());
+        assert_eq!(fs::read(&path).unwrap(), b"user changed");
+        let escape = temp.path().join("versions/../firefox-codex-mcp.exe");
+        assert!(cleanup(temp.path(), &[(escape, digest(b"original"))]).is_err());
     }
     #[test]
     fn crash_recovery_restores_files_and_registry_but_preserves_new_edits() {

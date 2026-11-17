@@ -6,8 +6,9 @@ This is a preview, not a claim that Windows 10/11 desktop acceptance testing is 
 
 ## Install, update and remove
 
-Download the Windows setup EXE from the project's release and double-click it as
-your normal Windows user. Choose **Install connection → Continue**, then **Add
+Download and extract the Windows ZIP from the project's release. Double-click
+`firefox-codex-mcp.exe` as your normal Windows user. Keep the bundled license notices
+with the application when redistributing it. Choose **Install connection → Continue**, then **Add
 Codex Work Tabs to Firefox**. Confirm Firefox's normal extension installation.
 Start a new Codex chat. No administrator rights, code, token, terminal, profile
 path, Rust or Node installation is required. The installer can register desktop
@@ -18,7 +19,7 @@ desktop Firefox from Mozilla, then reopen setup in Firefox to install the extens
 The Firefox extension controls still use Korean: **이 Firefox 사용** selects that
 profile, **잠시 중지** pauses control, and **모든 작업 탭 접근 해제** revokes all work tabs.
 
-Download and open a newer setup EXE to update. Executing an older downloaded EXE
+Download and extract a newer ZIP, then open its EXE to update. Executing an older downloaded EXE
 installs that version, so choose the intended release. Windows Settings → Apps →
 Firefox Codex MCP → Uninstall opens the manager; choose **Remove connection**.
 The manager exits after a successful removal. Remove the Firefox extension

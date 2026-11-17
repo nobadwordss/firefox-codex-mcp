@@ -10,7 +10,7 @@
 - Use immutable versioned EXEs, journaled file/registry changes, conflict-preserving
   recovery and bounded deferred deletion of unchanged program files.
 - Add Windows native Firefox and official Codex app-server integration tests,
-  extracted-package testing and Windows ZIP/EXE artifacts with license notices.
+  extracted-package testing and Windows ZIP artifacts with license notices.
 - Keep the Mozilla-signed extension at 0.4.0 and retain Linux-only advanced BiDi.
 - Windows 10/11 desktop, live model/desktop UI and Authenticode/SmartScreen validation
   are pending. Windows Server CI is not a substitute for those checks.
