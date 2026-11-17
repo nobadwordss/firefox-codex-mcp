@@ -25,12 +25,11 @@ Linux x86_64의 일반 Firefox 140+와 로컬 Codex 앱/CLI가 필요합니다.
 패키지는 Rust·Node 설치 없이 실행됩니다. Ubuntu 22.04(glibc 2.35) 이상 대상이며
 Windows는 아래 별도 프리뷰를 제공합니다. macOS, Snap/Flatpak, Android는 검증하지 않았습니다.
 
-현재 소스 빌드는 설치 화면·확장·진단을 영어로 제공합니다. 아래 영어 버튼 이름은 다음
-프리뷰 기준이며, 공개 안정판 0.4.0의 기존 한국어 화면과 배포 파일은 교체하지 않았습니다.
-이전 배포본은 그 파일에 포함된 `INSTALL.txt`의 버튼 이름을 따르세요.
+**0.4.1은 영문 Linux 정식판입니다.** 설치 화면·확장·진단은 영어이며 Windows는 별도
+프리뷰로 유지합니다. [릴리스 안내·체크섬·검증 기록](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1)을 함께 제공합니다.
 
 1. Codex를 열어 로그인할 수 있는지 확인하고 일반 Firefox를 준비합니다.
-2. [v0.4.0 배포 패키지](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0)를 받아 압축을 완전히 풉니다. 풀린 폴더에서 **여기서 터미널 열기**를 선택해 `./install.sh`를 실행합니다. 파일 관리자에서 스크립트 실행을 지원하면 직접 실행해도 됩니다.
+2. [Linux 0.4.1 압축 파일](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz)을 받아 압축을 완전히 풉니다. 풀린 폴더에서 **여기서 터미널 열기**를 선택해 `./install.sh`를 실행합니다. 파일 관리자에서 스크립트 실행을 지원하면 직접 실행해도 됩니다.
 3. Firefox에 열린 관리 화면에서 **Install connection → Continue**를 누릅니다. MCP 등록과 브라우저 스킬·사용 지침은 설치기가 자동으로 넣으므로 따로 설정하지 않습니다.
 4. 같은 화면에서 **Add Codex Work Tabs to Firefox**를 누르고 Firefox의 설치·권한 안내를 확인합니다.
 5. 새 Codex 채팅에 다음처럼 요청합니다. `https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.`
@@ -39,7 +38,7 @@ Windows는 아래 별도 프리뷰를 제공합니다. macOS, Snap/Flatpak, Andr
 도구 사용 승인이 나오면 요청한 웹 작업인지 확인한 뒤 허용하세요.
 스크립트가 편집기로 열리거나 도구가 안 보이면 [처음 설치 안내](docs/first-install-linux.ko.md)를 확인하세요.
 
-현재 소스 빌드는 Mozilla가 서명한 영문 확장 `codex-work-tabs-0.4.1.xpi`를 포함합니다.
+Linux 0.4.1은 Mozilla가 서명한 영문 확장 `codex-work-tabs-0.4.1.xpi`를 포함합니다.
 아래는 기존 **0.4.0 연결 프로그램 + 확장**으로 확인한 검증 기록입니다.
 일반 Firefox의 영구 설치·재시작·다중 프로필을 검증했습니다.
 현재 개인 프로필의 실제 Codex 데스크톱 두 채팅에서 여러 턴에 걸쳐 동일 탭·문서·입력값이
@@ -76,7 +75,7 @@ Windows 10 22H2·Windows 11 x64와 일반 데스크톱 Firefox를 대상으로 �
 5. 새 Codex 채팅에서 브라우저 작업을 요청합니다.
 
 코드·토큰·프로필 경로나 터미널 입력이 필요 없습니다. 공개 beta.1은 기존 Mozilla 서명
-확장 0.4.0을 사용하며, 다음 프리뷰 소스는 영문 확장 0.4.1을 포함합니다.
+확장 0.4.0을 사용합니다. Linux 0.4.1에는 Windows 설치본을 포함하지 않습니다.
 **Windows 연결 프로그램의 Authenticode 서명은 없습니다.** SmartScreen의
 다운로드 설치 흐름은 미검증입니다. 보안 기능을 끄지 마세요. 차단된다면 서명 배포를
 기다리거나 소스를 검토해 직접 빌드해야 합니다.

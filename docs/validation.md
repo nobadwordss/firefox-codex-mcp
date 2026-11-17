@@ -1,5 +1,8 @@
 # Validation history
 
+Linux stable 0.4.1: [release downloads, checksums, provenance and release-specific verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1).
+The release publishes Linux x86_64 only; Windows retains its separate preview status.
+
 English defaults, next preview 0.5.0-beta.2: [isolated installation, actual model task and signed extension 0.4.1](english-default-e2e-2026-11-17.json).
 This is a local candidate build, not a replacement for the published stable archive.
 

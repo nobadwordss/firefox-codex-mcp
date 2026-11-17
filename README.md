@@ -22,13 +22,12 @@ The package runs without Rust or Node installed. It targets Ubuntu 22.04
 (glibc 2.35) or newer. Windows has a separate preview below. macOS,
 Snap/Flatpak Firefox and Android are not validated.
 
-Current source builds use English setup, extension controls and diagnostics.
-The published stable 0.4.0 archive retains its earlier Korean interface; it has
-not been replaced. The English labels below describe the next preview build.
-For an older download, follow its bundled `INSTALL.txt` for the matching labels.
+**0.4.1 is the English Linux stable release.** Setup, extension controls and
+diagnostics use English. [Release notes, checksums and verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1)
+are available with the download. Windows remains a separate preview.
 
 1. Open Codex and check that you can sign in. Install ordinary desktop Firefox.
-2. Download and fully extract the [0.4.0 Linux package](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0). Open a terminal in the extracted folder and run `./install.sh`. A file manager that supports running scripts can also launch it directly.
+2. [Download the Linux 0.4.1 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz) and fully extract it. Open a terminal in the extracted folder and run `./install.sh`. A file manager that supports running scripts can also launch it directly.
 3. In the local manager, choose **Install connection**, then **Continue**. The installer registers MCP and installs the browser skill and guidance automatically.
 4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's installation and permission prompts.
 5. Start a new Codex chat and ask: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
@@ -45,7 +44,7 @@ in the intended profile. An offline selected profile never silently falls back t
 
 The package includes a Mozilla-signed extension for permanent installation.
 This is an **unlisted, direct distribution**, not an AMO search listing.
-Current builds include `codex-work-tabs-0.4.1.xpi`. Use the signed XPI bundled with
+Linux 0.4.1 includes `codex-work-tabs-0.4.1.xpi`. Use the signed XPI bundled with
 your package; `*-unsigned.xpi` is only for development/review.
 See [signing and release](packaging/SIGNING.md).
 
@@ -70,7 +69,7 @@ Server 2022. See the exact [Windows verification scope](docs/windows-preview.md)
 
 No terminal, Rust, Node, pairing code, token or profile path is needed. The ZIP includes the EXE, dependency licenses and an SBOM. The helper is **not
 Authenticode-signed**. The published beta.1 includes Mozilla-signed extension
-0.4.0; current source builds prepare the English extension 0.4.1. We have not
+0.4.0. Linux 0.4.1 does not publish or promote a Windows installer. We have not
 validated SmartScreen's downloaded-file flow. Do not disable Windows security to
 install the preview; if blocked, wait for signed delivery or review/build the source.
 

@@ -6,13 +6,12 @@
 Codex에 로그인할 수 있어야 합니다. Rust·Node·프로젝트 소스는 필요 없습니다.
 Snap/Flatpak Firefox와 다른 운영체제의 설치 흐름은 이 안내의 검증 범위 밖입니다.
 
-현재 소스 빌드는 설치 화면과 확장을 영어로 제공합니다. 아래 영어 버튼 이름은 다음
-프리뷰 기준이며, 공개 안정판 0.4.0의 기존 한국어 배포 파일은 교체하지 않았습니다.
+**Linux 0.4.1은 영문 정식판입니다.** 설치 화면과 확장은 영어이며 아래 버튼 이름은
+실제 화면과 같습니다. Windows는 별도 프리뷰이고 과거 배포 파일은 그대로 남깁니다.
 
 ## 배포 파일 실행
 
-1. [안정판 0.4.0 릴리스](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0)에서
-   `firefox-codex-mcp-0.4.0-linux-x86_64.tar.gz`를 받습니다.
+1. [Linux 0.4.1 압축 파일](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.1/firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz)을 받습니다.
 2. 파일 관리자의 **압축 풀기**로 내용을 모두 꺼냅니다. 압축 파일 안에서 실행하지 않습니다.
 3. 풀린 폴더를 열어 **여기서 터미널 열기**를 선택하고 다음 한 줄을 실행합니다.
 
@@ -62,9 +61,10 @@ Codex 앱 또는 대화형 CLI에서 **새 채팅**을 열고 다음처럼 요�
 
 ## 검증 범위
 
-[영문 기본 화면 검증 기록](english-default-e2e-2026-11-17.json)은 다음 프리뷰의 설치 화면,
-확장과 실제 모델 작업을 빈 홈에서 확인한 결과입니다. 아직 공개하지 않은 로컬 빌드이며
-기존 공개 안정판 파일은 그대로입니다.
+[0.4.1 릴리스](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.1)에 실제
+배포 파일의 체크섬·GitHub 빌드 증명·`release-verification.json`을 제공합니다.
+[영문 기본 화면 검증 기록](english-default-e2e-2026-11-17.json)은 그전에 시험한 로컬 후보
+빌드의 역사적 기록이며 해당 파일과 검증 범위를 별도로 표시합니다.
 
 [2026-11-17 새 환경 검증 기록](linux-first-install-e2e-2026-11-17.json)을 확인하세요.
 공개 배포 파일을 프로젝트 밖에서 실행했고, 기존 홈을 가린 임시 홈에서 설정이 없는
