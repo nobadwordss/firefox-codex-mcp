@@ -6,7 +6,7 @@
 - Open Settings in the requesting Firefox profile through a capability-checked native control, outside the MCP tool surface.
 - Hide redundant single-profile selection and keep pause/revoke controls in Mozilla-signed extension 0.4.2.
 - Retire receipt-owned old launchers and managed debugging preferences transactionally, preserving deletions, custom edits and original baselines.
-- Keep Linux0.4.1 stable and Windows0.5.0-beta.2 published assets unchanged. The one-time per-user native helper installation remains necessary.
+- Keep Linux 0.4.1 stable and Windows 0.5.0-beta.2 published assets unchanged. The one-time per-user native helper installation remains necessary.
 
 ## 0.5.0-beta.2 — English Windows preview — 2026-11-17
 

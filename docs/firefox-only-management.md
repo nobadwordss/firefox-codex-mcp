@@ -83,3 +83,5 @@ Firefox; it is not part of normal installation.
 These are source-version instructions. They do not establish Windows 10/11
 desktop, SmartScreen or first-time-user acceptance. Verification records for
 earlier releases retain their original scope.
+
+Verification and boundaries: [2026-11-17 record](firefox-only-management-e2e-2026-11-17.json).

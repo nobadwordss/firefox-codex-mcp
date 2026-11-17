@@ -1,0 +1,395 @@
+{
+  "date": "2026-11-17",
+  "status": "Local verification and Linux CI passed; Windows Settings-update failure diagnosed; fix and new CI pending; helper unreleased",
+  "sourceCommit": "0118db0de46c6162a17ed6e794ea329232013479",
+  "helperVersion": "0.5.0-beta.3",
+  "extension": {
+    "version": "0.4.2",
+    "amoVersion": 6720969,
+    "file": 5265052,
+    "distribution": "unlisted/direct",
+    "signedSha256": "14e42f17f608cc975a47ba57b3cfde0f58998ce6a5e832eee362fce53352090f",
+    "runtimeMatchesSource": true,
+    "permissionsChanged": false
+  },
+  "productChanges": [
+    "No extra app-menu launchers for normal Firefox or helper management",
+    "Settings opens from trusted extension controls into that same Firefox profile",
+    "One connected profile is automatic; multiple-profile selection and no offline fallback preserved",
+    "One-time per-user helper installation still required; no manual skill installation",
+    "Settings tab is excluded from MCP chat-owned tabs"
+  ],
+  "localEnvironment": {
+    "os": "Linux x86_64",
+    "firefox": "160.0",
+    "geckodriver": "0.37.1",
+    "rust": "1.100.0",
+    "codex": "0.169.0-alpha.11.1"
+  },
+  "localChecks": {
+    "rustfmt": "passed",
+    "linuxClippyAllTargetsWarningsDenied": "passed",
+    "windowsGnuClippyAllTargetsWarningsDenied": "passed",
+    "linuxRustUnitTests": 34,
+    "javascriptTests": 72,
+    "installMigrationE2E": "passed",
+    "signedFirefoxNativeE2ETests": 2,
+    "signedFirefoxNativeE2ESeconds": 25.24,
+    "packageRuntimeSignatureGuard": "passed"
+  },
+  "nativeFirefox": {
+    "extensionSettingsInSameFirefoxProfile": true,
+    "firstInstall": true,
+    "multiProfile": true,
+    "nonselectedProfileSettings": true,
+    "offlineNoFallback": true,
+    "permanentSignedRestartVerified": true,
+    "restartReconnect": true,
+    "settingsExcludedFromWorkTabs": true,
+    "settingsUpdateResponseSurvivesNativeReset": true,
+    "signedInstallUi": true,
+    "singleProfileAutomaticSelection": true,
+    "temporaryAddonReloaded": false,
+    "twoChats": true
+  },
+  "settingsRemoval": {
+    "firefoxFixturePreserved": true,
+    "registrationRemoved": true,
+    "responseDeliveredAfterNativeReset": true,
+    "serviceClosed": true
+  },
+  "continuity": {
+    "crossChatDenied": true,
+    "detachedToolbarRevoke": true,
+    "independentFormStateReadback": true,
+    "lateEofIsolation": true,
+    "overlapFencing": true,
+    "restartDoesNotRestoreAccess": true,
+    "revokeIrreversible": true,
+    "sameTabAcrossProcesses": true,
+    "signed": true,
+    "staleSnapshotRejected": true
+  },
+  "cleanPackageFirstRun": {
+    "actualCodexModel": {
+      "answer": "Opened the page, read Observation code `90367f11`, clicked **Count 0** exactly once, and entered the code in **Message**. Verified **“Count updated to 1”** is displayed.",
+      "approvalMode": "approve-for-me (automatic review)",
+      "calls": [
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_open_tab"
+        },
+        {
+          "error": null,
+          "failureContent": [
+            {
+              "text": "Only owned HTTP(S) tabs can be controlled",
+              "type": "text"
+            }
+          ],
+          "isError": null,
+          "server": "firefox",
+          "status": "failed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_tabs"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_click"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_type"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        }
+      ],
+      "completed": true,
+      "installedSkillRead": true,
+      "mcpConfigurationOverridden": false,
+      "toolNamedInPrompt": false
+    },
+    "automaticRegistration": {
+      "guidance": true,
+      "mcp": true,
+      "nativeHost": true,
+      "skill": true
+    },
+    "elapsedSeconds": 43.045512966,
+    "extensionPopup": {
+      "language": "en",
+      "status": "Connected. Codex can open its own work tabs."
+    },
+    "independentDomReadback": {
+      "code": "90367f11",
+      "count": "Count 1",
+      "input": "90367f11",
+      "status": "Count updated to 1"
+    },
+    "initialState": {
+      "guidance": false,
+      "mcp": false,
+      "nativeHost": false,
+      "skill": false
+    },
+    "instrumentation": "Headless Firefox with Marionette; normal installer and Firefox permission controls",
+    "login": "read-only mount",
+    "noExtraAppMenuLaunchers": true,
+    "packageOnly": true,
+    "registrationVerified": true,
+    "scriptLaunchedManagerAndFirefox": true,
+    "setupLanguage": "en",
+    "signedExtensionInstalledThroughFirefoxPrompts": true,
+    "status": "passed"
+  },
+  "isolation": {
+    "credentialsCopied": false,
+    "filesChecked": [
+      ".codex/config.toml",
+      ".codex/AGENTS.md",
+      ".codex/skills/firefox-browser/SKILL.md",
+      ".codex/auth.json",
+      ".mozilla/native-messaging-hosts/firefox_codex_mcp.json",
+      ".local/lib/firefox-codex-mcp/firefox-codex-mcp",
+      ".local/lib/firefox-codex-mcp/native-host",
+      ".config/mozilla/firefox/profiles.ini",
+      ".mozilla/firefox/profiles.ini",
+      ".local/share/applications/firefox-codex-manager.desktop",
+      ".local/share/applications/firefox-codex.desktop"
+    ],
+    "loginMountedReadOnly": true,
+    "originalSettingsUnchanged": true,
+    "realHomeHidden": true,
+    "systemReadOnly": true,
+    "testAccountRemovedOnExit": true
+  },
+  "testedLocalArchive": {
+    "sha256": "99cc22223e5d5db7d700c8dab5e838b807eb0c9cdb4295dd76929b1fd941b37e",
+    "binarySha256": "451acca361276824d7fcc010599b16af106a630a8395bf931a93224cd4ce851a",
+    "buildCommitMetadata": null,
+    "scope": "Local unreleased package, built before source commit; not a claim about a published or final CI archive"
+  },
+  "realComputerChange": {
+    "removed": [
+      "~/.local/share/applications/firefox-codex-manager.desktop",
+      "~/.local/share/applications/firefox-codex.desktop"
+    ],
+    "privateBackup": "/tmp/firefox-launcher-backup-2026-11-17",
+    "kdeApplicationCacheRefreshed": true,
+    "defaultBrowser": "org.mozilla.firefox.desktop",
+    "remainingReferencesInKnownMimeAndPlasmaSettings": false,
+    "helperAndExtensionUpgraded": false,
+    "codexAndFirefoxSettingsPreserved": true
+  },
+  "advisoryReview": {
+    "reviewer": "Gemini",
+    "scope": "Product and migration review, advisory only; not execution evidence",
+    "focus": [
+      "On-demand manager startup and response survival across update/removal",
+      "Nonselected-profile management and old-helper upgrade notice",
+      "Default-browser association and recovery after extension removal"
+    ]
+  },
+  "workflows": {
+    "checks": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44032358861",
+    "linuxDistribution": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44032358883",
+    "windows": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44032358924"
+  },
+  "publishedReleases": {
+    "latest": {
+      "assets": [
+        {
+          "digest": "sha256:4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc",
+          "name": "codex-work-tabs-0.4.1.xpi",
+          "size": 45330
+        },
+        {
+          "digest": "sha256:0b39ef35064773ce7ac224193598282921fb08cd733b8698f73eace029689683",
+          "name": "firefox-codex-mcp-0.4.1-linux-x86_64.tar.gz",
+          "size": 2443857
+        },
+        {
+          "digest": "sha256:4c80d63603101c3731a20cbe0d14d43017acb95d28af2b29c0bf3396efe26cbb",
+          "name": "linux-attestation.jsonl",
+          "size": 11259
+        },
+        {
+          "digest": "sha256:d4d7d40e021cfe8b6b6dc33a51215044effe170859cc25b2372f0ccd511d3f38",
+          "name": "linux-evidence.zip",
+          "size": 407800
+        },
+        {
+          "digest": "sha256:5d808549f5e9fc329891de528b1d1bf59edf953e8d9497d85c559c7565859dfa",
+          "name": "provenance-verification.json",
+          "size": 14359
+        },
+        {
+          "digest": "sha256:d1d49d6251b7457212cbfacfec2dbc219ae19ba17971bda4dfa984ac1c8446d5",
+          "name": "release-verification.json",
+          "size": 9061
+        },
+        {
+          "digest": "sha256:71098ca36db417b01a40d7f62c2870c7b3ddb3bc1f686c8450662d1dfa5c7330",
+          "name": "SHA256SUMS",
+          "size": 564
+        }
+      ],
+      "id": 448085306,
+      "immutable": false,
+      "prerelease": false,
+      "tag_name": "v0.4.1"
+    },
+    "windowsPreview": {
+      "assets": [
+        {
+          "digest": "sha256:4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc",
+          "name": "codex-work-tabs-0.4.1.xpi",
+          "size": 45330
+        },
+        {
+          "digest": "sha256:a118f86e9ecdfef8fa589d39dcebe32ac6ad507fe6d147d1597791ad313ccb3f",
+          "name": "firefox-codex-mcp-0.5.0-beta.2-windows-x86_64.zip",
+          "size": 3099486
+        },
+        {
+          "digest": "sha256:29f2c2776a39a9f4ac5c1a0e0a17a7c09ea57a27bf88318389f45da92067594f",
+          "name": "provenance-verification.json",
+          "size": 14039
+        },
+        {
+          "digest": "sha256:2b2039b7605efca8a7a9c3c13c57fd8864b7912d48c6c18f22ce02a14f704377",
+          "name": "release-verification.json",
+          "size": 7687
+        },
+        {
+          "digest": "sha256:a0cdc4d31976bd2b808962df31b0f5e39935e3d5ef445770d9021d05279ec44f",
+          "name": "SHA256SUMS",
+          "size": 574
+        },
+        {
+          "digest": "sha256:deb90af5ca8243f54b38785519bd3a0dd08c82bbc89457361abd3241e3a67e5d",
+          "name": "windows-attestation.jsonl",
+          "size": 11040
+        },
+        {
+          "digest": "sha256:717ef503819ac918351d9ad075d67926517bf05dcf8d33e3238cfda5b6f6ffdb",
+          "name": "windows-evidence.zip",
+          "size": 156695
+        }
+      ],
+      "id": 448218058,
+      "prerelease": true,
+      "tag_name": "v0.5.0-beta.2"
+    },
+    "newReleasePublished": false
+  },
+  "notVerified": [
+    "Fresh OS prerequisite installation and first-time-user study",
+    "Manual novice interaction or separate Codex desktop GUI acceptance",
+    "Windows10/11 interactive desktop, SmartScreen or Authenticode",
+    "Store/MSIX, ARM64, WSL or cross-user interactive sessions",
+    "Competing tools executed side by side"
+  ],
+  "knownObservedFailure": "The first model snapshot was rejected once while its new tab was becoming ready; the model refreshed its owned-tab list, retried and completed. Raw failure remains in cleanPackageFirstRun.actualCodexModel.calls.",
+  "ciFirstAttempt": {
+    "checks": "passed",
+    "linuxDistribution": "passed",
+    "windows": {
+      "repo": "nobadwordss/firefox-codex-mcp",
+      "sourceCommit": "0118db0de46c6162a17ed6e794ea329232013479",
+      "runId": 44032358924,
+      "jobId": 133867051040,
+      "url": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44032358924",
+      "conclusion": "failure",
+      "passed": [
+        "Windows MSVC fmt",
+        "Windows MSVC all-targets clippy -D warnings",
+        "Rust default tests",
+        "72 JS tests",
+        "MSVC release build",
+        "repair lock E2E",
+        "Settings opened in originating Firefox profile",
+        "Settings Check setup",
+        "Settings excluded from MCP-owned work tabs"
+      ],
+      "failed": {
+        "step": 12,
+        "name": "Real install, running update, removal and signed Firefox E2E",
+        "message": "Settings update response failed: Setup did not finish. NetworkError when attempting to fetch resource.",
+        "time": "2026-11-17T06:38:43Z"
+      },
+      "notReached": [
+        "nonselected-profile Settings",
+        "Settings removal",
+        "extracted ZIP E2E",
+        "artifact attestation"
+      ],
+      "diagnosis": {
+        "status": "strongly supported; proposed fix requires new CI run",
+        "cause": "Settings child inherits Windows Firefox native host Job and is terminated when native reset closes that Job.",
+        "evidence": "Reset code has no process-name filter; native reset only sends role reload over authenticated local pipe. Current transport::detach adds CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP, without CREATE_BREAKAWAY_FROM_JOB.",
+        "primarySource": "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging#closing_the_native_app"
+      },
+      "artifact": {
+        "id": 14305014402,
+        "name": "windows-preview-evidence",
+        "digest": "sha256:b1a210df62617e20e5d5847a434e582a8f2724e4f0c87c3d75bee61c185215e6"
+      },
+      "releasePublished": false
+    }
+  },
+  "linuxCiArchive": {
+    "archiveSha256": "7e757eedf63ce3f40c8a472dcd5e1c98f83b533682cd2259e64f2615d2446c5c",
+    "build": {
+      "binarySha256": "e57306e4653bc945cb2f6bc8dbf193078bf911e2ef25b26bcfea4acb91870b3d",
+      "commit": "0118db0de46c6162a17ed6e794ea329232013479",
+      "runner": "Linux",
+      "target": "x86_64-unknown-linux-gnu",
+      "version": "0.5.0-beta.3"
+    },
+    "checksumsVerified": true,
+    "signedXpiMatchesSource": true
+  },
+  "firstFailurePreserved": true
+}

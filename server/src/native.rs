@@ -294,6 +294,18 @@ impl Settings {
         // the profile that requested Settings. Never launch Firefox here.
         let mut command = Command::new(env::current_exe()?);
         crate::transport::detach(&mut command);
+        #[cfg(windows)]
+        {
+            use windows_sys::Win32::System::Threading::{
+                CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW,
+            };
+            // Firefox kills its native host's Windows Job when the connection
+            // resets. Settings must finish the update/removal HTTP response.
+            // https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging#closing_the_native_app
+            command.creation_flags(
+                CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB,
+            );
+        }
         let mut starting = StartingSettings(Some(
             command
                 .arg("--manage-no-open")

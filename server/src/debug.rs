@@ -258,7 +258,7 @@ impl State {
             if name == "firefox_status" {
                 return Ok(
                     json!({"connected":false,"mode":"bidi","ownedTabs":0,"tabEnabled":false,
-                    "nextStep":"If Firefox is running, save your work, close it once and open Firefox (Codex connection). If Firefox is closed and a profile is configured, firefox_open_tab starts it automatically. This advanced mode needs no extension, token or per-tab grant.","diagnostic":reason.to_string()}),
+                    "nextStep":"If Firefox is running, save your work, close it once and use --launch-firefox PROFILE for advanced debugging. If Firefox is closed and a profile is configured, firefox_open_tab starts it automatically. This advanced mode needs no extension, token or per-tab grant.","diagnostic":reason.to_string()}),
                 );
             }
             return Err(reason);

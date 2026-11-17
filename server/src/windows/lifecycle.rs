@@ -520,7 +520,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
     transact(&layout, changes)?;
     let restart_required = prior.is_some() && !reset(&exe);
     Ok(
-        json!({"installed":true,"version":next.version,"mode":"extension","restartRequired":restart_required,"nextStep":"Connection installed. Add Codex Work Tabs using step 2, then start a new Codex chat. No code, token, profile path or Firefox restart is needed. An update releases previous work-tab access. Manage or remove this connection in Windows Settings → Apps → Firefox Codex MCP."}),
+        json!({"installed":true,"version":next.version,"mode":"extension","restartRequired":restart_required,"nextStep":"Connection installed. Add Codex Work Tabs using step 2, then start a new Codex chat. No code, token, profile path or Firefox restart is needed. An update releases previous work-tab access. Manage or remove this connection using Settings in the Firefox extension. Windows Settings → Apps → Firefox Codex MCP remains available for removal."}),
     )
 }
 pub fn uninstall() -> Result<Value> {
