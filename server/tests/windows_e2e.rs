@@ -985,7 +985,8 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     let mut a = Mcp::start(&root, A)?;
     let b = Mcp::start(&root, B)?;
     a.connected()?;
-    browser.goto(&url)?;
+    let ordinary_url = format!("{url}/ordinary");
+    browser.goto(&ordinary_url)?;
     settings_from_popup(&browser, &mut a, &artifacts, true, Some("update"))?;
     drop(a);
     drop(b);
@@ -1026,9 +1027,19 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
         .send()?
         .json()?;
     let mut found = false;
+    let mut ordinary_unchanged = false;
     for handle in handles["value"].as_array().context("window handles")? {
         browser.call("/window", json!({"handle":handle}))?;
-        if browser.script("return location.href;")? == format!("{url}/") {
+        let page_url = browser.script("return location.href;")?;
+        if page_url == ordinary_url {
+            let dom=browser.script("return {count:document.querySelector('#count').textContent,message:document.querySelector('#message').value};")?;
+            ensure!(
+                dom["count"] == "Count 0" && dom["message"] == "",
+                "Ordinary tab changed during MCP work: {dom}"
+            );
+            ordinary_unchanged = true;
+        }
+        if page_url == format!("{url}/") {
             let dom=browser.script("return {count:document.querySelector('#count').textContent,message:document.querySelector('#message').value};")?;
             ensure!(
                 dom["count"] == "Count 2" && dom["message"] == "WINDOWS-NATIVE-42",
@@ -1039,6 +1050,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
         }
     }
     ensure!(found, "Original work tab missing");
+    ensure!(ordinary_unchanged, "Ordinary Firefox tab missing");
     a.ok("firefox_revoke", json!({}))?;
     a.denied("firefox_snapshot", json!({}))?;
     drop(a);

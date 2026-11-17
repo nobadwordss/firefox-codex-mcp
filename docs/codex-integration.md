@@ -1,7 +1,12 @@
 # Codex 데스크톱의 Firefox 통합 경계
 
+> Historical integration investigation from 2026-11-16. The current default is the
+> [Firefox extension connection](extension-mode.md); BiDi is an advanced Linux-only
+> compatibility option. For current setup and management, see the
+> [Firefox Settings flow](firefox-only-management.md).
+
 아래 Foxhand/확장 비교는 수동 탭 허용 방식을 검토하던 시점의 기록입니다.
-현재 기본 구현은 [디버깅 기반 AI 작업 탭](easy-connection-design.md)으로 전환했습니다.
+당시 기본 구현은 [디버깅 기반 AI 작업 탭](easy-connection-design.md)으로 전환했습니다.
 컴퓨터 사용 목록 통합을 보류한 결정은 유지합니다.
 
 2026-11-16에 사용자 화면과 설치된 앱을 확인한 뒤, 사용자와 합의해 **컴퓨터 사용 목록

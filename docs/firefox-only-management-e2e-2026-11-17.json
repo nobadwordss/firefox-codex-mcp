@@ -1,6 +1,6 @@
 {
   "date": "2026-11-17",
-  "status": "Local verification and Linux CI passed; Windows Settings-update failure diagnosed; fix and new CI pending; helper unreleased",
+  "status": "Local verification and Linux CI passed; Windows Settings update fix passed; fixture-conflict regression corrected and full Windows rerun pending; helper unreleased",
   "sourceCommit": "0118db0de46c6162a17ed6e794ea329232013479",
   "helperVersion": "0.5.0-beta.3",
   "extension": {
@@ -391,5 +391,55 @@
     "checksumsVerified": true,
     "signedXpiMatchesSource": true
   },
-  "firstFailurePreserved": true
+  "firstFailurePreserved": true,
+  "productionFixCommit": "3f423ae3d74ae540ebb88a6f1db75a66b2a55909",
+  "ciSecondAttempt": {
+    "checks": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033056098",
+    "linuxDistribution": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033056071",
+    "windows": {
+      "repo": "nobadwordss/firefox-codex-mcp",
+      "sourceCommit": "3f423ae3d74ae540ebb88a6f1db75a66b2a55909",
+      "runId": 44033056017,
+      "jobId": 133869313757,
+      "url": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/44033056017",
+      "conclusion": "failure",
+      "fixVerified": "CREATE_BREAKAWAY_FROM_JOB lets Settings update HTTP response survive native reset.",
+      "passed": [
+        "Windows MSVC fmt",
+        "Windows MSVC all-targets clippy -D warnings",
+        "Rust default tests",
+        "72 JS tests",
+        "MSVC release build",
+        "repair lock E2E",
+        "Settings opened in originating Firefox profile",
+        "Settings Check setup",
+        "Settings excluded from MCP-owned work tabs",
+        "Settings update HTTP response after native reset",
+        "MCP reconnected after Settings update",
+        "work-tab click/type and retained-chat MCP snapshot Count1 to Count2"
+      ],
+      "failed": {
+        "step": 12,
+        "message": "Document state changed: {\"count\":\"Count 0\",\"message\":\"\"}",
+        "time": "2026-11-17T06:43:44Z"
+      },
+      "diagnosis": {
+        "status": "confirmed in test source",
+        "cause": "New ordinary Firefox fixture page and chat A work tab share identical root URL. Existing readback loop asserts Count2/message on every matching rootURL tab, including untouched ordinary Count0 page.",
+        "location": "server/tests/windows_e2e.rs:988 and1031",
+        "proposedFix": "Give ordinary fixture tab a distinct /ordinary path; keep work-tab DOM assertions unchanged."
+      },
+      "notReached": [
+        "nonselected-profile Settings",
+        "Settings removal",
+        "extracted ZIP E2E"
+      ],
+      "artifact": {
+        "id": 14305369900,
+        "name": "windows-preview-evidence",
+        "digest": "sha256:2d35be2158c147446e4898ca92398a2079a424d3cdbabb7b41c36d3f19803d42"
+      },
+      "releasePublished": false
+    }
+  }
 }

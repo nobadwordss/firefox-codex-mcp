@@ -1,5 +1,11 @@
 # 디버깅 기반 AI 작업 탭
 
+> Historical BiDi design record from 2026-11-16, not current installation guidance.
+> BiDi is an advanced Linux-only compatibility option; the launcher behavior below
+> describes earlier builds. The current source creates no app-menu launchers.
+> Use the default [Firefox extension connection](extension-mode.md) and its
+> [Firefox Settings flow](firefox-only-management.md) for ordinary use.
+
 사용자가 2026-11-16 명확히 한 모델은 AI가 현재 Firefox 프로필에 작업 탭을 직접 열어
 사용하는 것입니다. 사용자가 탭을 선택해 매번 허용하는 모델을 기본 흐름에서 제외합니다.
 Native Messaging을 이용한 수동 허용 단순화 시안은 배포하지 않고 이 설계로 전환했습니다.
