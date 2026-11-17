@@ -25,9 +25,15 @@ Linux x86_64의 일반 Firefox 140+와 로컬 Codex 앱/CLI가 필요합니다.
 패키지는 Rust·Node 설치 없이 실행됩니다. Ubuntu 22.04(glibc 2.35) 이상 대상이며
 Windows는 아래 별도 프리뷰를 제공합니다. macOS, Snap/Flatpak, Android는 검증하지 않았습니다.
 
-1. [v0.4.0 배포 패키지](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0)를 받아 압축을 풀고 `install.sh` 실행 → **설치 → 진행**.
-2. 같은 관리 화면에서 **Firefox에 Codex Work Tabs 확장 추가**를 누르고 Firefox의 설치·권한 안내를 확인합니다.
-3. 새 Codex 채팅에 웹 작업을 요청합니다. AI가 작업 탭을 직접 엽니다.
+1. Codex를 열어 로그인할 수 있는지 확인하고 일반 Firefox를 준비합니다.
+2. [v0.4.0 배포 패키지](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0)를 받아 압축을 완전히 풉니다. 풀린 폴더에서 **여기서 터미널 열기**를 선택해 `./install.sh`를 실행합니다. 파일 관리자에서 스크립트 실행을 지원하면 직접 실행해도 됩니다.
+3. Firefox에 열린 관리 화면에서 **설치 → 진행**을 누릅니다. MCP 등록과 브라우저 스킬·사용 지침은 설치기가 자동으로 넣으므로 따로 설정하지 않습니다.
+4. 같은 화면에서 **Firefox에 Codex Work Tabs 확장 추가**를 누르고 Firefox의 설치·권한 안내를 확인합니다.
+5. 새 Codex 채팅에 다음처럼 요청합니다. `https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.`
+
+새 Firefox 작업 탭이 열리고 AI가 링크를 눌러 결과를 알려주면 첫 연결이 확인됩니다.
+도구 사용 승인이 나오면 요청한 웹 작업인지 확인한 뒤 허용하세요.
+스크립트가 편집기로 열리거나 도구가 안 보이면 [처음 설치 안내](docs/first-install-linux.md)를 확인하세요.
 
 **0.4.0 연결 프로그램 + 확장:** Mozilla가 서명한 `codex-work-tabs-0.4.0.xpi`를 패키지와 관리 화면에 포함합니다.
 일반 Firefox의 영구 설치·재시작·다중 프로필을 검증했습니다.

@@ -1,0 +1,126 @@
+{
+  "date": "2026-11-17",
+  "status": "Public Linux 0.4.0 clean-home automated installation and actual-model first web task passed",
+  "scope": "Existing user settings hidden; existing system Firefox, Codex and libraries retained. Not a clean OS or novice user study.",
+  "environment": {
+    "os": "Fedora Linux 45 x86_64",
+    "firefox": "160.0, system desktop Firefox, launched headless by the unmodified install.sh",
+    "codex": "codex-cli 0.169.0-alpha.11.1, native binary bundled with the installed desktop application",
+    "model": "CLI account default; not explicitly pinned or separately captured",
+    "geckodriver": "0.36.0",
+    "bubblewrap": "0.13.1",
+    "runtimePath": "/usr/bin:/bin",
+    "browserInstrumentation": "MOZ_HEADLESS, MOZ_MARIONETTE, MOZ_REMOTE_ALLOW_SYSTEM_ACCESS, MOZ_NO_REMOTE. DISPLAY=:99 selects the normal installer graphical branch; no real display server is used.",
+    "approvalMode": "codex exec --approve-for-me for the test invocation only; automatic review, no approval/sandbox bypass"
+  },
+  "isolation": {
+    "realHomeHidden": true,
+    "systemReadOnlyExceptTestArtifactsAndPrivateHome": true,
+    "privatePidAndIpcNamespaces": true,
+    "initialMcpConfiguration": false,
+    "initialBrowserSkill": false,
+    "initialAgentsGuidance": false,
+    "initialNativeHost": false,
+    "login": "Existing auth.json mounted read-only; credentials never copied into test artifacts",
+    "originalSettingsAndLoginHashesUnchanged": true,
+    "originalFirefoxProfileIndexesUnchanged": true,
+    "productSpecificEndpointOrCodexBinaryOverrides": false,
+    "testAccountAndDescendantProcessesRemoved": true
+  },
+  "releasedPackage": {
+    "version": "0.4.0",
+    "release": "https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0",
+    "archive": "firefox-codex-mcp-0.4.0-linux-x86_64.tar.gz",
+    "sha256": "d762cdf73aff33d9e768ed7f073b156244cccbc9b4a8d84005a9929ecb1a16b3",
+    "matchesDownloadedSha256SumsAndGitHubAssetDigest": true,
+    "buildCommit": "825703dda7e8c5ab2b1cd6db4902d911c5406f43",
+    "binarySha256": "f5fdfb1812d7999dea0f07cd13c0cb212d8494b6e1c83a6b2c9ede85e8b4ce7f",
+    "extension": "Bundled Mozilla-signed 0.4.0; installed through the manager link and Firefox's actual enabled installation/permission notification buttons, not the WebDriver addon-install shortcut",
+    "result": "passed",
+    "automaticSkillReadByModel": true,
+    "promptNamedFirefoxMcpOrSkill": false,
+    "mcpCommandOrSkillOverriddenByHarness": false,
+    "successfulToolCalls": 7,
+    "recoveredReadFailures": 1,
+    "recoveredReadFailure": "First snapshot: Only owned HTTP(S) tabs can be controlled. Model listed its work tabs and took a fresh snapshot; no write action was replayed.",
+    "independentDomReadback": {
+      "code": "d6c72362",
+      "count": "Count 1",
+      "input": "d6c72362",
+      "status": "Count updated to 1"
+    },
+    "localArtifacts": "/tmp/firefox-clean-install-2026-11-17-KLnfaZ/artifacts/released-040-final"
+  },
+  "localChanges": {
+    "baseCommit": "8bbbdac6b7576c1167ceded910eaea79a7c8d508",
+    "releasePublished": false,
+    "stableReleaseRemains": "0.4.0",
+    "changes": [
+      "Explain full extraction and the one-line ./install.sh terminal fallback when file managers open scripts in an editor",
+      "Explain automatic MCP, browser skill and guidance installation",
+      "Add a third Linux setup step with a concrete first-chat browser task, success criteria and approval guidance",
+      "Show browser-use guidance registration in diagnosis and direct users to the first web task for live verification",
+      "Add a Rust regression test that creates mount/PID/IPC isolation, installs the extracted distribution and verifies actual-model browser effects independently"
+    ]
+  },
+  "localCandidateVerification": {
+    "version": "0.5.0-beta.1 from the modified local main checkout; not the published preview archive",
+    "binarySha256": "81eaaab63df7fa35a391daa081c959556238d03a1c3261c8102f2174a2ad37b8",
+    "result": "passed after extraction outside the checkout into another clean home",
+    "automaticSkillReadByModel": true,
+    "mcpCommandOrSkillOverriddenByHarness": false,
+    "successfulToolCalls": 6,
+    "failedToolCalls": 0,
+    "independentDomReadback": {
+      "code": "208c7af8",
+      "count": "Count 1",
+      "input": "208c7af8",
+      "status": "Count updated to 1"
+    },
+    "originalSettingsAndLoginHashesUnchanged": true,
+    "testAccountRemoved": true,
+    "localArtifacts": "/tmp/firefox-clean-install-2026-11-17-KLnfaZ/artifacts/candidate-final"
+  },
+  "checks": {
+    "cargoFmt": "passed",
+    "cargoClippy": "passed, workspace all-targets with -D warnings",
+    "cargoTestWorkspace": "passed: 25 unit tests and 1 process test; opt-in browser fixtures remain ignored in the default suite",
+    "realFirstRunE2e": "passed explicitly for the downloaded stable package and the locally modified candidate",
+    "shellSyntax": "passed for packaging/install.sh",
+    "sandboxNote": "The initial default-sandbox unit run could not bind local sockets. The identical full suite passed with local networking permitted."
+  },
+  "screenshots": {
+    "releasedFirstWebTask": "assets/linux-first-install-2026-11-17.png",
+    "localCandidateFirstTaskGuide": "assets/linux-first-install-guide-2026-11-17.png"
+  },
+  "initialBlockedAttempt": {
+    "cause": "The initial read-only non-interactive codex exec invocation used approval policy never; Firefox work-tab creation was refused by the host",
+    "result": "Installation and automatic tool discovery succeeded, but the web task did not run",
+    "correction": "Run the model test with the supported --approve-for-me review mode. The installer never modifies user or administrator approval policy.",
+    "localArtifacts": "/tmp/firefox-clean-install-2026-11-17-KLnfaZ/artifacts/released-040"
+  },
+  "verified": [
+    "Archive downloaded from the public stable release and extracted outside the source checkout",
+    "Unmodified install.sh launched with no arguments opened the actual Firefox manager",
+    "Manager Install and Continue created the helper, native registration, global MCP, skill and guidance from absent settings",
+    "Actual Firefox signed-extension installation prompts completed by automation",
+    "Real Codex model found the installed skill and tools without Firefox, MCP or skill names in the prompt",
+    "Rendered random code read, exactly one counter click and code entry independently confirmed through WebDriver DOM readback",
+    "Read-only registration diagnosis confirmed MCP, native host, skill and guidance",
+    "Original user configuration, login and Firefox profile indexes remained unchanged"
+  ],
+  "notVerified": [
+    "Fresh OS installation or installation of Firefox/Codex prerequisites",
+    "Fresh Codex account sign-in or other credential stores",
+    "A separate Codex desktop GUI session in the disposable account",
+    "Manual desktop/file-manager double-click behavior, visible first-run windows or human approval-prompt usability",
+    "A novice completing installation without assistance or a timed user study",
+    "Other Linux distributions, containerized Firefox, all model versions or all administrator policies",
+    "Windows or competing-tool execution"
+  ],
+  "review": {
+    "reviewer": "Gemini, existing project design conversation",
+    "status": "Reviewed; advisory opinion, not independent execution evidence",
+    "acceptedBoundary": "Clean user home with installed system prerequisites, automated browser prompts and explicitly reviewed CLI approvals; distinct from a clean OS or manual novice acceptance"
+  }
+}

@@ -1,5 +1,9 @@
 # 검증 기록
 
+Linux 첫 설치: [공개 0.4.0 배포 파일·빈 홈·실제 모델의 첫 웹 작업](linux-first-install-e2e-2026-11-17.json).
+기존 설정은 가리고 로그인만 읽기 전용으로 연결했습니다. 새 OS나 초보 사용자 사용성
+시험과는 구분하며, [처음 설치 안내](first-install-linux.md)에 실행·승인·첫 작업 단계를 보완했습니다.
+
 Windows 0.5.0-beta.1: [Windows Server 실제 설치·Codex–Firefox E2E·배포 ZIP 검증](windows-e2e-2026-11-17.json).
 Windows 10/11 데스크톱·실제 모델의 자동 도구 선택·SmartScreen 검증은 아직 남아 있습니다.
 

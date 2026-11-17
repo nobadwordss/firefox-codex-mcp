@@ -22,10 +22,16 @@ The package runs without Rust or Node installed. It targets Ubuntu 22.04
 (glibc 2.35) or newer. Windows has a separate preview below. macOS,
 Snap/Flatpak Firefox and Android are not validated.
 
-1. Download the [0.4.0 Linux package](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0), extract it, and run `install.sh`.
-2. In the local manager, choose **설치 (Install)**, then **진행 (Continue)**.
-3. Choose **Firefox에 Codex Work Tabs 확장 추가 (Add Codex Work Tabs to Firefox)** and confirm Firefox's installation and permission prompts.
-4. Start a new Codex chat and request an interactive web task. Codex can create its own work tab.
+1. Open Codex and check that you can sign in. Install ordinary desktop Firefox.
+2. Download and fully extract the [0.4.0 Linux package](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0). Open a terminal in the extracted folder and run `./install.sh`. A file manager that supports running scripts can also launch it directly.
+3. In the local manager, choose **설치 (Install)**, then **진행 (Continue)**. The installer registers MCP and installs the browser skill and guidance automatically.
+4. Choose **Firefox에 Codex Work Tabs 확장 추가 (Add Codex Work Tabs to Firefox)** and confirm Firefox's installation and permission prompts.
+5. Start a new Codex chat and ask: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
+
+A new Firefox work tab and a successful link click confirm the first connection.
+Review any tool approval request for the task you asked for. If the script opens in
+an editor, use the terminal command above. See the [first-install guide](docs/first-install-linux.md)
+for troubleshooting and the exact fresh-environment verification boundary.
 
 The manager and extension controls currently use Korean; the English labels above
 describe those controls. Install the helper once per OS user and the extension in

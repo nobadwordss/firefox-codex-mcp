@@ -1,6 +1,7 @@
 #![cfg(unix)]
 //! Opt-in real Firefox integration test. Uses a throwaway WebDriver profile.
 mod debug_e2e;
+mod first_run_e2e;
 mod native_e2e;
 use anyhow::{bail, ensure, Context, Result};
 use reqwest::blocking::Client;
@@ -574,6 +575,9 @@ struct Fixture {
 }
 impl Fixture {
     fn start() -> Result<Self> {
+        Self::with_page(FIXTURE)
+    }
+    fn with_page(page: &'static str) -> Result<Self> {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         // Deliberately NOT the manifest's 127.0.0.1 host permission: needs activeTab.
         let url = format!("http://localhost:{}", listener.local_addr()?.port());
@@ -587,7 +591,7 @@ impl Fixture {
                         let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
                         let mut buffer = [0u8; 4096];
                         let _ = stream.read(&mut buffer);
-                        let _ = write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",FIXTURE.len(),FIXTURE);
+                        let _ = write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",page.len(),page);
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                         thread::sleep(Duration::from_millis(10))
