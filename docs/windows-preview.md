@@ -1,5 +1,9 @@
 # Windows preview: installation and verification boundary
 
+> **Release status:** Linux **0.4.2** remains the published stable release.
+> The **0.4.3 RPM/DEB candidate is paused and unreleased**; see the
+> [pause handoff](linux-packaging-handoff-2026-11-17.md) for remaining validation.
+
 The [0.5.0-beta.3 English preview](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.5.0-beta.3)
 targets Windows 10 22H2 and Windows 11 x64 with ordinary desktop Firefox 140+.
 It includes Mozilla-signed English extension 0.4.2 and management through
@@ -7,11 +11,8 @@ It includes Mozilla-signed English extension 0.4.2 and management through
 Firefox profile is needed. This is a preview, not a claim that Windows 10/11
 desktop acceptance testing is complete.
 
-Linux 0.4.3 is the separate English stable release with the same signed extension.
-RPM and DEB are its primary downloads; tar.gz remains a fallback. Its per-user
-Connect/Disconnect flow and OS package update/removal apply only to Linux;
-[Linux package details](linux-packages.md). The Windows beta.3 ZIP remains unchanged.
-The Linux release publishes no Windows installer. GitHub Latest points to Linux; use the
+Linux 0.4.2 is the separate English stable release with the same signed extension.
+It publishes no Windows installer. GitHub Latest points to Linux; use the
 Windows-specific download below. Earlier Linux 0.4.1 and Windows beta.1/beta.2
 archives remain unchanged. See the [management guide](firefox-only-management.md).
 

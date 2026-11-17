@@ -1,5 +1,9 @@
 # Firefox Codex MCP
 
+> **Release status:** Linux **0.4.2** remains the published stable release.
+> The **0.4.3 RPM/DEB candidate is paused and unreleased**; see the
+> [pause handoff](docs/linux-packaging-handoff-2026-11-17.md) for remaining validation.
+
 제품의 초점은 Codex 채팅별 탭 격리·이어쓰기·철회와 쉬운 설치입니다.
 관련 도구와 [동일 조건 비교 계획](docs/comparison-plan.md)을 공개하며,
 아직 직접 측정하지 않은 성능·보안 우위를 주장하지 않습니다.
@@ -12,10 +16,10 @@ Codex가 사용 중인 Firefox의 로그인 상태로 **자신의 작업 탭을 
 기본 연결은 Firefox 확장 + 로컬 연결 프로그램입니다. 코드·토큰·프로필 경로를 입력하거나
 탭마다 허용할 필요가 없습니다. 기존 WebDriver BiDi 방식은 고급 옵션으로 유지합니다.
 
-**Linux 0.4.3 정식판 · Windows 0.5.0-beta.3 프리뷰.** 처음 설치한 뒤에는 일반 Firefox의
+**Linux 0.4.2 정식판 · Windows 0.5.0-beta.3 프리뷰.** 처음 설치한 뒤에는 일반 Firefox의
 **Codex Work Tabs → Settings**에서 관리합니다. 별도 Firefox 앱 메뉴 항목이나 전용 프로필을
-만들지 않습니다. RPM·DEB는 시스템에 한 번 설치하고 OS 계정마다 Settings에서 Codex를
-연결합니다. 확장만으로 연결 프로그램을 설치할 수는 없습니다. [관리 안내](docs/firefox-only-management.md)를 참고하세요. 과거 배포 파일은
+만들지 않습니다. 로컬 연결 프로그램은 OS 사용자별로 한 번 설치해야 하며 확장만으로 설치할
+수는 없습니다. [관리 안내](docs/firefox-only-management.md)를 참고하세요. 과거 배포 파일은
 변경하지 않고 그대로 남깁니다.
 
 ```text
@@ -31,32 +35,20 @@ Linux x86_64의 일반 Firefox 140+와 로컬 Codex 앱/CLI가 필요합니다.
 패키지는 Rust·Node 설치 없이 실행됩니다. Ubuntu 22.04(glibc 2.35) 이상 대상이며
 Windows는 아래 별도 프리뷰를 제공합니다. macOS, Snap/Flatpak, Android는 검증하지 않았습니다.
 
-**0.4.3은 영문 Linux 정식판입니다.** RPM·DEB가 기본이며 관리자 권한이 없으면 tar.gz를
-사용합니다. 설치 화면·확장·진단은 영어입니다. [릴리스·체크섬·검증 기록](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.3)을 제공합니다.
-Windows beta.3 배포 파일은 그대로 유지합니다.
+**0.4.2는 영문 Linux 정식판입니다.** 설치 화면·확장·진단은 영어이며 Windows는 별도
+프리뷰로 유지합니다. [릴리스 안내·체크섬·검증 기록](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.2)을 함께 제공합니다.
 
-1. 일반 Firefox를 준비하고 로컬 Codex 앱/CLI에 로그인합니다.
-2. 배포판에 맞는 파일을 소프트웨어 관리자로 설치합니다.
+1. Codex를 열어 로그인할 수 있는지 확인하고 일반 Firefox를 준비합니다.
+2. [Linux 0.4.2 압축 파일](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.2/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz)을 받아 압축을 완전히 풉니다. 풀린 폴더에서 **여기서 터미널 열기**를 선택해 `./install.sh`를 실행합니다. 파일 관리자에서 스크립트 실행을 지원하면 직접 실행해도 됩니다.
+3. Firefox에 열린 관리 화면에서 **Install connection → Continue**를 누릅니다. MCP 등록과 브라우저 스킬·사용 지침은 설치기가 자동으로 넣으므로 따로 설정하지 않습니다.
+4. 같은 화면에서 **Add Codex Work Tabs to Firefox**를 누르고 Firefox의 설치·권한 안내를 확인합니다.
+5. 새 Codex 채팅에 다음처럼 요청합니다. `https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.`
 
-   | 배포판 | 다운로드 | 다운로드 폴더에서 실행할 명령 |
-   | --- | --- | --- |
-   | Fedora | [RPM x86_64](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp-0.4.3-1.x86_64.rpm) | `sudo dnf install ./firefox-codex-mcp-0.4.3-1.x86_64.rpm` |
-   | Ubuntu / Debian | [DEB amd64](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp_0.4.3-1_amd64.deb) | `sudo apt install ./firefox-codex-mcp_0.4.3-1_amd64.deb` |
+새 Firefox 작업 탭이 열리고 AI가 링크를 눌러 결과를 알려주면 첫 연결이 확인됩니다.
+도구 사용 승인이 나오면 요청한 웹 작업인지 확인한 뒤 허용하세요.
+스크립트가 편집기로 열리거나 도구가 안 보이면 [처음 설치 안내](docs/first-install-linux.ko.md)를 확인하세요.
 
-3. Firefox에서 [Mozilla 서명 Codex Work Tabs XPI](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/codex-work-tabs-0.4.2.xpi)를 열고 확장 설치를 확인합니다. 파일로 저장되면 부가 기능 관리자 → 톱니바퀴 → **파일에서 부가 기능 설치**로 선택합니다.
-4. 일반 사용자로 **Codex Work Tabs → Settings → Connect Codex → Continue**를 누릅니다. 계정의 MCP·스킬·사용 지침을 자동 등록하므로 따로 설정하지 않습니다. 이 단계는 `sudo`로 실행하지 않습니다.
-5. 새 Codex 채팅에 `https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.`라고 요청합니다.
-
-확장이 이미 설치됐다면 RPM/DEB 설치 후 Settings를 열면 됩니다. 일반 사용자로
-`firefox-codex-mcp --manage`를 실행해 관리 화면과 확장 설치 링크를 열 수도 있습니다.
-관리자 권한이 없다면 [tar.gz 보조 배포](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp-0.4.3-linux-x86_64.tar.gz)를
-완전히 풀고 `./install.sh` → **Install connection**을 사용합니다. RPM/DEB가 이미 있다면
-개인 복사본 대신 시스템 프로그램에 연결합니다. [처음 설치 안내](docs/first-install-linux.ko.md)와
-[패키지 소유권·이전·복구](docs/linux-packages.md)를 참고하세요.
-
-새 작업 탭과 링크 클릭이 확인되면 실제 연결이 된 것입니다. 도구 승인은 자신이 요청한
-작업인지 확인한 뒤 허용합니다. 자동 검증은 초보자의 직접 사용성 시험과 구분합니다.
-Linux 0.4.3은 Mozilla가 서명한 영문 확장 `codex-work-tabs-0.4.2.xpi`를 포함합니다.
+Linux 0.4.2는 Mozilla가 서명한 영문 확장 `codex-work-tabs-0.4.2.xpi`를 포함합니다.
 아래는 기존 **0.4.0 연결 프로그램 + 확장**으로 확인한 검증 기록입니다.
 일반 Firefox의 영구 설치·재시작·다중 프로필을 검증했습니다.
 현재 개인 프로필의 실제 Codex 데스크톱 두 채팅에서 여러 턴에 걸쳐 동일 탭·문서·입력값이
@@ -148,48 +140,36 @@ BiDi는 Linux 전용이며 WSL·Store Firefox·ARM64·관리자/다른 계정 �
 
 ## 업데이트·제거
 
-RPM·DEB는 새 파일을 소프트웨어 관리자나 같은 dnf/apt 명령으로 설치해 업데이트합니다.
-각 계정은 시스템 프로그램을 직접 사용합니다. 패키지가 바뀌거나 제거되면 이전 패키지의
-실행 중인 연결 프로그램을 중단하고 접근을 해제합니다. Firefox와 결과 탭은 유지하며
-업데이트 후 새 Codex 채팅에서 시작하세요. **Reconnect Codex**는 계정 설정 재연결이며
-OS 파일을 업데이트하지 않습니다.
+새 패키지의 `install.sh`에서 **Update connection**을 선택합니다. 실행 중인 Firefox를 종료하지 않습니다.
+확장 연결을 갱신하며 이전 작업 탭 접근은 해제됩니다. 새 Codex 채팅에서 다시 시작하세요.
+확장은 Firefox 부가 기능 관리자에서 업데이트/제거합니다. 직접 배포한 서명 XPI에는 별도의
+자동 업데이트 URL이 없으므로 새 서명 XPI 설치가 필요합니다. AMO 목록 배포는 추후 단계입니다.
 
-제거는 연결한 계정마다 **Codex Work Tabs → Settings → Disconnect Codex**를 누른 뒤
-소프트웨어 관리자, `sudo dnf remove firefox-codex-mcp` 또는
-`sudo apt remove firefox-codex-mcp`로 시스템 프로그램을 제거합니다. DEB purge도 지원합니다.
-Disconnect는 그 계정의 소유한 연결·스킬·지침만 제거하고 다른 계정용 시스템 프로그램은
-남깁니다. OS 제거는 사용자 홈을 편집하지 않습니다. 먼저 패키지를 제거했다면 재설치 후
-Disconnect하거나 현재 tar.gz의 `./install.sh --uninstall`로 계정 장부를 정리하세요.
-
-tar.gz 보조 배포는 새 압축 파일의 `install.sh` → **Update connection**으로 갱신하고,
-확장의 **Settings → Remove connection** 또는 `./install.sh --uninstall`로 제거합니다.
-RPM/DEB로 옮길 때는 패키지를 설치하고 **Reconnect Codex**를 선택합니다. 장부 소유이며
-수정되지 않은 사용자 복사본·native-host·구형 실행기만 정리하고 수정·외부 파일은 보존합니다.
-개인 Native Messaging 등록이 시스템 등록을 가리면 충돌을 알리고 이전을 중단합니다.
-
-일반 Firefox 프로필·로그인·결과 탭과 사용자 수정은 보존합니다. 기존 채팅은 닫고 확장은
-Firefox에서 별도로 제거하세요. 새 서명 XPI가 제공되면 별도로 설치합니다. 직접 배포 XPI의
-자동 업데이트 채널과 자동 APT/DNF 저장소는 없습니다. RPM·DEB는 별도 패키지·저장소 서명이
-없으며 Mozilla 서명은 XPI에 적용됩니다. 체크섬과 GitHub 빌드 증명을 함께 확인하세요.
-
-관리 화면은 일반 Firefox의 **Codex Work Tabs → Settings**, 직접 실행은
-`firefox-codex-mcp --manage`입니다. 설치 장부·복구 정보는
-`~/.local/state/firefox-codex-mcp/`에 있습니다. [관리·복구 안내](docs/firefox-only-management.md).
+일반 Firefox의 **Codex Work Tabs → Settings**에서 진단·복구·제거할 수 있습니다.
+별도 앱 메뉴 실행기는 필요 없습니다. 연결 프로그램이나 확장이 없으면 압축을 푼 패키지의
+설치 파일을 다시 실행하세요. [관리와 이전 설치 처리](docs/firefox-only-management.md)를 참고하세요. 제거는 전역 MCP 등록과
+설치한 파일/관리 블록만 대상으로 하며 사용자 수정, Firefox 프로필·로그인·결과 탭은 보존합니다.
+기존 채팅을 종료하면 남아 있는 연결도 끝납니다. 확장은 별도로 제거하세요.
+설치 장부와 복구 정보는 `~/.local/state/firefox-codex-mcp/`입니다.
 
 ```bash
-firefox-codex-mcp --doctor
-firefox-codex-mcp --repair
-firefox-codex-mcp --uninstall   # 현재 계정 연결만 해제
-# tar.gz 보조 배포는 위 실행 파일 대신 ./install.sh 사용
+./install.sh --install          # 확장 연결 기본 설치: 프로필 불필요
+./install.sh --update           # 설치된 연결 방식 유지
+./install.sh --doctor
+./install.sh --uninstall
+./install.sh --repair
+./install.sh --install-bidi     # 고급: 디버깅 연결과 프로필 자동 탐지
+./install.sh --install-bidi /absolute/profile
 ```
 
-고급 BiDi는 `--install-bidi [프로필 절대 경로]`로 유지합니다. 디버깅용 실행기는 만들지
-않습니다. 작업을 저장하고 Firefox를 닫은 뒤 `--launch-firefox /absolute/profile`을 사용합니다.
-일반 확장 연결은 기존 Firefox만 실행하면 됩니다.
+관리 화면 기본 선택은 확장입니다. 기존 BiDi 설치를 확장으로 바꾸려면 기본 설치를 실행하세요.
+디버깅용 앱 메뉴 실행기는 만들지 않습니다. 고급 BiDi 사용자는 작업을 저장하고 Firefox를 닫은 뒤
+`./install.sh --launch-firefox /absolute/profile`을 사용할 수 있습니다. 일반 확장 연결은 기존
+Firefox만 실행하면 됩니다. 앱을 강제 종료하지 않습니다.
 
 ## 개발·검증·패키징
 
-Rust 1.89+, Node 24+ 및 패키징용 `zip`, `unzip`, `tar`, `dpkg-deb`, `rpmbuild`가 필요합니다.
+Rust 1.89+, Node 24+ 및 패키징용 `zip`, `unzip`, `tar`가 필요합니다.
 서명 확장 UI 시험과 패키징에는 현재 확장 소스와 일치하는 서명 XPI도 필요합니다.
 [서명 상태](packaging/SIGNING.md)를 확인하세요.
 
@@ -201,7 +181,7 @@ node --test --test-isolation=none extension/tests/*.test.cjs
 cargo build --release --locked
 FIREFOX_SETUP_CODEX_BINARY=/path/to/codex cargo test --release --test install_e2e -- --ignored
 FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.2.xpi" FIREFOX_SIGNED_UI=1 FIREFOX_GECKODRIVER=/path/to/geckodriver cargo test --release --test firefox_e2e native_e2e:: -- --ignored --nocapture
-cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist/release --linux-packages
+cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist/release
 ```
 
 실제 Firefox E2E는 격리된 HOME과 임시 프로필만 사용합니다. Firefox UI 시험에만

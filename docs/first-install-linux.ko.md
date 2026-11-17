@@ -1,59 +1,43 @@
 # Linux에서 처음 설치하기
 
+> **Release status:** Linux **0.4.2** remains the published stable release.
+> The **0.4.3 RPM/DEB candidate is paused and unreleased**; see the
+> [pause handoff](linux-packaging-handoff-2026-11-17.md) for remaining validation.
+
 [English](first-install-linux.md) · **한국어 번역**
 
 대상은 Linux x86_64, 일반 데스크톱 Firefox 140+와 로컬 Codex 앱/CLI입니다.
-첫 작업 전에 Codex에 로그인할 수 있어야 합니다. Rust·Node·프로젝트 소스는 필요 없습니다.
-Snap/Flatpak Firefox와 다른 운영체제는 이 안내의 검증 범위 밖입니다.
+Codex에 로그인할 수 있어야 합니다. Rust·Node·프로젝트 소스는 필요 없습니다.
+Snap/Flatpak Firefox와 다른 운영체제의 설치 흐름은 이 안내의 검증 범위 밖입니다.
 
-**Linux 0.4.3은 영문 정식판입니다.** RPM·DEB를 기본으로 배포하며 관리자 권한이 없으면
-보조 tar.gz를 사용합니다. 관리 화면과 Mozilla 서명 확장 **0.4.2**는 영어입니다.
-기존 Firefox 프로필·로그인·탭을 유지하며 별도 앱 메뉴 항목이나 프로필은 만들지 않습니다.
-Windows **0.5.0-beta.3**는 별도 프리뷰로 그대로 유지합니다.
+**Linux 0.4.2는 영문 정식판입니다.** 설치 화면과 서명 확장은 영어이며 아래 버튼 이름은
+실제 화면과 같습니다. 기존 Firefox와 프로필을 그대로 쓰고 확장의 **Settings**에서 관리합니다.
+별도 앱 메뉴 항목이나 Firefox 프로필은 만들지 않습니다. Windows는 별도 프리뷰이며
+과거 배포 파일은 그대로 남깁니다. [관리 안내](firefox-only-management.md)를 참고하세요.
 
-## 시스템 연결 프로그램 설치
+## 배포 파일 실행
 
-배포판에 맞는 파일을 받습니다.
+1. [Linux 0.4.2 압축 파일](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.2/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz)을 받습니다.
+2. 파일 관리자의 **압축 풀기**로 내용을 모두 꺼냅니다. 압축 파일 안에서 실행하지 않습니다.
+3. 풀린 폴더를 열어 **여기서 터미널 열기**를 선택하고 다음 한 줄을 실행합니다.
 
-| 배포판 | 다운로드 |
-| --- | --- |
-| Fedora | [firefox-codex-mcp-0.4.3-1.x86_64.rpm](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp-0.4.3-1.x86_64.rpm) |
-| Ubuntu / Debian | [firefox-codex-mcp_0.4.3-1_amd64.deb](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp_0.4.3-1_amd64.deb) |
+   ```sh
+   ./install.sh
+   ```
 
-로컬 패키지를 지원하는 소프트웨어 관리자로 엽니다. 설치 화면이 열리지 않으면 다운로드
-폴더의 터미널에서 배포판에 맞는 명령 하나를 실행합니다.
+파일 관리자에 따라 스크립트가 편집기로 열리거나 실행 여부를 물을 수 있습니다.
+편집기로 열리면 위 터미널 방식을 사용하세요. 관리자 권한으로 실행할 필요는 없습니다.
+현재 Linux 배포는 파일 관리자 종류와 무관한 더블클릭 설치를 보장하지 않습니다.
 
-```sh
-# Fedora
-sudo dnf install ./firefox-codex-mcp-0.4.3-1.x86_64.rpm
-```
+## 연결과 확장 설치
 
-```sh
-# Ubuntu / Debian
-sudo apt install ./firefox-codex-mcp_0.4.3-1_amd64.deb
-```
+Firefox에 열린 관리 화면에서 **Install connection → Continue**를 누릅니다. 연결 프로그램,
+Codex의 MCP 등록, `firefox-browser` 스킬과 사용 지침을 설치기가 자동으로 준비합니다.
+스킬을 따로 내려받거나 설정 파일을 편집하지 않습니다.
 
-이 단계는 시스템 연결 프로그램만 설치합니다. Firefox를 열거나 root의 Codex를 등록하지
-않고 사용자 홈도 수정하지 않습니다. 이후에는 일반 사용자로 진행하며 **Connect Codex를
-sudo로 실행하지 않습니다.** 로컬 패키지는 자동 APT/DNF 업데이트 저장소를 추가하지 않습니다.
-RPM·DEB에 별도 패키지·저장소 서명은 없고 XPI는 Mozilla 서명입니다. 파일을 확인할 때
-릴리스의 `SHA256SUMS`와 GitHub 빌드 증명을 함께 확인하세요.
-
-## 확장 설치와 계정 연결
-
-1. 일반 Firefox에서 [Mozilla 서명 Codex Work Tabs 0.4.2 XPI](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/codex-work-tabs-0.4.2.xpi)를 엽니다.
-   Firefox의 **설치 계속/허용 → 추가** 안내를 확인합니다. 파일로 저장되면 부가 기능
-   관리자 → 톱니바퀴 → **파일에서 부가 기능 설치**로 XPI를 선택합니다.
-2. **Codex Work Tabs → Settings → Connect Codex → Continue**를 누릅니다.
-   이 계정의 Codex 연결·브라우저 스킬·사용 지침을 자동 등록합니다.
-   스킬을 따로 받거나 설정 파일을 편집하지 않습니다.
-3. 연결할 OS 계정마다 **Connect Codex**를 진행하고, 평소 사용하는 Firefox 프로필에
-   확장을 설치합니다.
-
-확장이 이미 설치됐다면 RPM/DEB 설치 후 확장의 **Settings**를 열면 됩니다.
-Settings가 열리지 않으면 일반 사용자로 `firefox-codex-mcp --manage`를 실행합니다.
-관리 화면의 **Add Codex Work Tabs to Firefox**로도 확장을 설치할 수 있습니다.
-여러 프로필이 연결되면 원하는 Firefox의 **Use this Firefox**를 선택합니다.
+같은 화면의 **Add Codex Work Tabs to Firefox**를 누르고 Firefox 안내의
+**설치 계속/허용 → 추가**를 확인합니다. 연결 프로그램과 Firefox 확장은 둘 다 필요합니다.
+여러 프로필이 연결되면 사용할 Firefox의 확장 버튼에서 **Use this Firefox**를 선택합니다.
 
 ## 첫 웹 작업 확인
 
@@ -61,85 +45,50 @@ Codex 앱 또는 대화형 CLI에서 **새 채팅**을 열고 다음처럼 요�
 
 > https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.
 
-새 작업 탭이 열리고 링크를 눌러 결과를 알려주면 실제 연결이 확인됩니다.
-도구 승인 요청은 자신이 요청한 웹 작업인지 확인한 뒤 허용합니다. 관리 화면의
-**Registered**는 설정 확인이며 실제 탭 제어 성공과는 구분합니다.
+새 Firefox 작업 탭이 열리고 링크를 눌러 이동한 결과를 알려주면 첫 연결이 확인됩니다.
+도구 사용 승인 요청은 자신이 요청한 웹 작업인지 확인한 뒤 허용합니다.
+관리 화면의 **Registered** 표시는 설정 확인이며 실제 탭 제어 성공과는 구분합니다.
 
-## 업데이트·연결 해제·제거
+## 일상 사용과 제거
 
-새 RPM/DEB를 소프트웨어 관리자나 새 파일명을 사용한 같은 명령으로 설치합니다.
-각 계정은 시스템 프로그램을 직접 사용합니다. 업데이트·제거하면 이전 패키지의 실행 중인
-연결 프로그램을 중단하고 작업 탭 접근을 해제합니다. Firefox와 결과 탭은 유지하며,
-업데이트 후에는 새 Codex 채팅에서 시작합니다.
+일반 Firefox의 **Codex Work Tabs → Settings**에서 **Check setup**, **Repair**, **Remove
+connection**을 사용합니다. 중지와 권한 철회 버튼도 확장에 있습니다. 연결 프로그램은
+OS 사용자별로 한 번 설치해야 하며 확장만으로 설치할 수는 없습니다.
+연결 프로그램을 먼저 제거한 뒤 Firefox 확장을 제거하세요. 연결이 안 되거나 확장을
+이미 제거했다면 압축을 푼 패키지의 `./install.sh`에서 복구·제거할 수 있습니다.
+Firefox 프로필·사이트 로그인·결과 탭은 보존합니다.
 
-완전히 제거하려면 다음 순서로 진행합니다.
-
-1. 연결한 OS 계정마다 **Codex Work Tabs → Settings → Disconnect Codex**를 누릅니다.
-   해당 계정의 소유한 연결·스킬·지침만 제거하고 사용자 수정은 보존합니다.
-   시스템 프로그램은 남습니다.
-2. 소프트웨어 관리자 또는 `sudo dnf remove firefox-codex-mcp` /
-   `sudo apt remove firefox-codex-mcp`로 시스템 패키지를 제거합니다. DEB purge도 지원합니다.
-3. 원하면 Firefox 부가 기능 관리자에서 확장을 별도로 제거합니다.
-
-패키지부터 제거해도 실행 중인 패키지 연결 프로그램은 중단하지만 사용자 설정은 남깁니다.
-RPM/DEB를 재설치해 각 계정에서 Disconnect하거나, 현재 tar.gz를 풀어
-`./install.sh --uninstall`로 남은 연결 장부를 정리할 수 있습니다. Firefox 프로필이나
-Codex 설정 폴더 전체를 지우지 마세요. [이전과 복구](linux-packages.md)를 참고하세요.
-릴리스가 새 서명 XPI를 제공하면 별도로 설치합니다. 직접 배포 XPI에는 자동 확장 업데이트
-채널이 없습니다.
-
-## 관리자 권한이 없을 때: tar.gz 보조 배포
-
-[0.4.3 tar.gz](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp-0.4.3-linux-x86_64.tar.gz)를
-완전히 풀고 해당 폴더의 터미널에서 실행합니다.
-
-```sh
-./install.sh
-```
-
-**Install connection → Continue → Add Codex Work Tabs to Firefox**를 선택하고 Firefox의
-안내를 확인합니다. 이 방식은 OS 계정의 개인 연결 프로그램을 설치합니다. 이후 제거는
-**Settings → Remove connection** 또는 `./install.sh --uninstall`, 업데이트는 새 압축 파일의
-**Update connection**입니다. 스크립트가 편집기로 열리면 위 터미널 방식을 쓰세요.
-파일 관리자마다 더블클릭 동작이 같다고 보장하지 않습니다.
-
-RPM/DEB가 이미 설치됐다면 별도 개인 복사본 대신 시스템 연결 프로그램에 연결합니다.
-이전 tar.gz에서 옮기려면 RPM/DEB를 설치하고 **Reconnect Codex**를 선택합니다.
-변경되지 않은 장부 소유의 파일만 정리하며, 시스템 등록을 가리는 수정·외부 등록은
-보존하고 충돌을 알립니다. [관리 안내](firefox-only-management.md)를 참고하세요.
+업데이트는 새 패키지에서 **Update connection**을 누르고, 함께 제공된 새 서명 확장도
+설치합니다. 직접 배포 XPI에는 자동 업데이트 채널이 없습니다. 업데이트 후에는 새 Codex
+채팅에서 시작하세요.
 
 ## 막히는 경우
 
-| 현상 | 확인할 것 |
+| 보이는 현상 | 확인할 것 |
 | --- | --- |
-| 패키지 설치 화면이 열리지 않음 | 다운로드 폴더에서 위의 dnf/apt 명령 사용 |
-| Settings가 연결 프로그램에 연결하지 못함 | `firefox-codex-mcp --manage` 실행. 명령이 없으면 RPM/DEB 재설치 |
-| 개인 Native Messaging 등록 충돌 | 보고된 파일을 검토한 뒤 직접 옮기기. 수정·외부 파일은 자동 삭제하지 않음 |
-| 도구가 안 보임 | 로컬 Codex 설치·로그인 확인 후 앱을 다시 열어 새 채팅에서 요청. 설치 시 CLI가 PATH에 없어도 됨 |
-| 확장이 중지됨 | 원하는 Firefox의 **Resume** 선택 |
-| 여러 프로필 선택 필요 | 원하는 Firefox의 **Use this Firefox** 선택 |
-| 도구 승인 거부 | 호스트가 허용하는 승인 절차 사용. 설치기는 승인 정책을 바꾸지 않음 |
+| 스크립트가 편집기로 열림 | 압축을 푼 폴더의 터미널에서 `./install.sh` 실행 |
+| Codex를 찾지 못함 | Codex 앱/CLI 설치 상태를 확인하고 관리 화면을 다시 열기. Linux 설치기는 Codex 실행 파일을 찾아야 함 |
+| 도구가 안 보임 | Codex 앱을 다시 열고 새 채팅에서 요청 |
+| 확장이 중지 상태 | 사용할 Firefox 확장 버튼에서 **Resume** 선택 |
+| 여러 프로필 중 선택 필요 | 원하는 Firefox의 **Use this Firefox** 선택 |
+| 도구 승인이 거부됨 | 호스트가 제공하는 승인 절차 사용. 설치기는 사용자·관리자의 승인 정책을 바꾸지 않음 |
 
-비대화형 `codex exec`는 일반 채팅과 승인 방식이 다릅니다. 첫 검증에서는 기본 승인 거부
-정책이 새 탭을 차단했습니다. 처음에는 Codex 앱 또는 대화형 CLI로 확인하세요.
-자동화 개발자는 자신의 Codex 버전이 지원하는 승인 검토 방식을 선택해야 하며,
-이 도구를 위해 전체 승인이나 샌드박스를 해제할 필요는 없습니다.
+비대화형 `codex exec`는 일반 채팅과 승인 방식이 다릅니다. 실제 시험에서도 기본
+승인 거부 정책에서는 새 탭 열기가 차단됐습니다. 처음에는 Codex 앱 또는 대화형 CLI로
+확인하세요. 자동화하는 개발자는 자신의 Codex 버전이 지원하는 승인 검토 방식을 별도로
+정해야 하며, 이 도구를 쓰기 위해 전체 승인이나 샌드박스를 해제할 필요는 없습니다.
 
 ## 검증 범위
 
-[0.4.3 릴리스](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.3)는
-정확한 RPM·DEB·압축 배포 파일별 체크섬·GitHub 빌드 증명·`release-verification.json`을
-제공합니다. 패키지 수명주기 CI는 폐기 가능한 Ubuntu·Fedora 환경에서 수행하며,
-[패키지 소유권과 검증](linux-packages.md)을 참고하세요. 자동 시험은 초보자나 새 데스크톱
-OS에서의 수동 설치 검증과 구분합니다.
-
+[0.4.2 릴리스](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.2)에 실제
+배포 파일의 체크섬·GitHub 빌드 증명·`release-verification.json`을 제공합니다.
 [Firefox 관리 구조의 소스 검증 기록](firefox-only-management-e2e-2026-11-17.json)은 해당 소스 빌드,
 서명 확장과 깨끗한 홈의 실제 모델 작업을 기록합니다. 최종 배포 파일의 검증 기록은 별도입니다.
 [영문 기본 화면 검증 기록](english-default-e2e-2026-11-17.json)은 이전 로컬 후보 빌드의
 역사적 기록입니다.
 
 [2026-11-17 새 환경 검증 기록](linux-first-install-e2e-2026-11-17.json)을 확인하세요.
-공개 0.4.0 압축 배포 파일을 프로젝트 밖에서 실행했고, 기존 홈을 가린 임시 홈에서 설정이 없는
+공개 배포 파일을 프로젝트 밖에서 실행했고, 기존 홈을 가린 임시 홈에서 설정이 없는
 상태로 시작했습니다. Codex 로그인만 읽기 전용으로 연결했습니다.
 Firefox의 정상 확장 설치 확인을 거쳐 실제 모델의 읽기·클릭·입력을 확인했습니다.
 

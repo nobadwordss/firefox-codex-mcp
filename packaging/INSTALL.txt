@@ -1,103 +1,90 @@
 Firefox Codex MCP — Linux x86_64
 
-Linux 0.4.3 stable. RPM and DEB are the primary downloads; tar.gz is the fallback.
-Includes Mozilla-signed English Codex Work Tabs 0.4.2. Windows beta.3 is unchanged.
-English is the default. Korean translation: INSTALL.ko.txt and README.ko.md.
+Release status: Linux 0.4.2 remains the published stable release.
+The 0.4.3 RPM/DEB candidate is paused and unreleased.
+Pause handoff: https://github.com/nobadwordss/firefox-codex-mcp/blob/main/docs/linux-packaging-handoff-2026-11-17.md
 
-Requirements: ordinary Firefox 140+ and a local Codex app or CLI you can sign in to.
+Installation instructions: Linux 0.4.2 stable.
+Includes Mozilla-signed Codex Work Tabs 0.4.2. Older release archives are unchanged.
+English instructions: README.md. Korean translation: README.ko.md and INSTALL.ko.txt.
+
+Requirements: ordinary Firefox 140+ and the local Codex app or CLI.
 Rust, Node, pairing codes, tokens and profile paths are not needed.
-Snap/Flatpak Firefox, macOS and Android are not validated.
-Downloads: https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.3
+Windows has a separate preview. macOS, Snap/Flatpak Firefox and Android are not validated.
 
-Recommended: RPM or DEB
-1. Install the package for your distribution with its software manager.
-   If no installer opens, use a terminal in the download folder:
-   Fedora: sudo dnf install ./firefox-codex-mcp-0.4.3-1.x86_64.rpm
-   Ubuntu/Debian: sudo apt install ./firefox-codex-mcp_0.4.3-1_amd64.deb
-   This installs a system helper without changing user homes or opening Firefox.
-2. Open the release's codex-work-tabs-0.4.2.xpi in ordinary Firefox.
-   Confirm Continue Installation/Allow → Add. If the file is saved, use Firefox's
-   Add-ons Manager → gear menu → Install Add-on From File and select that XPI.
-3. As your normal user, open Codex Work Tabs → Settings → Connect Codex → Continue.
-   Never run Connect with sudo. It registers this account's connection, skill and
-   guidance automatically. No separate skill download or configuration editing.
-   Repeat Connect for each OS account that wants it.
-   If Settings cannot reach the helper, run: firefox-codex-mcp --manage
-   The setup page also provides Add Codex Work Tabs to Firefox.
-4. Open a new Codex chat and try:
+First installation
+1. Open Codex and check that you can sign in. Install ordinary desktop Firefox.
+2. Fully extract the downloaded archive. Do not run setup from inside the archive.
+   Open a terminal in the extracted folder and run:
+   ./install.sh
+   A file manager that supports running scripts can also launch install.sh directly.
+   If it opens in an editor, use the terminal command above. No administrator rights are needed.
+3. In the Firefox setup page, choose Install connection, then Continue.
+   The installer registers MCP and installs the browser skill and guidance automatically.
+   You do not need to install the skill separately or edit configuration files.
+4. Choose Add Codex Work Tabs to Firefox in the same setup page.
+   Confirm Firefox's Continue Installation/Allow and Add prompts.
+   Use the Mozilla-signed XPI bundled with this package.
+   The *-unsigned.xpi is for development/review only; see SIGNING.md.
+5. Open a new Codex chat and try:
    Open https://example.com in the browser, click Learn more, and tell me the destination page title.
-   A new work tab and successful link click confirm actual browser control.
-   Review tool approval requests for the web task you asked for.
+   A new Firefox work tab and a successful link click confirm the connection.
+   Review any tool approval request for the web task you asked for.
 
-Fallback: this archive, without administrator rights
-1. Fully extract the archive. Do not run setup inside the archive.
-2. Open a terminal in the extracted folder and run: ./install.sh
-3. Choose Install connection → Continue, then Add Codex Work Tabs to Firefox.
-   Confirm Firefox's prompts, then try the new Codex chat above.
-   If a script opens in an editor, use the terminal command. Double-click behavior
-   varies by file manager. No administrator rights are needed for this fallback.
-   If an RPM/DEB is already installed, setup uses that system helper instead of
-   making a competing private copy.
+If something goes wrong
+- Script opens in an editor: run ./install.sh from a terminal in the extracted folder.
+- Codex is not found: check your Codex app/CLI installation, then reopen setup.
+- Settings are registered but tools are missing: reopen Codex and start a new chat.
+- Extension is paused: open its button in the Firefox you want to use and choose Resume.
+- Tool approval is denied: use the approval process allowed by your administrator.
+  Setup never changes approval policy. Non-interactive codex exec has different
+  approval behavior; first try the Codex app or interactive CLI.
 
-Everyday use
-Use your ordinary Firefox and existing profile. No additional Firefox app-menu
-entry or separate Codex profile is created. Open Codex Work Tabs → Settings for
-Check setup and Repair. Pause and Revoke all tab access stay in the extension.
-A single connected profile is selected automatically. With several, choose Use
-this Firefox in the intended profile. An offline selected profile never silently
-falls back to another. Existing tabs and other chats' tabs are never adopted.
-In the same chat, work tabs continue across turns. Access ends on explicit
-revocation, pause, 24 hours without a request, or a Firefox/helper restart.
-Visible result tabs stay open. See PRIVACY.md for website-login and data scope.
+Linux first-install guide: docs/first-install-linux.md
+Firefox management guide: docs/firefox-only-management.md
 
-Update
-- RPM/DEB: install the newer local package with the software manager or the same
-  dnf/apt command using its new filename. Each user runs the system helper directly.
-  Settings → Reconnect Codex repairs this user's settings; it does not upgrade OS files.
-- tar.gz: extract the newer archive, run ./install.sh and choose Update connection.
-- Both release old work-tab access and keep Firefox open. Start a new Codex chat.
-- Install a newer signed XPI separately when a release calls for it. Direct XPI
-  distribution currently has no automatic extension update channel.
+Everyday use and management
+Use your ordinary Firefox and its existing profile. No extra Firefox app-menu
+entries or separate Codex browser profile are installed. Open Codex Work Tabs in
+Firefox, then choose Settings for connection checks, repair and removal.
+Firefox's Add-ons Manager can also open the extension controls and Settings button.
+The helper must be installed once per OS user; the extension cannot install it alone.
+If the helper is absent or unreachable, open this package's install.sh again.
+If the extension was already removed, install.sh still opens setup for helper
+repair or removal. Removing the add-on alone leaves the helper and Codex settings.
 
-Disconnect and remove
-- RPM/DEB: choose Settings → Disconnect Codex for each connected OS account.
-  This removes that user's owned connection, skill and guidance; the system helper
-  remains. Then remove the system package with the software manager, or:
-  sudo dnf remove firefox-codex-mcp
-  sudo apt remove firefox-codex-mcp
-  DEB purge is also supported. Package removal stops running packaged helpers,
-  but never edits homes. If removed before Disconnect, reinstall and disconnect,
-  or use this archive's ./install.sh --uninstall to clean the user receipt.
-- tar.gz: Settings → Remove connection, or ./install.sh --uninstall.
-- Remove the extension separately in Firefox Add-ons Manager if desired.
-- Firefox profiles, website logins, result tabs and user edits are preserved.
-  Already-dispatched browser actions cannot be undone. Close old Codex chats.
+In the same chat, work tabs continue across turns. Access ends after 24 hours without
+a request, explicit revocation, pause or a Firefox/helper restart. Result tabs stay open.
 
-Migration from an older tar.gz
-Install the RPM/DEB, then use Settings → Reconnect Codex. Setup retires unchanged,
-receipt-owned user binaries, native-host files and old launchers. User modifications
-remain and are reported. A foreign or modified per-user Native Messaging registration
-may mask the system helper and blocks migration; review it before moving it yourself.
-Do not delete Firefox profiles or Codex's whole configuration folder.
+A single connected Firefox profile is selected automatically. With several profiles,
+choose Use this Firefox in the intended profile. An offline selected profile never
+silently falls back to another. If the selected profile is not Firefox's default,
+you may need to open that profile yourself.
 
-Troubleshooting
-- Tools missing: install/sign in to local Codex, reopen it and start a new chat.
-  Setup does not require the Codex CLI to be on PATH.
-- Extension paused: choose Resume in the intended Firefox profile.
-- Helper absent/damaged: reinstall the RPM/DEB, or rerun the fallback's install.sh.
-- Tool approval denied: use the host's allowed approval process. Setup never changes
-  approval policy. First try the Codex app or interactive CLI, not codex exec.
-- Recovery: firefox-codex-mcp --doctor / --repair / --uninstall for RPM/DEB;
-  ./install.sh --doctor / --repair / --uninstall for the fallback.
-  Installation receipts and recovery: ~/.local/state/firefox-codex-mcp/
+Update: run install.sh from the newer package and choose Update connection.
+Firefox stays open. Previous work-tab access is revoked; start a new chat afterwards.
+To update the extension, install the new signed XPI through Firefox's Add-ons Manager.
+Direct-distribution XPIs do not currently have an automatic update channel.
+
+Remove: open the extension's Settings and choose Remove connection.
+Remove the extension separately in Firefox Add-ons Manager.
+Firefox profiles, logins, result tabs and user changes are preserved.
+Close existing Codex chats to end their already-running tool connections.
+
+./install.sh --install
+./install.sh --update
+./install.sh --doctor
+./install.sh --uninstall
+./install.sh --repair
 
 Advanced BiDi remains a command-line compatibility option:
 ./install.sh --install-bidi [ABSOLUTE_PROFILE_PATH]
-No debugging launcher is installed. After saving work and closing Firefox,
-advanced users can run ./install.sh --launch-firefox ABSOLUTE_PROFILE_PATH.
+No debugging app-menu launcher is created. After saving your work and closing
+Firefox, advanced users can run ./install.sh --launch-firefox ABSOLUTE_PROFILE_PATH.
+Use the default extension connection for ordinary Firefox and extension Settings.
 
-These local RPM/DEB files do not add an automatic APT/DNF update repository.
-RPM/DEB currently have no separate package/repository signature. The XPI is signed
-by Mozilla. SHA256SUMS checks integrity; also review GitHub build provenance.
-Automated checks are not a novice study or a fresh desktop OS installation.
-See docs/first-install-linux.md, docs/linux-packages.md and docs/firefox-only-management.md.
+Installation receipts and recovery: ~/.local/state/firefox-codex-mcp/
+Run --repair after an interrupted installation. Modified files are not overwritten.
+Local Codex chats can use this profile's website logins in their own work tabs.
+Existing tabs and other chats' tabs are never adopted. See PRIVACY.md.
+SHA256SUMS checks download integrity. See LICENSE and the build provenance.

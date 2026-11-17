@@ -1,106 +1,95 @@
 # Manage the connection in Firefox
 
-Instructions for **Linux 0.4.3 stable** and **Windows 0.5.0-beta.3 preview**.
+> **Release status:** Linux **0.4.2** remains the published stable release.
+> The **0.4.3 RPM/DEB candidate is paused and unreleased**; see the
+> [pause handoff](linux-packaging-handoff-2026-11-17.md) for remaining validation.
+
+Instructions for **Linux 0.4.2 stable** and **Windows 0.5.0-beta.3 preview**.
 Use the [Linux installation guide](first-install-linux.md) or
-[Windows preview guide](windows-preview.md) for the matching download. Linux uses
-RPM/DEB by default, with tar.gz as a fallback. The Windows beta.3 ZIP and older
-release files remain unchanged. All include Mozilla-signed English extension
-**Codex Work Tabs 0.4.2** for unlisted/direct distribution.
+[Windows preview guide](windows-preview.md) for the correct download. Older
+Linux 0.4.1 and Windows beta.2 archives remain available unchanged.
+
+Both packages include **Codex Work Tabs 0.4.2**, approved and signed by Mozilla
+for unlisted/direct distribution on 2026-11-17. Source preparation, final archive
+verification and platform scope are recorded separately. Linux clean-home
+installation and actual model work passed, as did Windows Server source-build
+and extracted-ZIP installation, update, removal and Firefox E2E. Windows 10/11
+desktop acceptance remains pending.
 
 ## Install once, then use ordinary Firefox
 
-1. Install ordinary desktop Firefox and sign in to the local Codex app or CLI.
-2. On Linux, install the RPM/DEB with your software manager, then install the
-   release's signed XPI in Firefox. On Windows, extract the beta.3 ZIP,
-   double-click `firefox-codex-mcp.exe` as your normal user and choose **Install
-   connection → Continue → Add Codex Work Tabs to Firefox**.
-3. On Linux, click **Codex Work Tabs → Settings → Connect Codex → Continue** as
-   your normal user. It registers only that account's Codex connection, skill and
-   browser guidance. Repeat for each OS account; never run Connect with `sudo`.
-4. Start a new Codex chat and ask:
+1. Install ordinary desktop Firefox and the local Codex app or CLI.
+2. Extract the package matching the version you intend to install. On Linux,
+   run `./install.sh` from its extracted folder. On Windows, double-click
+   `firefox-codex-mcp.exe` as your normal user.
+3. Choose **Install connection → Continue** in the local setup page. This installs
+   the helper and registers the Codex connection, skill and browser guidance.
+4. Choose **Add Codex Work Tabs to Firefox** and accept Firefox's installation
+   prompts. Use the Mozilla-signed extension bundled with the package.
+5. Start a new Codex chat and ask:
 
    > Open https://example.com in the browser, click Learn more, and tell me the destination page title.
 
-The RPM/DEB installs one system helper. The Windows ZIP and Linux tar.gz install
-a private helper per user. Install the extension in your everyday Firefox
-profile. The extension cannot install a native program by itself. No additional
-Firefox profile, app-menu launcher, pairing code or manually installed skill is
-needed for ordinary use.
+Install the helper once per OS user and the extension in your everyday Firefox
+profile. The extension cannot install a native program or register Codex by itself.
+No extra Firefox profile, app-menu launcher, pairing code or manually installed
+skill is needed for the ordinary extension connection.
 
 ## Manage from the extension
 
-Open ordinary Firefox and click **Codex Work Tabs → Settings**. The page opens in
-that same Firefox profile. It provides **Check setup** and **Repair**, plus
-**Disconnect Codex** for Linux packages or **Remove connection** for the Windows
-and tar.gz installations. Pause, resume and revoke controls stay in the extension.
-Firefox's Add-ons Manager can also open those controls and their **Settings** button.
+Open ordinary Firefox, click **Codex Work Tabs → Settings**. The connection setup
+page opens in a tab in that Firefox. Use **Check setup**, **Repair** or **Remove
+connection** there. Firefox's Add-ons Manager can also open the extension controls,
+which provide the same **Settings** button. Pause, resume and revoke controls
+remain in the extension. Removing the helper and removing the extension are
+separate actions.
 
-With several profiles, choose **Use this Firefox** in the intended one. A single
-connected profile is selected automatically. An offline selected profile never
-silently falls back to another. Existing profiles, website logins and result tabs
-are preserved throughout setup, updates and removal.
+If you use several Firefox profiles, choose **Use this Firefox** in the intended
+one. A single connected profile is selected automatically. A disconnected selected
+profile never silently falls back to another. You do not need another profile to
+use this integration.
 
-## Program updates and removal
+To update the helper, open setup from a newer package. Update the extension with
+that package's signed XPI as well; direct-distribution XPIs have no automatic
+update channel. Updates release existing work-tab access and leave result tabs
+open. Start a new Codex chat afterwards.
 
-| Installation | Update the helper | Remove it completely |
-| --- | --- | --- |
-| Linux RPM/DEB | Install the newer package with the software manager | **Disconnect Codex** for each account, then remove `firefox-codex-mcp` with the software manager |
-| Linux tar.gz | Extract the newer archive, run `./install.sh`, choose **Update connection** | **Settings → Remove connection**, or `./install.sh --uninstall` |
-| Windows beta.3 ZIP | Extract the newer ZIP, run its EXE, choose **Update connection** | **Settings → Remove connection**, or Windows Settings → Apps → Firefox Codex MCP → Uninstall |
+If the helper is absent or cannot connect, reopen the extracted package's setup
+file. The extension cannot repair a helper it cannot reach. On Linux, the package
+also provides `./install.sh --doctor`, `--repair` and `--uninstall` for recovery.
+Windows Settings → Apps → Firefox Codex MCP → Uninstall remains available.
+If you already removed or disabled the extension, open the extracted package's
+setup file to remove or repair the helper. Removing the Firefox add-on alone
+does not uninstall the helper or remove Codex's connection settings.
 
-Linux package **Disconnect Codex** removes the current user's owned configuration,
-skill and guidance, revoking work-tab access. It leaves the system helper for
-other users and later reconnection. OS package removal stops running packaged
-helpers even for users who did not disconnect, but never edits their home folders.
-Their leftover registrations cannot launch the removed program. To clean them,
-reinstall the package and disconnect, or extract the current tar.gz and run
-`./install.sh --uninstall` as the affected user. [Package ownership and recovery](linux-packages.md).
+## Verified Firefox controls
 
-Local RPM/DEB files do not add an automatic APT/DNF update repository and have no
-separate package/repository signature. The Mozilla-signed extension has its own
-installation; install a newer signed XPI when a release calls for one.
-Direct-distribution XPIs currently have no automatic extension update channel.
-Updates release previous work-tab access and leave result tabs open. Start a new
-Codex chat afterwards. An already-dispatched browser action cannot be undone.
-
-If the extension cannot reach the helper, run `firefox-codex-mcp --manage` on a
-packaged Linux installation, `./install.sh` from a Linux fallback archive, or the
-extracted Windows EXE. If the system command is missing or its installation is
-damaged, reinstall the RPM/DEB with the software manager. The extension cannot
-repair a helper it cannot reach. Removing the Firefox add-on alone leaves the
-helper and Codex connection settings; remove the add-on separately if desired.
-
-## Existing installations
-
-To switch from tar.gz to RPM/DEB, install the package and choose **Reconnect
-Codex** in Settings. Setup switches the Codex command to the fixed system helper
-and retires unchanged, receipt-owned user binaries, native registrations and old
-**Firefox Codex Manager** / **Firefox (Codex connection)** launchers. Modified
-files remain and are reported. A modified or foreign per-user native registration
-can mask the system helper, so it blocks migration with a clear error. Review the
-reported file before moving it yourself; keep a backup. Firefox itself is not
-terminated.
-
-Older BiDi debugging installations remain an advanced command-line compatibility
-path. Install the default extension connection to use Firefox-based management.
-No debugging launcher is created. Advanced users can use `--launch-firefox PROFILE`
-after saving their work and closing Firefox; this is outside normal installation.
-
-## Verification scope
-
-The release's `release-verification.json` identifies its exact artifacts and CI.
-Linux RPM/DEB lifecycle checks, historical clean-home actual-model work and Windows
-Server integration tests are distinct evidence. Automated headless checks do not
-establish novice usability or a fresh desktop OS installation. Windows 10/11
-desktop and SmartScreen acceptance remain pending.
-
-The screenshots below show the signed 0.4.2 extension and a beta.3 candidate
-helper in a disposable Linux Firefox 160 profile. The older Settings screenshot
-precedes the Linux package Connect/Disconnect labels. It is historical evidence,
-not a screenshot of the 0.4.3 package flow.
+These screenshots show the signed 0.4.2 extension and beta.3 candidate helper in
+a disposable Linux Firefox 160 profile. They are an automated integration check,
+not a first-time-user study or Windows desktop acceptance.
 
 ![Extension controls in ordinary Firefox](assets/firefox-only-popup-2026-11-17.png)
 
-![Historical local Settings page](assets/firefox-only-settings-2026-11-17.png)
+**Settings** opens in that same Firefox profile:
 
-Original scope: [2026-11-17 source-preparation record](firefox-only-management-e2e-2026-11-17.json).
+![Local Settings page](assets/firefox-only-settings-2026-11-17.png)
+
+## Existing installations
+
+The installer removes its unchanged, previously managed **Firefox Codex
+Manager** and **Firefox (Codex connection)** launchers. Modified launchers are
+preserved and reported rather than silently overwritten or deleted. Ordinary
+Firefox, its profile, logins and result tabs remain available.
+
+Older BiDi debugging installations are an advanced compatibility path. Install
+the default extension connection to use this Firefox-based management flow.
+The installer does not create a debug launcher. Advanced BiDi users can use
+the helper's `--launch-firefox PROFILE` command after saving their work and closing
+Firefox; it is not part of normal installation.
+
+These instructions do not establish Windows 10/11 desktop, SmartScreen or
+first-time-user acceptance. Source-preparation screenshots and tests retain their
+own candidate scope; each release supplies verification for its exact archive.
+Earlier release records retain their original scope.
+
+Verification and boundaries: [2026-11-17 record](firefox-only-management-e2e-2026-11-17.json).

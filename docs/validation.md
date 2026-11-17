@@ -1,14 +1,15 @@
 # Validation history
 
-Linux **0.4.3**: [RPM/DEB installation, ownership and recovery](linux-packages.md),
-[release downloads](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.3)
-and [exact-artifact verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/release-verification.json).
-The release record separates Ubuntu/Debian/Fedora package-manager lifecycle,
-installed-package Firefox/Codex app-server dispatch, and any isolated actual-model
-checks. App-server dispatch does not establish model selection or novice usability.
-No product installation is performed on the developer's personal Linux account.
+Linux **0.4.3 RPM/DEB candidate — paused and unreleased**:
+the [pause handoff](linux-packaging-handoff-2026-11-17.md) records saved source,
+completed checks and the unresolved first-connection Settings failure. No 0.4.3
+release or RPM/DEB download is published. The [candidate package guide](linux-packages.md)
+describes unfinished work, not released installation instructions. Earlier jobs
+whose pipelines masked test failures are not release acceptance.
 
-Linux 0.4.2: [published archive and release verification](linux-0.4.2-release-2026-11-17.json).
+Linux **0.4.2 remains the published stable release**:
+[downloads](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.2),
+[archive and release verification](linux-0.4.2-release-2026-11-17.json).
 Windows **0.5.0-beta.3**: [published ZIP and release verification](windows-beta3-release-2026-11-17.json).
 These earlier releases remain unchanged; Windows 10/11 desktop and SmartScreen
 acceptance remain pending. The records below retain their original scope.

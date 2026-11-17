@@ -1,14 +1,20 @@
-# Linux RPM and DEB delivery
+# Linux RPM and DEB candidate (unreleased)
 
-Linux **0.4.3** uses RPM and DEB as the primary downloads. The tar.gz archive is
-the fallback for users without administrator rights. All use the same Rust helper
-and Mozilla-signed English extension **0.4.2**. Windows **0.5.0-beta.3** remains a
-separate preview; its release files are unchanged.
+> **Paused and unreleased:** No Linux 0.4.3 or RPM/DEB download is published.
+> This page describes unfinished candidate behavior and is not a released setup guide.
+> Use the [published Linux 0.4.2 instructions](first-install-linux.md). The
+> [pause handoff](linux-packaging-handoff-2026-11-17.md) records the unresolved validation.
 
-## Install and connect
+The Linux **0.4.3 candidate** proposes RPM and DEB as the primary downloads, with
+tar.gz as the fallback for users without administrator rights. The candidate uses
+the Rust helper and Mozilla-signed English extension **0.4.2**. Public Linux stable
+remains **0.4.2** and Windows **0.5.0-beta.3** remains a separate preview; their
+release files are unchanged.
 
-Download the matching package from the [0.4.3 release](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.3).
-Open it with your software manager, or use one command from its download folder:
+## Candidate installation flow
+
+The following commands describe the proposed flow after a verified release is
+available. Candidate package filenames are examples, not available download links:
 
 ```sh
 sudo dnf install ./firefox-codex-mcp-0.4.3-1.x86_64.rpm  # Fedora
@@ -107,8 +113,9 @@ fails closed; already-dispatched browser actions cannot be undone. A failed
 package transaction may leave the connection unavailable until the software
 manager completes configuration or reinstalls the package.
 
-The release's `release-verification.json` identifies the exact artifacts and CI
-runs. Package-manager lifecycle tests use disposable Ubuntu and Fedora accounts,
-including upgrade/reinstall, removal, migration, live-process fencing and preserved
-foreign data. Automated headless Firefox/browser checks are separate from manual
-novice testing, a fresh desktop OS install or Windows desktop acceptance.
+No final `release-verification.json` or published candidate artifact exists.
+The [pause handoff](linux-packaging-handoff-2026-11-17.md) separates completed
+Ubuntu/Debian/Fedora lifecycle checks from the unresolved extension-first Settings
+failure and browser phases that did not execute. Earlier green jobs with masked
+test failures are not acceptance. Automated headless browser checks are separate
+from novice testing, a fresh desktop OS install or Windows desktop acceptance.
