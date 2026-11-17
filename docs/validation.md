@@ -1,5 +1,8 @@
 # 검증 기록
 
+Windows 0.5.0-beta.1: [Windows Server 실제 설치·Codex–Firefox E2E·배포 ZIP 검증](windows-e2e-2026-11-17.json).
+Windows 10/11 데스크톱·실제 모델의 자동 도구 선택·SmartScreen 검증은 아직 남아 있습니다.
+
 최신 0.4.0: [채팅 연속성·실제 데스크톱·서명 확장 검증](chat-continuity-e2e-2026-11-17.json).
 아래는 이전 버전의 역사적 검증이며 현재 기본 연결 방식은 Native Messaging 확장입니다.
 

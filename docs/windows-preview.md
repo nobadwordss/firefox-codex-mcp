@@ -81,8 +81,10 @@ chats, and uses its `mcpServer/tool/call` API to exercise Firefox. It does not u
 mock MCP server. It also does not prove model-driven tool selection or the Windows
 Codex desktop UI: no live model/API account is sent to CI.
 
-The release verification record links the exact successful workflow commit and
-its artifacts. Read that result before treating any listed scenario as passed.
+The [release verification record](windows-e2e-2026-11-17.json) links the successful
+workflow commit and its artifacts. Source-build and extracted-ZIP E2E both passed
+on 2026-11-17, including actual deferred EXE deletion before repair. Windows and
+Linux archive checksums and GitHub build attestations were independently verified.
 
 Still required before a fully supported Windows desktop release:
 

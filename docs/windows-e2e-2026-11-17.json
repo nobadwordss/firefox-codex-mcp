@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-17",
+  "release": "0.5.0-beta.1",
+  "status": "Windows Server preview verified; Windows 10/11 desktop acceptance pending",
+  "buildCommit": "c2a300136dca4ce98e0ab641c47d7da5dd56645d",
+  "environment": {
+    "os": "Windows Server 2022 x64 (GitHub windows-2022)",
+    "firefox": "160.0, official desktop distribution, headless disposable profiles",
+    "extension": "Mozilla-signed Codex Work Tabs 0.4.0",
+    "codex": "Official native Windows @openai/codex app-server; version was not separately captured",
+    "account": "Disposable CI runner account; no personal profiles, logins or model API credentials"
+  },
+  "workflows": {
+    "windows": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/43992711961",
+    "linuxDistribution": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/43992711931",
+    "checks": "https://github.com/nobadwordss/firefox-codex-mcp/actions/runs/43992712056"
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "msvcClippyWarningsDenied": "passed",
+    "windowsRustUnitTests": 23,
+    "javascriptTests": 64,
+    "sourceBuildE2ESeconds": 41.39,
+    "extractedZipE2ESeconds": 36.49,
+    "sha256Verification": "passed for Windows and Linux distributions",
+    "githubBuildAttestationVerification": "passed; both bind the archive digest to buildCommit"
+  },
+  "verified": [
+    "Manager installation and actual Firefox signed-extension confirmation controls",
+    "HKCU native host, Codex global registration, preserved unrelated TOML and AGENTS rules",
+    "Korean, spaces, apostrophe and ampersand in installation paths",
+    "Named pipes, peer/session checks and busy-pipe connection regression",
+    "Actual Codex app-server ephemeral chats dispatching MCP to real Firefox",
+    "Normal Windows Known Folders endpoint with no MCP environment overrides",
+    "Text/status reading, clicking and typing with independent WebDriver DOM readback",
+    "Two-chat isolation and same-chat MCP replacement retaining counter/input state",
+    "Explicit revocation, pause/resume and refusal to restore old tab ownership",
+    "Two Firefox profiles, explicit selection and no silent offline fallback",
+    "Update while an old EXE is running; immutable versioned payload replacement",
+    "Firefox restart with permanent signed extension and fresh work-tab ownership",
+    "Uninstall revokes access and preserves unrelated configuration",
+    "Uninstall process/output EOF completes before background cleanup",
+    "Unlocked old/current EXEs disappear before repair is invoked",
+    "Full E2E repeated from ZIP extracted outside the repository",
+    "Windows ZIP includes helper, signed extension, licenses, third-party notices and SBOM",
+    "Linux CI package installation/update/removal and extracted-package checks"
+  ],
+  "notVerified": [
+    "Windows 10 22H2 or Windows 11 desktop clean-user acceptance",
+    "Windows Codex desktop GUI, actual model tool selection and app restart/job-object lifetime",
+    "Real non-administrator interactive accounts and cross-user/session rejection",
+    "Authenticode signing or downloaded-file SmartScreen flow (helper EXE is unsigned)",
+    "Microsoft Store Firefox, ARM64, WSL and elevated/mixed-user operation",
+    "Side-by-side execution or usability/performance comparison with competing tools"
+  ],
+  "artifacts": {
+    "windowsSha256": "e7b8ac9b497ae958e1cdea239d64c8c90c1793e37f90e979c71f29f95c8be36f",
+    "linuxSha256": "ca292bfa729fb8dafb3aeebd10cc58f8359008155d0e700461adb3a2555fd396",
+    "signedExtensionSha256": "a96a8c21d5007f5131ae3e0cb9f18547f8938ce36b234cec6abdfeb8eb72c6e2",
+    "evidence": "windows-evidence.zip in the v0.5.0-beta.1 release; also windows-preview-evidence in the Windows workflow"
+  }
+}
