@@ -18,7 +18,7 @@ needed. With several Firefox profiles, choose Use this Firefox in the extension
 in the profile you want. Existing personal tabs are never imported automatically.
 
 Update: extract the newer ZIP and open its EXE, then choose Update connection.
-The signed extension bundled here remains 0.4.0. This update changes the helper.
+This build includes the Mozilla-signed English extension 0.4.1.
 Updating releases existing work-tab permissions; pages remain open.
 
 Remove: Windows Settings > Apps > Firefox Codex MCP > Uninstall opens the manager.

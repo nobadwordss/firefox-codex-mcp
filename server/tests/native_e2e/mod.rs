@@ -102,7 +102,7 @@ impl Browser {
     }
     fn popup(&self) -> Result<()> {
         self.driver.popup_for(NATIVE_ID)?;
-        self.driver.wait_status("연결됨")
+        self.driver.wait_status("Connected")
     }
 }
 fn server(home: &Path) -> Result<Server> {
@@ -237,7 +237,8 @@ fn installed(home: &Path, browser: &Browser) -> Result<()> {
     BufReader::new(process.0.stdout.take().context("manager stdout")?).read_line(&mut line)?;
     let url = line
         .trim()
-        .strip_prefix("Firefox Codex 관리: ")
+        .strip_prefix("Firefox Codex setup: ")
+        .or_else(|| line.trim().strip_prefix("Firefox Codex 관리: "))
         .context("manager URL")?;
     browser.driver.goto(url)?;
     browser.driver.click("#install")?;
@@ -248,7 +249,10 @@ fn installed(home: &Path, browser: &Browser) -> Result<()> {
             "return document.querySelector('#result').textContent;",
             json!([]),
         )?;
-        if text.as_str().is_some_and(|t| t.contains("설치 완료")) {
+        if text
+            .as_str()
+            .is_some_and(|t| t.contains("Connection installed") || t.contains("설치 완료"))
+        {
             break;
         }
         ensure!(Instant::now() < deadline, "manager install: {text}");
@@ -390,13 +394,13 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     // Actual extension control buttons revoke both chats, pause and resume.
     browser.popup()?;
     browser.driver.click("#toggle")?;
-    browser.driver.wait_status("중지됨")?;
+    browser.driver.wait_status("Paused")?;
     browser.driver.close_popup()?;
     ensure!(a.ok("firefox_status", json!({}))?["enabled"] == false);
     b.denied("firefox_snapshot", json!({}), "released")?;
     browser.driver.popup_for(NATIVE_ID)?;
     browser.driver.click("#toggle")?;
-    browser.driver.wait_status("연결됨")?;
+    browser.driver.wait_status("Connected")?;
     browser.driver.close_popup()?;
     a.denied("firefox_snapshot", json!({}), "No AI work tab")?;
     a.ok("firefox_open_tab", json!({"url":fixture.url}))?;
@@ -440,7 +444,7 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     a.denied(
         "firefox_open_tab",
         json!({"url":fixture.url}),
-        "다른 프로필",
+        "selected Firefox is offline",
     )?;
     // Restart exactly the selected disposable profile. Temporary addon explicitly
     // reloaded; this verifies transport reconnection, not unsigned persistence.

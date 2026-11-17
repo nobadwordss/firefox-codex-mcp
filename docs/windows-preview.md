@@ -4,6 +4,10 @@ The 0.5.0-beta.1 helper targets Windows 10 22H2 and Windows 11 x64 with ordinary
 desktop Firefox 140+. The extension stays at Mozilla-signed version 0.4.0.
 This is a preview, not a claim that Windows 10/11 desktop acceptance testing is complete.
 
+Current source builds prepare 0.5.0-beta.2 with English setup, diagnostics and
+the Mozilla-signed English extension 0.4.1. The published beta.1 archive and its
+0.4.0 extension are unchanged; the verification record below describes beta.1.
+
 ## Install, update and remove
 
 Download and extract the Windows ZIP from the project's release. Double-click
@@ -16,8 +20,9 @@ Codex even when its command-line executable is not on PATH.
 
 The manager falls back to your default browser if it cannot locate Firefox. Install
 desktop Firefox from Mozilla, then reopen setup in Firefox to install the extension.
-The Firefox extension controls still use Korean: **이 Firefox 사용** selects that
-profile, **잠시 중지** pauses control, and **모든 작업 탭 접근 해제** revokes all work tabs.
+In the English extension, **Use this Firefox** selects that profile, **Pause**
+pauses control and **Revoke all tab access** revokes all work tabs. The published
+beta.1 package still includes the earlier Korean extension controls.
 
 Download and extract a newer ZIP, then open its EXE to update. Executing an older downloaded EXE
 installs that version, so choose the intended release. Windows Settings → Apps →

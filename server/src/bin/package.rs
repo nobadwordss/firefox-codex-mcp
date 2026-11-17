@@ -89,11 +89,13 @@ fn main() -> Result<()> {
     }
     #[cfg(unix)]
     fs::copy("packaging/install.sh", stage.join("install.sh"))?;
+    #[cfg(unix)]
+    fs::copy("packaging/INSTALL.ko.txt", stage.join("INSTALL.ko.txt"))?;
     copy_directory(Path::new("docs"), &stage.join("docs"))?;
     copy_directory(Path::new("extension/icons"), &stage.join("extension/icons"))?;
     fs::create_dir_all(stage.join("packaging"))?;
     fs::copy("packaging/SIGNING.md", stage.join("packaging/SIGNING.md"))?;
-    let signed_name = "codex-work-tabs-0.4.0.xpi";
+    let signed_name = "codex-work-tabs-0.4.1.xpi";
     let signed = Path::new("packaging/signed").join(signed_name);
     let expected_manifest: Value = serde_json::from_slice(&fs::read("extension/manifest.json")?)?;
     for &file in RUNTIME_FILES {

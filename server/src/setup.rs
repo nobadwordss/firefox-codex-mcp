@@ -122,7 +122,7 @@ pub fn install(profile: &Path) -> Result<Value> {
     let applications = home.join(".local/share/applications");
     fs::create_dir_all(&applications)?;
     let launcher = applications.join("firefox-codex.desktop");
-    let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex 연결)\nName[en]=Firefox (Codex connection)\nComment=현재 Firefox 프로필로 AI 작업 탭 사용\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\nStartupNotify=true\n",quote_desktop(&executable.to_string_lossy())?,quote_desktop(&profile.to_string_lossy())?);
+    let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex connection)\nComment=Use AI work tabs in this Firefox profile\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\nStartupNotify=true\n",quote_desktop(&executable.to_string_lossy())?,quote_desktop(&profile.to_string_lossy())?);
     write_atomic(&launcher, desktop.as_bytes(), 0o644)?;
     Ok(
         json!({"installed":true,"executable":executable,"launcher":launcher,"profile":profile,"preferencesBackup":backup,"browserRestarted":false}),
@@ -152,7 +152,7 @@ pub fn launch(profile: &Path) -> Result<Value> {
                 }
             }
         }
-        bail!("Firefox가 이미 실행 중입니다. 저장할 내용을 마친 뒤 Firefox를 종료하고 ‘Firefox (Codex 연결)’을 실행하세요. 현재 프로필과 로그인 정보는 유지됩니다.");
+        bail!("Firefox is already running. Save your work, close Firefox, then open Firefox (Codex connection). Your profile and logins are preserved.");
     }
     let descriptor = profile.join("WebDriverBiDiServer.json");
     if descriptor.exists() {
@@ -194,7 +194,7 @@ pub fn launch(profile: &Path) -> Result<Value> {
 }
 pub fn notify_launch_error(message: &str) {
     let _ = Command::new("notify-send")
-        .args(["Firefox Codex 연결", message])
+        .args(["Firefox Codex connection", message])
         .status();
 }
 
@@ -222,6 +222,6 @@ mod tests {
         assert!(launch(root.path())
             .unwrap_err()
             .to_string()
-            .contains("이미 실행"));
+            .contains("already running"));
     }
 }

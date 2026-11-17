@@ -52,7 +52,7 @@ pub(crate) fn codex() -> Result<PathBuf> {
     candidates
         .into_iter()
         .find(|path| path.is_file())
-        .context("Codex를 먼저 설치하세요. Codex CLI 실행 파일을 찾지 못했습니다")
+        .context("Codex executable not found. Install the Codex app or CLI first")
 }
 #[cfg(unix)]
 fn cli(binary: &Path, root: &Path, args: &[&str]) -> Result<std::process::Output> {
@@ -68,7 +68,7 @@ pub(crate) fn configured(binary: &Path, root: &Path) -> Result<Option<Value>> {
     let result = cli(binary, root, &["mcp", "list", "--json"])?;
     ensure!(
         result.status.success(),
-        "Codex 설정을 읽지 못했습니다: {}",
+        "Could not read Codex settings: {}",
         String::from_utf8_lossy(&result.stderr)
     );
     let values: Vec<Value> = serde_json::from_slice(&result.stdout)?;
@@ -160,7 +160,7 @@ pub(crate) fn choose(candidates: &[(PathBuf, bool)]) -> Result<PathBuf> {
     } else {
         None
     };
-    selected.cloned().context("Firefox 프로필을 하나로 결정할 수 없습니다. Firefox를 한 프로필로 실행한 뒤 다시 설치하거나 --install PROFILE 경로를 지정하세요")
+    selected.cloned().context("Could not choose a single Firefox profile. Open one profile and try again, or specify its path with --install-bidi PROFILE")
 }
 pub(crate) fn guidance(old: &str) -> Result<String> {
     let block = format!("{START}\n{GUIDANCE}{END}");

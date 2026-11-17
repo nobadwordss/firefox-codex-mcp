@@ -140,8 +140,21 @@ fn isolated_run() -> Result<()> {
 }
 
 fn capture(driver: &Driver, out: &Path, seq: u64, view: &str) -> Result<()> {
-    save_desktop_screenshot(driver, out, seq, view)?;
     let path = out.join(format!("step-{seq}-{view}.png"));
+    if driver.popup_open.get() {
+        // The ordinary chrome screenshot omits remote extension popups.
+        // Capture the same popup actor used for its controls and text instead.
+        let png = driver.popup_command(
+            "return actor.takeScreenshot(null, 0, true, false);",
+            json!([]),
+        )?;
+        fs::write(
+            path.with_extension("png.b64"),
+            png.as_str().context("missing popup screenshot")?,
+        )?;
+    } else {
+        save_desktop_screenshot(driver, out, seq, view)?;
+    }
     let encoded = fs::read_to_string(path.with_extension("png.b64"))?;
     fs::write(
         path,
@@ -243,10 +256,10 @@ fn run_first_task(home: &Path, out: &Path, url: &str) -> Result<Value> {
     let work = home.join("first-web-task");
     fs::create_dir(&work)?;
     let prompt = format!(
-        "이 페이지를 브라우저 화면에서 열어 주세요: {url}\n\
-         화면의 Observation code를 읽고, Count 0 버튼을 딱 한 번 누른 뒤 \
-         Message 입력란에 그 코드를 입력해 주세요. 화면에 Count updated to 1이 \
-         표시되는지 확인하고 결과를 알려 주세요. 셸이나 스크립트로 대신 조작하지 마세요."
+        "Open this page in the browser: {url}\n\
+         Read the Observation code shown on the page, click Count 0 exactly once, \
+         and enter that code in Message. Check that Count updated to 1 is displayed \
+         and report the result. Do not control the page through shell commands or scripts."
     );
     fs::write(out.join("first-task-prompt.txt"), &prompt)?;
     let log = fs::File::create(out.join("codex.stderr.log"))?;
@@ -424,7 +437,8 @@ fn clean_distribution_first_web_task() -> Result<()> {
         let line = receive.recv_timeout(Duration::from_secs(15))??;
         let manager = line
             .trim()
-            .strip_prefix("Firefox Codex 관리: ")
+            .strip_prefix("Firefox Codex setup: ")
+            .or_else(|| line.trim().strip_prefix("Firefox Codex 관리: "))
             .context("Manager URL")?;
         let origin = manager.split('#').next().context("manager origin")?;
         let deadline = Instant::now() + Duration::from_secs(30);
@@ -453,6 +467,8 @@ fn clean_distribution_first_web_task() -> Result<()> {
             found,
             "The installer did not open its setup page in Firefox"
         );
+        let setup_language = driver.script("return document.documentElement.lang;", json!([]))?;
+        checkpoint(&out, &mut report, "setupLanguage", setup_language.clone())?;
         let deadline = Instant::now() + Duration::from_secs(15);
         while driver.script(
             "return document.querySelector('#install')?.disabled;",
@@ -480,7 +496,10 @@ fn clean_distribution_first_web_task() -> Result<()> {
                 "return document.querySelector('#result').textContent;",
                 json!([]),
             )?;
-            if text.as_str().is_some_and(|s| s.contains("설치 완료")) {
+            if text
+                .as_str()
+                .is_some_and(|s| s.contains("Connection installed") || s.contains("설치 완료"))
+            {
                 break;
             }
             ensure!(
@@ -585,6 +604,27 @@ fn clean_distribution_first_web_task() -> Result<()> {
             ensure!(doctor[field] == true, "Registration missing: {field}");
         }
         checkpoint(&out, &mut report, "registrationVerified", json!(true))?;
+        driver.popup_for("{a171de16-96b6-4e50-94b7-e0b54d94436a}")?;
+        let popup_language = driver.script("return document.documentElement.lang;", json!([]))?;
+        if setup_language == "en" {
+            ensure!(
+                popup_language == "en",
+                "The English setup bundled a non-English extension"
+            );
+            driver.wait_status("Connected")?;
+        }
+        let popup_status = driver.script(
+            "return document.querySelector('#status').textContent;",
+            json!([]),
+        )?;
+        checkpoint(
+            &out,
+            &mut report,
+            "extensionPopup",
+            json!({"language":popup_language,"status":popup_status}),
+        )?;
+        capture(&driver, &out, 5, "extension-popup")?;
+        driver.close_popup()?;
         Ok(())
     })();
     report["elapsedSeconds"] = json!(started.elapsed().as_secs_f64());

@@ -101,10 +101,10 @@ impl Router {
     }
     fn choose(&self) -> Result<Arc<Peer>> {
         if let Some(id) = &self.selected {
-            return self.peers.get(id).filter(|p|p.alive.load(Ordering::SeqCst)).cloned().context("선택한 Firefox가 연결되지 않았습니다. 해당 Firefox를 여세요. 다른 프로필로 자동 전환하지 않습니다.");
+            return self.peers.get(id).filter(|p|p.alive.load(Ordering::SeqCst)).cloned().context("The selected Firefox is offline. Open that Firefox profile. Another profile will not be selected automatically.");
         }
-        ensure!(self.peers.len()<=1,"Firefox 프로필이 여러 개 연결됐습니다. 사용할 Firefox 확장에서 ‘이 Firefox 사용’을 한 번 누르세요.");
-        self.peers.values().next().filter(|p|p.alive.load(Ordering::SeqCst)).cloned().context("Firefox 확장이 연결되지 않았습니다. 확장 설치 후 Firefox를 여세요. 코드·토큰·프로필 경로는 필요 없습니다.")
+        ensure!(self.peers.len()<=1,"Several Firefox profiles are connected. Choose Use this Firefox in the extension of the profile you want to use.");
+        self.peers.values().next().filter(|p|p.alive.load(Ordering::SeqCst)).cloned().context("The Firefox extension is disconnected. Install the extension and open Firefox. No code, token or profile path is needed.")
     }
 }
 struct Peer {

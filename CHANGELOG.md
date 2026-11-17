@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0-beta.2 — English defaults (unreleased)
+
+- Use English for Linux setup, CLI help, diagnostics, launchers and connection errors.
+- Use English for the Codex Work Tabs 0.4.1 extension controls and status messages.
+- Make installation guides English by default and retain separate Korean translations.
+- Verify the installed defaults with an English model request in an isolated home.
+- Preserve the 0.4.0 stable release and the existing Windows desktop validation limits.
+
 ## 0.5.0-beta.1 — Windows preview
 
 - Add Windows local Named Pipes with logon-session ACLs, remote-client rejection,

@@ -85,8 +85,9 @@ impl Layout {
             .mode(0o600)
             .custom_flags(libc::O_NOFOLLOW)
             .open(directory.join("install.lock"))?;
-        lock.try_lock()
-            .context("다른 설치/업데이트/제거가 진행 중입니다. 완료 후 다시 시도하세요.")?;
+        lock.try_lock().context(
+            "Another installation, update or removal is running. Try again after it finishes.",
+        )?;
         Ok(Self {
             executable: home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp"),
             receipt: directory.join("install.json"),
@@ -167,7 +168,7 @@ fn restore(changes: &[Change]) -> Result<()> {
         if current == change.before {
             continue;
         }
-        ensure!(current==change.after,"설정이 외부에서 변경되어 자동 복구를 멈췄습니다: {}. 백업 transaction.json을 보존했습니다.",change.path.display());
+        ensure!(current==change.after,"Settings changed outside setup, so automatic recovery stopped: {}. The transaction.json backup was preserved.",change.path.display());
         put(&change.path, &change.before)?;
     }
     Ok(())
@@ -189,7 +190,7 @@ fn transact(layout: &Layout, changes: Vec<Change>) -> Result<()> {
     for c in &changes {
         ensure!(
             snapshot(&c.path)? == c.before,
-            "설정이 변경됐습니다. 다시 시도하세요: {}",
+            "Settings changed. Try again: {}",
             c.path.display()
         );
     }
@@ -198,14 +199,14 @@ fn transact(layout: &Layout, changes: Vec<Change>) -> Result<()> {
         let write = (|| {
             ensure!(
                 snapshot(&c.path)? == c.before,
-                "설정이 변경됐습니다: {}",
+                "Settings changed: {}",
                 c.path.display()
             );
             put(&c.path, &c.after)
         })();
         if let Err(error) = write {
             restore(&changes)
-                .context("설치 실패 후 복구를 완료하지 못했습니다. --repair를 실행하세요")?;
+                .context("Recovery after installation failure did not finish. Run --repair")?;
             remove_durable(&layout.pending)?;
             return Err(error);
         }
@@ -234,7 +235,7 @@ fn strip_marked(value: &str, start: &str, end: &str) -> Result<String> {
         {
             Ok(format!("{}{}", &value[..a], &value[b + end.len()..]))
         }
-        _ => bail!("설정의 관리 표시가 손상됐습니다. 기존 내용을 보존합니다."),
+        _ => bail!("Managed configuration markers are incomplete. Existing content was preserved."),
     }
 }
 // Run the official CLI against a staging config. The live config changes only
@@ -279,7 +280,7 @@ fn prepare_config(
         let output = command.output()?;
         ensure!(
             output.status.success(),
-            "Codex 설정 준비 실패: {}",
+            "Could not prepare Codex settings: {}",
             String::from_utf8_lossy(&output.stderr)
         );
         let mut after = snapshot(&stage.join("config.toml"))?;
@@ -311,7 +312,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
     let prior = layout.receipt()?;
     ensure!(
         !update_only || prior.is_some() || layout.executable.exists(),
-        "아직 설치되지 않았습니다. 먼저 설치를 선택하세요."
+        "The connection is not installed. Choose Install connection first."
     );
     let extension =
         explicit.is_none() && !(update_only && prior.as_ref().is_some_and(|p| p.mode == "bidi"));
@@ -329,18 +330,18 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
     if let Some(prior) = &prior {
         ensure!(
             prior.codex_home == layout.root,
-            "설치 당시 CODEX_HOME을 사용하세요."
+            "Use the CODEX_HOME from the original installation."
         );
         ensure!(
             extension || prior.mode != "bidi" || prior.profile == profile,
-            "BiDi 프로필을 바꾸려면 기존 설치를 먼저 제거하세요."
+            "Remove the existing installation before changing the BiDi profile."
         );
     }
     fs::create_dir_all(&layout.root)?;
     if o::configured(&o::codex()?, &layout.root)?.is_some() {
         ensure!(
             owned_registration(&layout)?,
-            "다른 firefox MCP 설정을 보존합니다. 기존 연결을 먼저 확인하세요."
+            "Another Firefox MCP configuration was preserved. Review the existing connection first."
         );
     }
     setup::private_dir(
@@ -363,7 +364,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
     let management = layout
         .home
         .join(".local/share/applications/firefox-codex-manager.desktop");
-    let manager=format!("[Desktop Entry]\nType=Application\nName=Firefox Codex 관리\nExec={} --manage\nIcon=firefox\nTerminal=false\nCategories=Settings;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?);
+    let manager=format!("[Desktop Entry]\nType=Application\nName=Firefox Codex Manager\nExec={} --manage\nIcon=firefox\nTerminal=false\nCategories=Settings;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?);
     let mut entries = vec![
         (
             agents,
@@ -406,7 +407,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
                 .is_some_and(|p| p.files.iter().any(|f| f.path == manifest))
         {
             anyhow::bail!(
-                "기존 Native Messaging 등록을 보존합니다: {}",
+                "Existing Native Messaging registration was preserved: {}",
                 manifest.display()
             );
         }
@@ -431,7 +432,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
                 }
             )
         };
-        let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex 연결)\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?,setup::quote_desktop(&profile.to_string_lossy())?);
+        let desktop=format!("[Desktop Entry]\nType=Application\nName=Firefox (Codex connection)\nExec={} --launch-firefox {}\nIcon=firefox\nTerminal=false\nCategories=Network;WebBrowser;\n",setup::quote_desktop(&layout.executable.to_string_lossy())?,setup::quote_desktop(&profile.to_string_lossy())?);
         entries.push((
             layout
                 .home
@@ -463,14 +464,14 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             if let Some(expected) = &previous.block {
                 ensure!(
                     text(&before)?.contains(expected),
-                    "관리 영역이 수정됐습니다. 내용을 보존합니다: {}",
+                    "A managed section was changed. Its content was preserved: {}",
                     path.display()
                 );
             }
         } else if path.ends_with("SKILL.md") && before.is_some() {
             ensure!(
                 text(&before)? == o::SKILL,
-                "기존 firefox-browser 스킬을 보존합니다"
+                "The existing firefox-browser skill was preserved"
             );
         }
         if has_existing_pref && path.ends_with("user.js") {
@@ -562,7 +563,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             .output()
             .is_ok_and(|o| o.status.success());
     Ok(
-        json!({"restartRequired":restart_required,"installed":true,"version":receipt.version,"mode":receipt.mode,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":if extension {"연결 프로그램 설치 완료. 이 화면의 ‘Firefox에 Codex Work Tabs 확장 추가’를 누른 뒤 새 Codex 채팅에서 웹 작업을 요청하세요. 코드·토큰·프로필 경로는 필요 없습니다. 업데이트 시 이전 작업 탭 접근은 해제되며 Firefox는 계속 실행됩니다. 확장은 Firefox 부가 기능 관리자에서 별도로 제거합니다."} else {"설치 완료. 새 Codex 채팅에서 웹 작업을 요청하세요. 일반 모드 Firefox가 켜져 있다면 저장 후 ‘Firefox (Codex 연결)’로 한 번 다시 여세요. 다음부터 Firefox Codex 관리에서 진단·제거할 수 있습니다. 업데이트는 새 패키지의 설치 화면을 여세요."}}),
+        json!({"restartRequired":restart_required,"installed":true,"version":receipt.version,"mode":receipt.mode,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":if extension {"Connection installed. Choose Add Codex Work Tabs to Firefox, then request a browser task in a new Codex chat. No code, token or profile path is needed. Updates revoke previous work-tab access and keep Firefox running. Remove the extension separately in Firefox Add-ons."} else {"Installation complete. Request a browser task in a new Codex chat. If ordinary Firefox is running, save your work and reopen it once with Firefox (Codex connection). Use Firefox Codex Manager for diagnosis and removal. Open setup from a newer package to update."}}),
     )
 }
 pub fn uninstall() -> Result<Value> {
@@ -570,12 +571,12 @@ pub fn uninstall() -> Result<Value> {
     recover(&layout)?;
     let Some(receipt) = layout.receipt()? else {
         return Ok(
-            json!({"removed":false,"nextStep":"설치 기록이 없습니다. 이전 개발 버전은 새 패키지를 한 번 설치한 뒤 제거하세요."}),
+            json!({"removed":false,"nextStep":"No installation record was found. For an older development version, install a current package once before removing it."}),
         );
     };
     ensure!(
         receipt.codex_home == layout.root,
-        "설치 당시 CODEX_HOME을 사용하세요."
+        "Use the CODEX_HOME from the original installation."
     );
     let mut changes = Vec::new();
     let mut preserved = Vec::new();
@@ -587,7 +588,7 @@ pub fn uninstall() -> Result<Value> {
             true,
         )?);
     } else {
-        preserved.push("변경된 또는 제거된 Firefox MCP 등록".into());
+        preserved.push("Modified or missing Firefox MCP registration".into());
     }
     for file in &receipt.files {
         let current = snapshot(&file.path)?;
@@ -636,7 +637,7 @@ pub fn uninstall() -> Result<Value> {
     });
     transact(&layout, changes)?;
     Ok(
-        json!({"removed":true,"preservedModifiedFiles":preserved,"nextStep":"제거 완료. Firefox 프로필·로그인·결과 탭은 보존했습니다. 이미 열린 Codex 채팅은 종료해야 기존 도구 연결도 끝납니다. Firefox의 현재 실행 옵션과 메모리에 적용된 설정은 다음 정상 재시작 때 바뀝니다."}),
+        json!({"removed":true,"preservedModifiedFiles":preserved,"nextStep":"Connection removed. Firefox profiles, logins and result tabs were preserved. Close existing Codex chats to end their running tool connections. Firefox launch options and in-memory preferences change on its next normal restart."}),
     )
 }
 pub fn repair() -> Result<Value> {

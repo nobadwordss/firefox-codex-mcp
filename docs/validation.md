@@ -1,14 +1,20 @@
-# 검증 기록
+# Validation history
 
-Linux 첫 설치: [공개 0.4.0 배포 파일·빈 홈·실제 모델의 첫 웹 작업](linux-first-install-e2e-2026-11-17.json).
-기존 설정은 가리고 로그인만 읽기 전용으로 연결했습니다. 새 OS나 초보 사용자 사용성
-시험과는 구분하며, [처음 설치 안내](first-install-linux.md)에 실행·승인·첫 작업 단계를 보완했습니다.
+English defaults, next preview 0.5.0-beta.2: [isolated installation, actual model task and signed extension 0.4.1](english-default-e2e-2026-11-17.json).
+This is a local candidate build, not a replacement for the published stable archive.
 
-Windows 0.5.0-beta.1: [Windows Server 실제 설치·Codex–Firefox E2E·배포 ZIP 검증](windows-e2e-2026-11-17.json).
-Windows 10/11 데스크톱·실제 모델의 자동 도구 선택·SmartScreen 검증은 아직 남아 있습니다.
+Linux first installation: [public 0.4.0 archive, clean home and actual model task](linux-first-install-e2e-2026-11-17.json).
+Existing settings were hidden and only the login was mounted read-only. This is
+distinct from a fresh OS or novice user study. See the [first-install guide](first-install-linux.md).
 
-최신 0.4.0: [채팅 연속성·실제 데스크톱·서명 확장 검증](chat-continuity-e2e-2026-11-17.json).
-아래는 이전 버전의 역사적 검증이며 현재 기본 연결 방식은 Native Messaging 확장입니다.
+Windows 0.5.0-beta.1: [Windows Server installation, Codex–Firefox E2E and extracted ZIP](windows-e2e-2026-11-17.json).
+Windows 10/11 desktop, actual model tool selection and SmartScreen remain unverified.
+
+Stable 0.4.0: [chat continuity, actual desktop chats and signed extension](chat-continuity-e2e-2026-11-17.json).
+The historical notes below retain their original Korean text. The current default
+connection uses the Native Messaging extension.
+
+## Historical records (Korean)
 
 2026-11-16, Fedora 45 / Firefox 160.0 / geckodriver 0.37.1 기준입니다.
 
@@ -77,7 +83,7 @@ SIGKILL·브로커 충돌처럼 종료 처리가 실행될 수 없는 경우 Fir
 있습니다. 순수 BiDi 세션은 새 연결에서 세션 ID만으로 안전하게 회수할 수 있다고 보장하지
 않습니다. 다른 디버거의 세션을 강제 종료하거나 사용자 작업 중인 Firefox를 자동 종료하지 않습니다.
 
-## 현재 기본 방식: 직접 BiDi 연결
+## 당시 기본 방식: 직접 BiDi 연결 (2026-11-16)
 
 2026-11-16, Firefox 160.0 / Codex 데스크톱 26.1111.21308에서 검증했습니다.
 사용자 승인 후 **현재 사용 중인 프로필**을 디버깅 모드로 재시작했습니다.

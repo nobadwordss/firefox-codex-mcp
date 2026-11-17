@@ -33,7 +33,7 @@ fn address() -> Result<String> {
     } else if let Some(profile) = env::var_os("FIREFOX_MCP_PROFILE") {
         let path = PathBuf::from(profile).join("WebDriverBiDiServer.json");
         let file = OpenOptions::new().read(true).custom_flags(libc::O_NOFOLLOW).open(&path)
-            .context("현재 Firefox에 디버깅 연결이 없습니다. 같은 프로필로 --remote-debugging-port 0 옵션을 사용해 시작하세요")?;
+            .context("Firefox has no debugging connection. Start the same profile with --remote-debugging-port 0")?;
         ensure!(
             file.metadata()?.len() <= 4096 && file.metadata()?.uid() == uid(),
             "Invalid Firefox debug descriptor"
@@ -165,7 +165,7 @@ async fn handshake(socket: UnixStream) -> Result<BufReader<UnixStream>> {
     socket.get_mut().flush().await?;
     let reply = timeout(Duration::from_secs(3), read_line(&mut socket)).await??;
     ensure!(reply.is_some_and(|r| r["ok"] == true && r["value"]["protocol"] == BROKER_PROTOCOL),
-        "Firefox MCP 업데이트 전의 연결이 남아 있습니다. 기존 Firefox 도구 채팅을 종료하고 10초 뒤 새 채팅에서 다시 시도하세요. Firefox를 강제로 종료하지 않았습니다.");
+        "A connection from before the Firefox MCP update is still active. Close existing Firefox tool chats, wait 10 seconds, then try a new chat. Firefox was not forcibly closed.");
     Ok(socket)
 }
 
@@ -258,7 +258,7 @@ impl State {
             if name == "firefox_status" {
                 return Ok(
                     json!({"connected":false,"mode":"bidi","ownedTabs":0,"tabEnabled":false,
-                    "nextStep":"Firefox가 실행 중이라면 저장 후 한 번 종료하고 ‘Firefox (Codex 연결)’로 다시 여세요. Firefox가 꺼져 있고 프로필 설정이 되어 있으면 firefox_open_tab이 자동으로 시작합니다. 확장·토큰·탭 허용은 필요 없습니다.","diagnostic":reason.to_string()}),
+                    "nextStep":"If Firefox is running, save your work, close it once and open Firefox (Codex connection). If Firefox is closed and a profile is configured, firefox_open_tab starts it automatically. This advanced mode needs no extension, token or per-tab grant.","diagnostic":reason.to_string()}),
                 );
             }
             return Err(reason);
@@ -510,7 +510,7 @@ mod tests {
                 .unwrap();
         });
         let error = handshake(client).await.err().unwrap();
-        assert!(error.to_string().contains("업데이트 전의 연결"));
+        assert!(error.to_string().contains("before the Firefox MCP update"));
         old.await.unwrap();
     }
     #[test]

@@ -7,4 +7,4 @@ fi
 if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
     exec "$package_dir/firefox-codex-mcp" --manage
 fi
-printf '%s\n' '그래픽 환경이 없습니다. 직접 설치: ./install.sh --install' '관리 주소만 열기: ./install.sh --manage-no-open'
+printf '%s\n' 'No graphical session detected. Install directly: ./install.sh --install' 'Print the setup URL without opening a browser: ./install.sh --manage-no-open'

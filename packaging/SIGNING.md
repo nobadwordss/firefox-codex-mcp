@@ -4,7 +4,24 @@ The `*-unsigned.xpi` in this package is a review/development artifact. It is NOT
 an installable permanent add-on for standard Firefox. Do not present temporary
 `about:debugging` loading as normal installation or as a persistent restart test.
 
-## 0.4.0 signed release
+## 0.4.1 signed English build
+
+Mozilla approved Codex Work Tabs 0.4.1 for unlisted/direct distribution on
+2026-11-17. It translates the extension controls, status and help to English.
+The ID, permissions and native protocol are unchanged.
+AMO version: 6720447; file: 5264530. An archive of the readable extension source,
+privacy policy and reproduction instructions was provided for review.
+Signed artifact: `codex-work-tabs-0.4.1.xpi`.
+SHA256: `4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc`.
+
+Current source builds embed this artifact and compare every runtime file against
+it before packaging. The published helper stable release remains 0.4.0.
+Permanent installation through Firefox's actual confirmation controls, restart,
+two profiles, chat continuity and irreversible revocation passed on Linux with
+Firefox 160. The English clean-home model task also passed. See
+[the verification record](https://github.com/nobadwordss/firefox-codex-mcp/blob/main/docs/english-default-e2e-2026-11-17.json).
+
+## Historical 0.4.0 signed release
 
 Mozilla approved Codex Work Tabs 0.4.0 for unlisted/direct distribution.
 Extension ID: `{a171de16-96b6-4e50-94b7-e0b54d94436a}`.
@@ -15,7 +32,7 @@ SHA256: `a96a8c21d5007f5131ae3e0cb9f18547f8938ce36b234cec6abdfeb8eb72c6e2`.
 The package builder compares every runtime file with the signed archive (manifest
 JSON semantically, JavaScript/HTML/CSS and PNG icons byte-for-byte). Firefox 160 accepted permanent
 installation and retained the add-on across restart without reinstalling it.
-The helper and installer embed this same signed artifact.
+The published 0.4.0 and Windows beta.1 helper and installer embed this artifact.
 
 This does not create a searchable AMO listing. There is no automatic extension
 update URL: install a new signed XPI for future extension releases.

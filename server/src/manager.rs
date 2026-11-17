@@ -37,7 +37,7 @@ fn action(request: Value) -> Result<Value> {
             let selected = request["profile"]
                 .as_str()
                 .and_then(|path| list.iter().find(|(p, _)| p.to_str() == Some(path)))
-                .context("고급 BiDi 방식에 사용할 Firefox 프로필을 선택하세요")?;
+                .context("Choose a Firefox profile for advanced BiDi mode")?;
             lifecycle::install(
                 Some(&selected.0.to_string_lossy()),
                 request["action"] == "update",
@@ -105,7 +105,7 @@ async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> 
             &mut stream,
             "200 OK",
             "application/x-xpinstall",
-            include_bytes!("../../packaging/signed/codex-work-tabs-0.4.0.xpi"),
+            include_bytes!("../../packaging/signed/codex-work-tabs-0.4.1.xpi"),
         )
         .await?;
         return Ok(false);
@@ -140,7 +140,7 @@ async fn handle(mut stream: TcpStream, host: &str, token: &str) -> Result<bool> 
             &mut stream,
             "200 OK",
             "application/json",
-            "{\"ok\":true,\"result\":{\"nextStep\":\"관리 화면을 닫아도 됩니다.\"}}",
+            "{\"ok\":true,\"result\":{\"nextStep\":\"Setup service closed. You may close this tab.\"}}",
         )
         .await?;
         return Ok(true);
@@ -171,7 +171,7 @@ pub async fn serve(no_open: bool) -> Result<()> {
     let host = listener.local_addr()?.to_string();
     let token = crate::random_hex(32)?;
     let url = format!("http://{host}/#{token}");
-    println!("Firefox Codex 관리: {url}");
+    println!("Firefox Codex setup: {url}");
     if !no_open {
         #[cfg(unix)]
         {

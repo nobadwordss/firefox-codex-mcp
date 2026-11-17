@@ -13,7 +13,7 @@ let port = null,
   enabled = true,
   preferred = null,
   profileCount = 0;
-let status = "연결 프로그램을 확인하고 있습니다.",
+let status = "Checking the local helper.",
   retry = null,
   queue = Promise.resolve();
 function revokeOwner(id) {
@@ -349,15 +349,15 @@ function connect() {
     const error = current.error?.message;
     disconnect();
     status = error
-      ? "연결 프로그램을 찾지 못했습니다. 설치 프로그램을 한 번 실행하세요."
-      : "연결이 끊어졌습니다. 자동 재연결 중입니다.";
+      ? "Local helper not found. Run the setup program once."
+      : "Connection lost. Reconnecting automatically.";
     schedule();
   });
   current.onMessage.addListener((message) => {
     if (port !== current || started !== epoch) return;
     if (message.kind === "ready") {
       connected = true;
-      status = "연결됨. AI가 작업 탭을 직접 열 수 있습니다.";
+      status = "Connected. Codex can open its own work tabs.";
       return;
     }
     if (message.kind === "configuration") {
@@ -446,7 +446,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
     await browser.storage.local.set({ nativeEnabled: true });
     connect();
   } else if (message.action === "choose") {
-    if (!connected) throw Error("연결 프로그램을 먼저 설치하세요.");
+    if (!connected) throw Error("Install the local helper first.");
     revokeAll();
     port.postMessage({ kind: "selectProfile" });
   } else if (message.action === "revoke") {
@@ -480,5 +480,5 @@ browser.alarms.onAlarm.addListener(() => {
 });
 browser.alarms.create("connection", { periodInMinutes: 1 });
 const initialized = initialize().catch(() => {
-  status = "설정 저장에 실패했습니다.";
+  status = "Could not save connection settings.";
 });

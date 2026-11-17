@@ -1,0 +1,207 @@
+{
+  "date": "2026-11-17",
+  "status": "Passed locally; next-preview source, not a published helper release",
+  "helperVersion": "0.5.0-beta.2",
+  "baseCommit": "951d0ca125cc1edcf48e714b4479ee3c0aa016e2",
+  "build": "Base commit plus English-default changes in this commit; extracted local distribution outside the checkout",
+  "publishedReleases": {
+    "stable": "0.4.0, unchanged",
+    "windowsPreview": "0.5.0-beta.1, unchanged"
+  },
+  "environment": {
+    "os": "Fedora Linux 45 x86_64",
+    "firefox": "160.0, ordinary Firefox, headless disposable profiles",
+    "codex": "0.169.0-alpha.11.1, native local CLI, actual model task",
+    "model": "CLI default selection, not pinned or overridden",
+    "geckodriver": "0.36.0",
+    "bubblewrap": "0.13.1"
+  },
+  "englishDefaults": [
+    "Linux setup and first-task guidance",
+    "Extension popup, buttons, help and status",
+    "CLI help, launchers and connection errors",
+    "Primary installation guides; Korean translations separate",
+    "Mozilla add-on default locale and metadata: English (US)"
+  ],
+  "signedExtension": {
+    "version": "0.4.1",
+    "distribution": "Mozilla-signed unlisted/direct distribution",
+    "amoVersion": 6720447,
+    "amoFile": 5264530,
+    "sha256": "4a1685b820ef279e580b0a790540b165d529852b91e8e8631cbc8f61956d8ddc",
+    "permissionsIdAndProtocolUnchanged": true,
+    "signedSourceGuard": "Passed: manifest compared semantically; each runtime script, HTML, CSS and icon compared byte-for-byte before packaging",
+    "metadataScreenshot": "assets/mozilla-english-default-2026-11-17.jpg"
+  },
+  "candidate": {
+    "archive": "firefox-codex-mcp-0.5.0-beta.2-linux-x86_64.tar.gz",
+    "archiveSha256": "401486a0ae8a25a2a427e8e5aab9eb400fdfe31dd7e8a3bab41be6f0a79517bb",
+    "binarySha256": "2b784ae502e78c8e16456605cdd82e6083577d2a0416bd714e7860f8ce178b8a",
+    "scope": "Exact archive used for this run. Later evidence-only documentation additions are not in that archive."
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "clippyAllTargetsWarningsDenied": "passed",
+    "rustUnitTests": 25,
+    "rustProcessTests": 1,
+    "javascriptTests": 64,
+    "webExtLint": {
+      "errors": 0,
+      "warnings": 0,
+      "notices": 0
+    },
+    "shellSyntax": "passed",
+    "nativeSignedFirefoxE2ETests": 2,
+    "cleanHomeModelRuns": 2,
+    "popupScreenshot": "Captured from the actual remote popup actor; the ordinary chrome screenshot omits this popup"
+  },
+  "firstRun": {
+    "actualCodexModel": {
+      "answer": "Clicked Count 0 exactly once and entered observation code `cc44b8d9` in Message. Confirmed the page displays “Count updated to 1.”",
+      "approvalMode": "approve-for-me (automatic review)",
+      "calls": [
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_open_tab"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_click"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_type"
+        },
+        {
+          "error": null,
+          "failureContent": null,
+          "isError": null,
+          "server": "firefox",
+          "status": "completed",
+          "tool": "firefox_snapshot"
+        }
+      ],
+      "completed": true,
+      "installedSkillRead": true,
+      "mcpConfigurationOverridden": false,
+      "toolNamedInPrompt": false
+    },
+    "automaticRegistration": {
+      "guidance": true,
+      "mcp": true,
+      "nativeHost": true,
+      "skill": true
+    },
+    "elapsedSeconds": 35.503496907,
+    "extensionPopup": {
+      "language": "en",
+      "status": "Connected. Codex can open its own work tabs."
+    },
+    "independentDomReadback": {
+      "code": "cc44b8d9",
+      "count": "Count 1",
+      "input": "cc44b8d9",
+      "status": "Count updated to 1"
+    },
+    "initialState": {
+      "guidance": false,
+      "mcp": false,
+      "nativeHost": false,
+      "skill": false
+    },
+    "instrumentation": "Headless Firefox with Marionette; normal installer and Firefox permission controls",
+    "login": "read-only mount",
+    "packageOnly": true,
+    "registrationVerified": true,
+    "scriptLaunchedManagerAndFirefox": true,
+    "setupLanguage": "en",
+    "signedExtensionInstalledThroughFirefoxPrompts": true,
+    "status": "passed"
+  },
+  "isolation": {
+    "credentialsCopied": false,
+    "filesChecked": [
+      ".codex/config.toml",
+      ".codex/AGENTS.md",
+      ".codex/skills/firefox-browser/SKILL.md",
+      ".codex/auth.json",
+      ".mozilla/native-messaging-hosts/firefox_codex_mcp.json",
+      ".local/lib/firefox-codex-mcp/firefox-codex-mcp",
+      ".local/lib/firefox-codex-mcp/native-host",
+      ".config/mozilla/firefox/profiles.ini",
+      ".mozilla/firefox/profiles.ini"
+    ],
+    "loginMountedReadOnly": true,
+    "originalSettingsUnchanged": true,
+    "realHomeHidden": true,
+    "systemReadOnly": true,
+    "testAccountRemovedOnExit": true
+  },
+  "nativeInstallRestartAndProfiles": {
+    "firstInstall": true,
+    "multiProfile": true,
+    "offlineNoFallback": true,
+    "permanentSignedRestartVerified": true,
+    "restartReconnect": true,
+    "signedInstallUi": true,
+    "temporaryAddonReloaded": false,
+    "twoChats": true
+  },
+  "chatContinuityAndRevocation": {
+    "crossChatDenied": true,
+    "detachedToolbarRevoke": true,
+    "independentFormStateReadback": true,
+    "lateEofIsolation": true,
+    "overlapFencing": true,
+    "restartDoesNotRestoreAccess": true,
+    "revokeIrreversible": true,
+    "sameTabAcrossProcesses": true,
+    "signed": true,
+    "staleSnapshotRejected": true
+  },
+  "screenshots": [
+    "assets/english-setup-2026-11-17.png",
+    "assets/english-first-task-guide-2026-11-17.png",
+    "assets/english-first-web-task-2026-11-17.png",
+    "assets/english-extension-popup-2026-11-17.png"
+  ],
+  "artifactsLocal": "/tmp/firefox-english-2026-11-17-gacItv/artifacts",
+  "limits": [
+    "Clean home with existing system prerequisites, not a fresh OS installation",
+    "Existing Codex login mounted read-only; prerequisite installation and new-account sign-in not tested",
+    "Headless/Marionette automation invoked real Firefox confirmation controls",
+    "Actual model ran with --approve-for-me automatic approval review for this invocation",
+    "No manual novice usability study, desktop GUI approval-prompt test or Linux file-manager double-click acceptance",
+    "Windows 10/11 desktops, SmartScreen and Windows model-driven discovery remain unverified",
+    "No side-by-side execution or measured advantage over competing tools"
+  ],
+  "reviewBoundary": "Retains the previously discussed Gemini boundary: clean user home with installed prerequisites and automated confirmations is distinct from a clean OS or novice study; no new independent Gemini execution claimed"
+}

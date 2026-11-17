@@ -447,7 +447,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some("--help" | "-h") => {
-            println!("Firefox Codex MCP\n--manage        설치·업데이트·제거 화면\n--install       확장 연결 프로그램 설치\n--install-bidi [PROFILE] 고급 디버깅 방식 설치\n--update        이 패키지로 업데이트\n--uninstall     사용자 설정을 보존하며 제거\n--doctor        연결 진단(JSON)\n--repair        중단된 설치 복구\n--version       버전 확인");
+            println!("Firefox Codex MCP\n--manage        Open setup, update and removal\n--install       Install the Firefox extension connection\n--install-bidi [PROFILE] Install advanced debugging mode\n--update        Update using this package\n--uninstall     Remove the connection and preserve user changes\n--doctor        Check setup (JSON)\n--repair        Recover an interrupted installation\n--version       Show the version");
             return Ok(());
         }
         Some("--install-bidi") => {
@@ -463,7 +463,12 @@ async fn main() -> Result<()> {
         }
         Some("--install") => {
             let value = onboarding::install(env::args().nth(2).as_deref())?;
-            println!("{}", value["nextStep"].as_str().unwrap_or("설치 완료"));
+            println!(
+                "{}",
+                value["nextStep"]
+                    .as_str()
+                    .unwrap_or("Installation complete")
+            );
             return Ok(());
         }
         Some("--doctor") => {

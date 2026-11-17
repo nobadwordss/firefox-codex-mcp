@@ -1,55 +1,58 @@
-Firefox Codex MCP 0.4.0 — Linux x86_64
+Firefox Codex MCP — Linux x86_64
 
-English instructions: README.md. 한국어 설명: README.ko.md.
+English instructions: README.md. Korean translation: README.ko.md and INSTALL.ko.txt.
 
-필요한 것: 일반 Linux Firefox 140+와 로컬 Codex 앱 또는 CLI.
-Rust/Node, 연결 코드/토큰/프로필 경로 입력은 필요 없습니다.
-Windows/macOS, Snap/Flatpak, Android는 지원 검증하지 않았습니다.
+Requirements: ordinary Firefox 140+ and the local Codex app or CLI.
+Rust, Node, pairing codes, tokens and profile paths are not needed.
+Windows has a separate preview. macOS, Snap/Flatpak Firefox and Android are not validated.
 
-처음 설치
-1. Codex를 열어 로그인할 수 있는지 확인하고 일반 Firefox를 준비합니다.
-2. 배포 압축 파일을 완전히 풉니다. 압축 파일 안에서 실행하지 마세요.
-   풀린 폴더에서 “여기서 터미널 열기”를 선택하고 다음 한 줄을 실행합니다.
+First installation
+1. Open Codex and check that you can sign in. Install ordinary desktop Firefox.
+2. Fully extract the downloaded archive. Do not run setup from inside the archive.
+   Open a terminal in the extracted folder and run:
    ./install.sh
-   파일 관리자에서 실행을 지원하면 install.sh를 실행해도 됩니다.
-   편집기가 열리면 위 터미널 방식을 사용하세요. 관리자 권한은 필요 없습니다.
-3. Firefox에 열린 관리 화면에서 설치 → 진행을 누릅니다.
-   연결 설정과 브라우저 사용 스킬은 자동으로 설치됩니다. 별도 설치가 필요 없습니다.
-4. 같은 화면의 “Firefox에 Codex Work Tabs 확장 추가”를 누릅니다.
-   Firefox에서 설치 계속 → 추가를 눌러 권한 안내를 확인합니다.
-   Mozilla 서명된 codex-work-tabs-0.4.0.xpi가 포함되어 있습니다.
-   *-unsigned.xpi는 개발/심사 전용입니다. SIGNING.md 참고.
-5. Codex에서 새 채팅을 열고 다음처럼 요청합니다.
-   https://example.com을 브라우저로 열고, Learn more 링크를 눌러 이동한 페이지 제목을 알려줘.
-   새 Firefox 작업 탭이 열리고 링크를 눌러 결과를 알려주면 첫 연결이 확인됩니다.
-   도구 승인 요청이 나오면 요청한 작업인지 확인한 뒤 허용하세요.
+   A file manager that supports running scripts can also launch install.sh directly.
+   If it opens in an editor, use the terminal command above. No administrator rights are needed.
+3. In the Firefox setup page, choose Install connection, then Continue.
+   The installer registers MCP and installs the browser skill and guidance automatically.
+   You do not need to install the skill separately or edit configuration files.
+4. Choose Add Codex Work Tabs to Firefox in the same setup page.
+   Confirm Firefox's Continue Installation/Allow and Add prompts.
+   The package includes Mozilla-signed codex-work-tabs-0.4.1.xpi.
+   The *-unsigned.xpi is for development/review only; see SIGNING.md.
+5. Open a new Codex chat and try:
+   Open https://example.com in the browser, click Learn more, and tell me the destination page title.
+   A new Firefox work tab and a successful link click confirm the connection.
+   Review any tool approval request for the web task you asked for.
 
-막힐 때
-- 파일 실행 시 편집기가 열림: 압축을 푼 폴더의 터미널에서 ./install.sh 실행.
-- Codex를 찾지 못함: Codex 앱/CLI 설치를 확인한 뒤 관리 화면을 다시 엽니다.
-- 연결 설정은 등록됐지만 도구가 안 보임: Codex 앱을 다시 열어 새 채팅에서 요청.
-- 확장 연결이 중지됨: 사용할 Firefox의 확장 버튼에서 연결 재개.
-- 도구 승인이 차단됨: 관리자가 허용한 승인 절차를 사용하세요. 설치기는 승인 정책을 바꾸지 않습니다.
-  비대화형 codex exec는 일반 채팅과 승인 방식이 다릅니다. 첫 사용은 Codex 앱 또는 대화형 CLI에서 확인하세요.
+If something goes wrong
+- Script opens in an editor: run ./install.sh from a terminal in the extracted folder.
+- Codex is not found: check your Codex app/CLI installation, then reopen setup.
+- Settings are registered but tools are missing: reopen Codex and start a new chat.
+- Extension is paused: open its button in the Firefox you want to use and choose Resume.
+- Tool approval is denied: use the approval process allowed by your administrator.
+  Setup never changes approval policy. Non-interactive codex exec has different
+  approval behavior; first try the Codex app or interactive CLI.
 
-단계별 설명: docs/first-install-linux.md
+Step-by-step guide: docs/first-install-linux.md
 
-같은 채팅은 다음 메시지에서도 작업 탭을 이어 씁니다. 24시간 무요청, 접근 해제,
-중지, Firefox/연결 프로그램 재시작 시 제어권은 해제되고 결과 탭은 남습니다.
+In the same chat, work tabs continue across turns. Access ends after 24 hours without
+a request, explicit revocation, pause or a Firefox/helper restart. Result tabs stay open.
 
-확장은 실행 중인 Firefox 프로필에서 자동 연결합니다. 여러 프로필이면 원하는
-Firefox 확장에서 ‘이 Firefox 사용’을 한 번 누릅니다. 선택한 프로필이 꺼지면
-다른 프로필로 전환하지 않습니다. Firefox가 모두 꺼졌을 때 일반 실행을 시도하지만,
-다른 프로필이 기본값이면 원하는 Firefox를 직접 열어야 합니다.
+A single connected Firefox profile is selected automatically. With several profiles,
+choose Use this Firefox in the intended profile. An offline selected profile never
+silently falls back to another. If the selected profile is not Firefox's default,
+you may need to open that profile yourself.
 
-업데이트: 새 패키지의 install.sh → 업데이트. Firefox를 종료하지 않습니다.
-이전 작업 탭 접근을 해제하고 연결 프로그램을 다시 연결합니다. 새 채팅에서 시작하세요.
-확장 업데이트는 Firefox 부가 기능 관리자에서 새 서명 XPI를 설치합니다.
-직접 배포 XPI에는 자동 업데이트 채널이 없습니다. AMO 목록 배포는 별도 단계입니다.
+Update: run install.sh from the newer package and choose Update connection.
+Firefox stays open. Previous work-tab access is revoked; start a new chat afterwards.
+To update the extension, install the new signed XPI through Firefox's Add-ons Manager.
+Direct-distribution XPIs do not currently have an automatic update channel.
 
-제거: Firefox Codex 관리 → 제거. 확장은 Firefox 부가 기능 관리자에서 별도로 제거.
-Firefox 프로필·로그인·결과 탭과 사용자가 수정한 파일은 보존됩니다.
-기존 Codex 채팅을 종료하면 이전 도구 연결도 끝납니다.
+Remove: open Firefox Codex Manager and choose Remove connection.
+Remove the extension separately in Firefox Add-ons Manager.
+Firefox profiles, logins, result tabs and user changes are preserved.
+Close existing Codex chats to end their already-running tool connections.
 
 ./install.sh --install
 ./install.sh --update
@@ -57,12 +60,12 @@ Firefox 프로필·로그인·결과 탭과 사용자가 수정한 파일은 보
 ./install.sh --uninstall
 ./install.sh --repair
 
-고급 BiDi: ./install.sh --install-bidi [프로필 절대 경로]
-이 경우에만 작업 저장 후 Firefox (Codex 연결) 실행기로 다시 여세요.
-디버깅 옵션은 다음 일반 Firefox 재시작 때 해제됩니다.
+Advanced BiDi: ./install.sh --install-bidi [ABSOLUTE_PROFILE_PATH]
+Only this mode may require saving your work and reopening Firefox with
+Firefox (Codex connection). Debugging options end on the next normal Firefox restart.
 
-설치 장부/복구: ~/.local/state/firefox-codex-mcp/
-중단된 설치는 --repair. 바뀐 파일은 자동 덮어쓰지 않습니다.
-모든 로컬 Codex 채팅은 해당 프로필의 로그인된 사이트를 새 탭에서 사용할 수 있습니다.
-기존 탭·다른 채팅의 탭은 인수하지 않습니다. 개인정보 흐름은 PRIVACY.md 참고.
-SHA256SUMS는 전송 손상 확인용입니다. LICENSE와 배포 증명도 확인하세요.
+Installation receipts and recovery: ~/.local/state/firefox-codex-mcp/
+Run --repair after an interrupted installation. Modified files are not overwritten.
+Local Codex chats can use this profile's website logins in their own work tabs.
+Existing tabs and other chats' tabs are never adopted. See PRIVACY.md.
+SHA256SUMS checks download integrity. See LICENSE and the build provenance.

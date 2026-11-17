@@ -31,7 +31,7 @@ switch or explicit revoke clears ownership. Closing or archiving a Codex chat
 does not reliably signal immediate revocation; use the explicit controls.
 
 Use the extension's pause/revoke buttons to release access. Uninstall the extension
-in Firefox and remove the helper from Firefox Codex 관리. Removing the helper does
+in Firefox and remove the helper from Firefox Codex Manager. Removing the helper does
 not erase your browsing profile, logins or result tabs. Local install receipts and
 profile-selection state may remain for recovery. End old Codex chats to close their
 already-running connections. Issues: https://github.com/nobadwordss/firefox-codex-mcp/issues

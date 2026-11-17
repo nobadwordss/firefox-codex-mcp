@@ -6,17 +6,17 @@ async function send(action) {
     document.querySelector("#permissions").hidden = state.siteAccess;
     document.querySelector("#status").textContent = state.enabled
       ? state.status
-      : "잠시 중지됨. 모든 작업 탭 접근이 해제됐습니다.";
+      : "Paused. All work-tab access has been revoked.";
     document.querySelector("#profile").textContent = state.selected
-      ? "이 Firefox가 기본 연결입니다."
+      ? "This Firefox is the selected connection."
       : state.unselected && state.profileCount === 1
-        ? "이 Firefox가 자동으로 사용됩니다."
-        : "사용할 Firefox에서 ‘이 Firefox 사용’을 누르세요.";
+        ? "This Firefox is selected automatically."
+        : "Choose Use this Firefox in the profile you want to use.";
     document.querySelector("#access").textContent =
-      `연결된 채팅 ${state.chats} · 작업 탭 ${state.tabs}`;
+      `Connected chats: ${state.chats} · Work tabs: ${state.tabs}`;
     document.querySelector("#toggle").textContent = state.enabled
-      ? "잠시 중지"
-      : "다시 연결";
+      ? "Pause"
+      : "Resume";
     document.querySelector("#choose").disabled = !state.connected;
   } catch (e) {
     document.querySelector("#status").textContent = e.message;

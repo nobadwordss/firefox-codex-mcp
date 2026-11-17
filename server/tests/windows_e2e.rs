@@ -762,7 +762,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
         if second_browser
             .script("return document.querySelector('#status').textContent;")?
             .as_str()
-            .is_some_and(|v| v.contains("연결됨"))
+            .is_some_and(|v| v.contains("Connected"))
         {
             break;
         }
@@ -881,7 +881,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
         while normal_browser
             .script("return document.querySelector('#status').textContent;")?
             .as_str()
-            .is_none_or(|v| !v.contains("연결됨"))
+            .is_none_or(|v| !v.contains("Connected"))
         {
             ensure!(Instant::now() < until, "normal profile reconnect");
             thread::sleep(Duration::from_millis(100));
@@ -901,7 +901,7 @@ fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     fs::write(
         artifacts.join("result.json"),
         serde_json::to_vec_pretty(
-            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":"0.4.0","verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","normal Known Folders endpoint without MCP environment overrides","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke and pause","two-profile selection and no offline fallback","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
+            &json!({"os":env::var("OS").ok(),"runner":env::var("ImageOS").ok(),"firefoxVersion":version,"signedExtension":serde_json::from_str::<Value>(include_str!("../../extension/manifest.json"))?["version"],"verified":["Unicode and spaces install","official Codex CLI MCP discovery","actual Codex app-server tool dispatch","normal Known Folders endpoint without MCP environment overrides","signed permanent extension","native messaging + named pipes","read text and status","click and type","two-chat isolation","MCP replacement continuity","irreversible revoke","extension UI revoke and pause","two-profile selection and no offline fallback","update with running old EXE","Firefox restart","uninstall preserves unrelated settings"],"notVerified":["Windows 10 desktop","Windows 11 desktop","Codex desktop UI or live model dispatch","Authenticode and SmartScreen"]}),
         )?,
     )?;
     Ok(())

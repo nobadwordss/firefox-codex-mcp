@@ -1,35 +1,35 @@
 <!doctype html>
-<html lang="ko">
-  <meta charset="utf-8" /><title>Codex Work Tabs 연결</title
+<html lang="en">
+  <meta charset="utf-8" /><title>Codex Work Tabs connection</title
   ><link rel="stylesheet" href="popup.css" />
   <body>
     <h1><img src="../icons/cursor-32.png" width="32" height="32" alt="" /> Codex Work Tabs</h1>
-    <p id="status" role="status">연결 확인 중…</p>
+    <p id="status" role="status">Checking connection…</p>
     <p id="profile"></p>
     <p id="access"></p>
-    <button id="permissions" hidden>사이트 접근 허용</button
-    ><button id="choose">이 Firefox 사용</button
-    ><button id="toggle">잠시 중지</button
-    ><button id="revoke">모든 작업 탭 접근 해제</button>
+    <button id="permissions" hidden>Allow site access</button
+    ><button id="choose">Use this Firefox</button
+    ><button id="toggle">Pause</button
+    ><button id="revoke">Revoke all tab access</button>
     <p>
-      코드·토큰·프로필 경로 입력은 필요 없습니다. 이 컴퓨터의 Codex 채팅은 이
-      프로필의 로그인 상태로 웹사이트에 접근할 수 있습니다. Codex가 만든 탭만
-      제어하며 원래 열려 있던 탭은 가져오지 않습니다.
+      No codes, tokens or profile paths are needed. Local Codex chats can use this
+      profile's website logins in their own work tabs. Only tabs created by Codex
+      can be controlled. Existing tabs are not imported.
     </p>
-    <p>같은 채팅에서는 다음 메시지에도 작업 탭을 이어 씁니다. 24시간 사용하지 않거나
-      접근 해제·중지·Firefox 재시작 시 제어권이 해제됩니다. 결과 탭은 닫지 않습니다.</p>
+    <p>Work tabs continue across turns in the same chat. Access ends after 24 hours
+      without a request, revocation, pause or Firefox restart. Result tabs stay open.</p>
     <details>
-      <summary>연결이 안 되나요?</summary>
+      <summary>Need help connecting?</summary>
       <p>
-        처음 한 번 로컬 연결 프로그램을 설치하세요. 확장만 설치했다면 배포
-        패키지의 install.sh를 실행하세요. 여러 Firefox 중 선택한 프로필이 꺼지면
-        다른 프로필로 자동 이동하지 않습니다.
+        Install the local helper once. In the downloaded package, open
+        firefox-codex-mcp.exe on Windows or run install.sh on Linux. If the selected
+        Firefox profile is offline, another profile is never selected automatically.
       </p>
       <p>
-        프로필을 복사해 연결이 충돌한 경우에만 아래 버튼을 누른 뒤 ‘이 Firefox
-        사용’을 선택하세요.
+        Only if a copied profile causes a connection conflict, reset its connection
+        below, then choose Use this Firefox.
       </p>
-      <button id="reset">복사된 프로필 연결 초기화</button>
+      <button id="reset">Reset copied profile connection</button>
     </details>
     <script src="popup.js"></script>
   </body>

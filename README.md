@@ -1,6 +1,6 @@
 # Firefox Codex MCP
 
-**English** · [한국어](README.ko.md)
+**English** · [Korean](README.ko.md)
 
 Let Codex open and use its own work tabs in your everyday Firefox profile, with
 your existing website logins. A Firefox extension and a small local Rust helper
@@ -22,10 +22,15 @@ The package runs without Rust or Node installed. It targets Ubuntu 22.04
 (glibc 2.35) or newer. Windows has a separate preview below. macOS,
 Snap/Flatpak Firefox and Android are not validated.
 
+Current source builds use English setup, extension controls and diagnostics.
+The published stable 0.4.0 archive retains its earlier Korean interface; it has
+not been replaced. The English labels below describe the next preview build.
+For an older download, follow its bundled `INSTALL.txt` for the matching labels.
+
 1. Open Codex and check that you can sign in. Install ordinary desktop Firefox.
 2. Download and fully extract the [0.4.0 Linux package](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.0). Open a terminal in the extracted folder and run `./install.sh`. A file manager that supports running scripts can also launch it directly.
-3. In the local manager, choose **설치 (Install)**, then **진행 (Continue)**. The installer registers MCP and installs the browser skill and guidance automatically.
-4. Choose **Firefox에 Codex Work Tabs 확장 추가 (Add Codex Work Tabs to Firefox)** and confirm Firefox's installation and permission prompts.
+3. In the local manager, choose **Install connection**, then **Continue**. The installer registers MCP and installs the browser skill and guidance automatically.
+4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's installation and permission prompts.
 5. Start a new Codex chat and ask: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
 
 A new Firefox work tab and a successful link click confirm the first connection.
@@ -33,15 +38,15 @@ Review any tool approval request for the task you asked for. If the script opens
 an editor, use the terminal command above. See the [first-install guide](docs/first-install-linux.md)
 for troubleshooting and the exact fresh-environment verification boundary.
 
-The manager and extension controls currently use Korean; the English labels above
-describe those controls. Install the helper once per OS user and the extension in
+Install the helper once per OS user and the extension in
 the Firefox profile you want to use. A single connected profile is selected
-automatically. If several profiles connect, click **이 Firefox 사용 (Use this Firefox)**
+automatically. If several profiles connect, click **Use this Firefox**
 in the intended profile. An offline selected profile never silently falls back to another.
 
 The package includes a Mozilla-signed extension for permanent installation.
 This is an **unlisted, direct distribution**, not an AMO search listing.
-Use `codex-work-tabs-0.4.0.xpi`; `*-unsigned.xpi` is only for development/review.
+Current builds include `codex-work-tabs-0.4.1.xpi`. Use the signed XPI bundled with
+your package; `*-unsigned.xpi` is only for development/review.
 See [signing and release](packaging/SIGNING.md).
 
 Global MCP registration, a Firefox skill and short browser guidance help Codex
@@ -64,7 +69,8 @@ Server 2022. See the exact [Windows verification scope](docs/windows-preview.md)
 5. Start a new Codex chat and ask for a browser task.
 
 No terminal, Rust, Node, pairing code, token or profile path is needed. The ZIP includes the EXE, dependency licenses and an SBOM. The helper is **not
-Authenticode-signed**; the extension remains Mozilla-signed at 0.4.0. We have not
+Authenticode-signed**. The published beta.1 includes Mozilla-signed extension
+0.4.0; current source builds prepare the English extension 0.4.1. We have not
 validated SmartScreen's downloaded-file flow. Do not disable Windows security to
 install the preview; if blocked, wait for signed delivery or review/build the source.
 
@@ -132,12 +138,12 @@ profile differs from the selected profile, open the intended profile yourself.
 
 ## Update and remove
 
-Run the new package's `install.sh` and choose **업데이트 (Update)**. Firefox stays
+Run the new package's `install.sh` and choose **Update connection**. Firefox stays
 running, but helper replacement releases old work-tab access. Install the matching
 signed XPI to update the extension, then use a fresh Codex chat. Direct-distribution
 XPIs currently have no automatic update channel.
 
-The app-menu entry **Firefox Codex 관리** provides diagnosis, recovery and removal.
+The app-menu entry **Firefox Codex Manager** provides diagnosis, recovery and removal.
 Removal targets registered MCP settings, installed files and managed blocks while
 preserving user edits, Firefox profiles, logins and result tabs. Remove the Firefox
 extension separately in Add-ons Manager. Local receipts and recovery state live
@@ -154,7 +160,7 @@ under `~/.local/state/firefox-codex-mcp/`.
 ```
 
 WebDriver BiDi remains an advanced option with connection-scoped ownership. Only
-that mode requires the **Firefox (Codex 연결)** debug launcher. To migrate a BiDi
+that mode requires the **Firefox (Codex connection)** debug launcher. To migrate a BiDi
 installation, choose the manager's default extension installation.
 
 ## Development and verification
@@ -173,7 +179,7 @@ cargo test --workspace --locked
 node --test --test-isolation=none extension/tests/*.test.cjs
 cargo build --release --locked
 FIREFOX_SETUP_CODEX_BINARY=/path/to/codex cargo test --release --test install_e2e -- --ignored
-FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.0.xpi" FIREFOX_SIGNED_UI=1 FIREFOX_GECKODRIVER=/path/to/geckodriver cargo test --release --test firefox_e2e native_e2e:: -- --ignored --nocapture
+FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.1.xpi" FIREFOX_SIGNED_UI=1 FIREFOX_GECKODRIVER=/path/to/geckodriver cargo test --release --test firefox_e2e native_e2e:: -- --ignored --nocapture
 cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist/release
 ```
 
