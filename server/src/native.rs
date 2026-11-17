@@ -127,6 +127,7 @@ impl Peer {
         self.closed.notify_one();
     }
     async fn call(&self, owner: &str, attachment: &str, name: &str, args: Value) -> Result<Value> {
+        crate::installation_guard::chat()?;
         ensure!(
             self.alive.load(Ordering::SeqCst),
             "Firefox connection ended"
@@ -382,6 +383,7 @@ async fn write_frames(
     messages: &mut mpsc::Receiver<Value>,
 ) -> Result<()> {
     while let Some(value) = messages.recv().await {
+        crate::installation_guard::validate()?;
         let bytes = serde_json::to_vec(&value)?;
         ensure!(bytes.len() < crate::LIMIT, "Native reply too large");
         output
@@ -417,6 +419,7 @@ pub async fn host() -> Result<()> {
     let up_outgoing = outgoing.clone();
     let up = async {
         while let Some(value) = read_frame(&mut input).await? {
+            crate::installation_guard::validate()?;
             if value["kind"] == "openSettings" {
                 let id = value["id"]
                     .as_str()
@@ -488,6 +491,7 @@ async fn chat(
     state: Arc<Mutex<Router>>,
     identity: Option<&str>,
 ) -> Result<()> {
+    crate::installation_guard::chat()?;
     if let Some(id) = identity {
         ensure!(
             id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit()),
@@ -538,6 +542,7 @@ async fn chat(
             let name = request["name"].as_str().unwrap_or("");
             let args = request["args"].clone();
             let result = async {
+                crate::installation_guard::chat()?;
                 crate::mcp::validate(name, &args)?;
                 if name == "firefox_open_tab" && state.lock().await.peers.is_empty() { launch_if_needed(&state).await?; }
                 let mut s = state.lock().await;
@@ -604,6 +609,7 @@ async fn extension(
     hello: Value,
     state: Arc<Mutex<Router>>,
 ) -> Result<()> {
+    crate::installation_guard::validate()?;
     let id = hello["profileId"]
         .as_str()
         .filter(|s| valid_id(s))
@@ -685,7 +691,7 @@ pub async fn broker() -> Result<()> {
             accepted=timeout(Duration::from_secs(10),listener.accept())=>match accepted {
                 Ok(Ok(socket))=>{let state=state.clone();tasks.spawn(async move {
                     let mut socket=BufReader::new(socket);
-                    let work=async {let hello=timeout(Duration::from_secs(5),crate::mcp::read_line(&mut socket)).await??.context("Missing hello")?;ensure!(hello["version"]==VERSION,"Unsupported router version");match hello["role"].as_str(){Some("chat")=>chat(socket,state,hello["identity"].as_str()).await,Some("extension")=>extension(socket,hello,state).await,Some("reload")=>{socket.get_mut().write_all(b"{\"reloading\":true}\n").await?;state.lock().await.shutdown.notify_one();Ok(())},_=>bail!("Unknown peer")}}.await;
+                    let work=async {let hello=timeout(Duration::from_secs(5),crate::mcp::read_line(&mut socket)).await??.context("Missing hello")?;crate::installation_guard::validate()?;ensure!(hello["version"]==VERSION,"Unsupported router version");match hello["role"].as_str(){Some("chat")=>chat(socket,state,hello["identity"].as_str()).await,Some("extension")=>extension(socket,hello,state).await,Some("reload")=>{socket.get_mut().write_all(b"{\"reloading\":true}\n").await?;state.lock().await.shutdown.notify_one();Ok(())},_=>bail!("Unknown peer")}}.await;
                     if let Err(e)=work {eprintln!("Firefox extension connection: {e}");}
                 });},
                 Ok(Err(e))=>return Err(e),Err(_)=>if tasks.is_empty(){break;}

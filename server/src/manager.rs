@@ -15,13 +15,24 @@ const HTML: &str = include_str!("../../packaging/manager.windows.html");
 
 fn state() -> Result<Value> {
     let codex = o::codex().is_ok();
-    let ready = cfg!(windows) || codex;
+    #[cfg(unix)]
+    let package = crate::package_install::installed()?;
+    #[cfg(unix)]
+    let system = package.is_some();
+    #[cfg(windows)]
+    let system = false;
+    #[cfg(unix)]
+    let delivery = lifecycle::installed_delivery();
+    #[cfg(windows)]
+    let delivery: Option<String> = None;
+    let ready = true;
     Ok(
         json!({"version":env!("CARGO_PKG_VERSION"),"installedVersion":lifecycle::installed_version(),"installedMode":lifecycle::installed_mode(),"codexAvailable":codex,
-        "ready":ready,"platform":std::env::consts::OS}),
+        "ready":ready,"platform":std::env::consts::OS,"systemPackage":system,"connectionDelivery":delivery}),
     )
 }
 fn action(request: Value) -> Result<Value> {
+    crate::installation_guard::validate()?;
     match request["action"].as_str().unwrap_or("") {
         "state" => state(),
         "doctor" => o::doctor(),

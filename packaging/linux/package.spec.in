@@ -1,0 +1,53 @@
+Name: firefox-codex-mcp
+Version: @RPM_VERSION@
+Release: @RPM_RELEASE@
+Summary: Codex work tabs in your normal Firefox
+License: MIT AND Apache-2.0 AND BSD-3-Clause AND Unicode-3.0 AND Zlib
+Requires(pre): coreutils
+Requires(post): coreutils
+Requires(preun): coreutils
+URL: https://github.com/nobadwordss/firefox-codex-mcp
+BuildArch: x86_64
+Requires: glibc >= 2.35, libgcc, coreutils
+
+%global debug_package %{nil}
+# Cargo produced the reviewed executable. Do not strip or otherwise rewrite it.
+%global __os_install_post %{nil}
+
+%description
+Native Messaging helper for Codex Work Tabs. Manage the per-user Codex
+connection through the extension's Settings in your existing Firefox.
+Package installation never changes Firefox profiles or user home directories.
+
+%prep
+
+%build
+
+%install
+mkdir -p "%{buildroot}"
+cp -a @PAYLOAD@ "%{buildroot}/"
+
+%pre
+# Invalidate an older running helper before replacing the executable.
+rm -f /usr/libexec/firefox-codex-mcp/installation.json
+
+%post
+@ACTIVATE@
+
+%preun
+# During upgrade ($1 >= 1), preserve the newly installed generation.
+if [ "$1" -eq 0 ]; then
+    rm -f /usr/libexec/firefox-codex-mcp/installation.json
+fi
+
+%files
+%defattr(-,root,root,-)
+/usr/bin/firefox-codex-mcp
+%dir /usr/libexec/firefox-codex-mcp
+/usr/libexec/firefox-codex-mcp/firefox-codex-mcp
+/usr/libexec/firefox-codex-mcp/native-host
+%ghost %attr(0644,root,root) /usr/libexec/firefox-codex-mcp/installation.json
+/usr/lib/mozilla/native-messaging-hosts/firefox_codex_mcp.json
+/usr/lib64/mozilla/native-messaging-hosts/firefox_codex_mcp.json
+%doc /usr/share/doc/firefox-codex-mcp
+%license /usr/share/licenses/firefox-codex-mcp

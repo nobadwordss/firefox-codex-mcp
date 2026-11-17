@@ -1,19 +1,17 @@
-//! Repeatable user-level setup. Delegate TOML edits to the official Codex CLI.
+//! Repeatable user-level setup and diagnostics without requiring a CLI on PATH.
 use crate::setup;
-#[cfg(unix)]
-use anyhow::ensure;
 use anyhow::{bail, Context, Result};
 #[cfg(unix)]
 use serde_json::json;
 use serde_json::Value;
 #[cfg(unix)]
 use std::collections::BTreeMap;
+#[cfg(unix)]
+use std::fs;
 use std::{
     env,
     path::{Path, PathBuf},
 };
-#[cfg(unix)]
-use std::{fs, process::Command};
 
 pub(crate) const SKILL: &str = include_str!("../../skills/firefox-browser/SKILL.md");
 pub(crate) const START: &str = "<!-- firefox-codex-mcp:start -->";
@@ -55,24 +53,42 @@ pub(crate) fn codex() -> Result<PathBuf> {
         .context("Codex executable not found. Install the Codex app or CLI first")
 }
 #[cfg(unix)]
-fn cli(binary: &Path, root: &Path, args: &[&str]) -> Result<std::process::Output> {
-    Command::new(binary)
-        .current_dir(root)
-        .env("CODEX_HOME", root)
-        .args(args)
-        .output()
-        .context("Cannot run Codex configuration command")
-}
-#[cfg(unix)]
-pub(crate) fn configured(binary: &Path, root: &Path) -> Result<Option<Value>> {
-    let result = cli(binary, root, &["mcp", "list", "--json"])?;
-    ensure!(
-        result.status.success(),
-        "Could not read Codex settings: {}",
-        String::from_utf8_lossy(&result.stderr)
-    );
-    let values: Vec<Value> = serde_json::from_slice(&result.stdout)?;
-    Ok(values.into_iter().find(|value| value["name"] == "firefox"))
+pub(crate) fn configured(_binary: &Path, root: &Path) -> Result<Option<Value>> {
+    let document = read_optional(&root.join("config.toml"))?
+        .parse::<toml_edit::DocumentMut>()
+        .context("Cannot read Codex config.toml")?;
+    let Some(table) = document
+        .get("mcp_servers")
+        .and_then(|servers| servers.get("firefox"))
+    else {
+        return Ok(None);
+    };
+    let args = table
+        .get("args")
+        .and_then(toml_edit::Item::as_array)
+        .map(|array| {
+            array
+                .iter()
+                .map(|value| value.as_str().context("Firefox MCP args must be strings"))
+                .collect::<Result<Vec<_>>>()
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let mut environment = serde_json::Map::new();
+    if let Some(env) = table.get("env").and_then(toml_edit::Item::as_table_like) {
+        for (name, value) in env.iter() {
+            environment.insert(
+                name.into(),
+                json!(value
+                    .as_str()
+                    .context("Firefox MCP environment must contain strings")?),
+            );
+        }
+    }
+    Ok(Some(json!({"name":"firefox",
+        "enabled":table.get("enabled").and_then(toml_edit::Item::as_bool).unwrap_or(true),
+        "transport":{"command":table.get("command").and_then(toml_edit::Item::as_str),
+        "args":args,"env":environment}})))
 }
 #[cfg(unix)]
 fn ini(text: &str) -> Vec<(String, BTreeMap<String, String>)> {
@@ -199,13 +215,23 @@ pub fn install(explicit: Option<&str>) -> Result<Value> {
 #[cfg(unix)]
 pub fn doctor() -> Result<Value> {
     let home = home()?;
-    let root = codex_home(&home);
-    let configured = configured(&codex()?, &root)?;
+    let root = crate::lifecycle::connection_codex_home(&home)?;
+    let configured = configured(Path::new(""), &root)?;
     let profile = configured
         .as_ref()
         .and_then(|v| v["transport"]["env"]["FIREFOX_MCP_PROFILE"].as_str())
         .map(PathBuf::from);
-    let executable = home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp");
+    let package = crate::package_install::installed()?;
+    let executable = package
+        .as_ref()
+        .map(|p| p.executable().to_path_buf())
+        .unwrap_or_else(|| home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp"));
+    let user_manifest = home.join(".mozilla/native-messaging-hosts/firefox_codex_mcp.json");
+    let native_registered = if let Some(package) = &package {
+        fs::symlink_metadata(&user_manifest).is_err() && package.native_host_registered()
+    } else {
+        user_manifest.is_file()
+    };
     let registration = configured.as_ref().is_some_and(|v| {
         v["transport"]["command"].as_str() == executable.to_str()
             && (v["transport"]["args"] == json!(["--bidi"])
@@ -232,7 +258,9 @@ pub fn doctor() -> Result<Value> {
         }
     }
     Ok(
-        json!({"globalMcpRegistered":registration,"mode":if profile.is_some(){"bidi"}else{"extension"},"nativeHostRegistered":home.join(".mozilla/native-messaging-hosts/firefox_codex_mcp.json").is_file(),"binaryInstalled":executable.is_file(),
+        json!({"globalMcpRegistered":registration,"mode":if profile.is_some(){"bidi"}else{"extension"},"nativeHostRegistered":native_registered,"binaryInstalled":executable.is_file(),
+        "systemPackage":package.is_some(),"executable":executable,
+        "packageGeneration":package.as_ref().map(|p|p.generation()),
         "skillInstalled":read_optional(&root.join("skills/firefox-browser/SKILL.md"))? == SKILL,
         "automaticBrowserGuidance":read_optional(&root.join("AGENTS.md"))?.contains(GUIDANCE),
         "profile":profile,"firefoxRunning":profile.as_deref().map(setup::running),

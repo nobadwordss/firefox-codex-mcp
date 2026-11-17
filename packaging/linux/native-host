@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/libexec/firefox-codex-mcp/firefox-codex-mcp --native-host "$@"

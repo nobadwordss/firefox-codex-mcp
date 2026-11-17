@@ -7,8 +7,11 @@ It includes Mozilla-signed English extension 0.4.2 and management through
 Firefox profile is needed. This is a preview, not a claim that Windows 10/11
 desktop acceptance testing is complete.
 
-Linux 0.4.2 is the separate English stable release with the same signed extension.
-It publishes no Windows installer. GitHub Latest points to Linux; use the
+Linux 0.4.3 is the separate English stable release with the same signed extension.
+RPM and DEB are its primary downloads; tar.gz remains a fallback. Its per-user
+Connect/Disconnect flow and OS package update/removal apply only to Linux;
+[Linux package details](linux-packages.md). The Windows beta.3 ZIP remains unchanged.
+The Linux release publishes no Windows installer. GitHub Latest points to Linux; use the
 Windows-specific download below. Earlier Linux 0.4.1 and Windows beta.1/beta.2
 archives remain unchanged. See the [management guide](firefox-only-management.md).
 

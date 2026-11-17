@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in
+    remove|purge)
+        rm -f /usr/libexec/firefox-codex-mcp/installation.json
+        rmdir /usr/libexec/firefox-codex-mcp 2>/dev/null || true
+        ;;
+esac
+exit 0

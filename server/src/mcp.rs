@@ -146,6 +146,7 @@ pub async fn stdio_mode(extension: bool) -> Result<()> {
                     Err(error) => crate::error(id, -32602, &error.to_string()),
                     Ok(()) => {
                         let exchange = async {
+                            crate::installation_guard::chat()?;
                             let identity = if extension {
                                 crate::continuity::host_identity(&request["params"])?
                             } else {

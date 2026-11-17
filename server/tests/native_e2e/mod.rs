@@ -67,7 +67,11 @@ impl Browser {
             ensure!(Instant::now() < deadline, "geckodriver unavailable");
             thread::sleep(Duration::from_millis(50));
         }
-        let value:Value=client.post(format!("{base}/session")).json(&json!({"capabilities":{"alwaysMatch":{"browserName":"firefox","moz:firefoxOptions":{"args":["-headless","-no-remote","-profile",profile],"prefs":{"extensions.webextensions.uuids":json!({NATIVE_ID:EXTENSION_UUID}).to_string()}}}}})).send()?.json()?;
+        let mut options = json!({"args":["-headless","-no-remote","-profile",profile],"prefs":{"extensions.webextensions.uuids":json!({NATIVE_ID:EXTENSION_UUID}).to_string()}});
+        if let Ok(binary) = env::var("FIREFOX_BINARY") {
+            options["binary"] = json!(binary);
+        }
+        let value:Value=client.post(format!("{base}/session")).json(&json!({"capabilities":{"alwaysMatch":{"browserName":"firefox","moz:firefoxOptions":options}}})).send()?.json()?;
         let session = value["value"]["sessionId"]
             .as_str()
             .with_context(|| format!("Firefox startup: {value}"))?
@@ -105,8 +109,15 @@ impl Browser {
         self.driver.wait_status("Connected")
     }
 }
+fn installed_binary(home: &Path) -> PathBuf {
+    if env::var_os("FIREFOX_SETUP_PACKAGE").is_some() {
+        PathBuf::from("/usr/libexec/firefox-codex-mcp/firefox-codex-mcp")
+    } else {
+        home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp")
+    }
+}
 fn server(home: &Path) -> Result<Server> {
-    let binary = home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp");
+    let binary = installed_binary(home);
     let mut c = command(&binary, home);
     c.arg("--extension");
     Server::from_command(c)
@@ -249,10 +260,11 @@ fn installed(home: &Path, browser: &Browser) -> Result<()> {
             "return document.querySelector('#result').textContent;",
             json!([]),
         )?;
-        if text
-            .as_str()
-            .is_some_and(|t| t.contains("Connection installed") || t.contains("설치 완료"))
-        {
+        if text.as_str().is_some_and(|t| {
+            t.contains("Connection installed")
+                || t.contains("Connected to Codex")
+                || t.contains("설치 완료")
+        }) {
             break;
         }
         ensure!(Instant::now() < deadline, "manager install: {text}");
@@ -417,7 +429,7 @@ fn settings_from_popup(
         .call("/window", json!({"handle":manager_handle}))?;
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
-        let ready = browser.driver.script("return location.origin.startsWith('http://127.0.0.1:') && !!document.querySelector('#doctor') && !document.querySelector('#doctor').disabled && document.querySelector('#version')?.textContent.includes('Installed');", json!([]))?;
+        let ready = browser.driver.script("return location.origin.startsWith('http://127.0.0.1:') && !!document.querySelector('#doctor') && !document.querySelector('#doctor').disabled && /Installed|connected/i.test(document.querySelector('#version')?.textContent || '');", json!([]))?;
         if ready == true {
             break;
         }
@@ -475,7 +487,15 @@ fn settings_from_popup(
                 "return document.querySelector('#result').textContent;",
                 json!([]),
             )?;
-            if result.as_str().is_some_and(|text| text.contains(expected)) {
+            if result.as_str().is_some_and(|text| {
+                text.contains(expected)
+                    || (env::var_os("FIREFOX_SETUP_PACKAGE").is_some()
+                        && if action == "uninstall" {
+                            text.contains("Disconnected this user from Codex")
+                        } else {
+                            text.contains("Connected to Codex")
+                        })
+            }) {
                 break;
             }
             ensure!(
@@ -537,6 +557,9 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     let mut a = server(home)?;
     let mut b = server(home)?;
     a.wait_connected(true)?;
+    if env::var_os("FIREFOX_NATIVE_APP_SERVER").is_some() {
+        codex_app_server_roundtrip(home, &fixture, &browser)?;
+    }
     // No profile/code/token/tab-grant input. Only a newly created work tab is visible.
     let baseline = browser.driver.handle()?;
     browser.driver.goto(&fixture.url)?;
@@ -739,6 +762,193 @@ fn extension_first_install_multi_profile_and_restart() -> Result<()> {
     Ok(())
 }
 
+// The real Codex app-server dispatches MCP without an API account. This proves
+// process/config/metadata integration, independently of model tool selection.
+struct AppServer {
+    _process: Daemon,
+    input: ChildStdin,
+    output: Receiver<std::io::Result<String>>,
+    seq: u64,
+}
+impl AppServer {
+    fn start(home: &Path) -> Result<Self> {
+        let binary = env::var("FIREFOX_SETUP_CODEX_BINARY")?;
+        // HOME is an ordinary documented MCP environment setting here: Codex
+        // otherwise replaces it with the disposable runner account's real HOME.
+        // The helper and Firefox share this test's temp HOME, not a private IPC override.
+        let isolated_home = format!(
+            "mcp_servers.firefox.env={{HOME={}}}",
+            serde_json::to_string(home)?
+        );
+        let mut process = Daemon(
+            command(Path::new(&binary), home)
+                .args(["app-server", "-c", &isolated_home])
+                .current_dir(home)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::inherit())
+                .spawn()?,
+        );
+        let input = process.0.stdin.take().context("Codex app-server stdin")?;
+        let stdout = process.0.stdout.take().context("Codex app-server stdout")?;
+        let (tx, output) = mpsc::channel();
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                if tx.send(line).is_err() {
+                    break;
+                }
+            }
+        });
+        let mut app = Self {
+            _process: process,
+            input,
+            output,
+            seq: 0,
+        };
+        app.rpc("initialize", json!({"clientInfo":{"name":"firefox_linux_package_e2e","version":"1"},"capabilities":{"experimentalApi":true}}))?;
+        writeln!(app.input, "{}", json!({"method":"initialized","params":{}}))?;
+        app.input.flush()?;
+        Ok(app)
+    }
+    fn rpc(&mut self, method: &str, params: Value) -> Result<Value> {
+        self.seq += 1;
+        writeln!(
+            self.input,
+            "{}",
+            json!({"id":self.seq,"method":method,"params":params})
+        )?;
+        self.input.flush()?;
+        let deadline = Instant::now() + Duration::from_secs(90);
+        loop {
+            let line = self
+                .output
+                .recv_timeout(deadline.saturating_duration_since(Instant::now()))??;
+            let message: Value = serde_json::from_str(&line)?;
+            if message["id"] == self.seq && message.get("method").is_none() {
+                ensure!(message.get("error").is_none(), "Codex {method}: {message}");
+                return Ok(message["result"].clone());
+            }
+            ensure!(
+                message.get("id").is_none() || message.get("method").is_none(),
+                "Unexpected Codex app-server request: {message}"
+            );
+        }
+    }
+    fn chat(&mut self, home: &Path) -> Result<String> {
+        let result = self.rpc("thread/start", json!({"cwd":home,"ephemeral":true,"model":"gpt-5","approvalPolicy":"never","sandbox":"read-only"}))?;
+        Ok(result["thread"]["id"]
+            .as_str()
+            .context("Codex chat ID")?
+            .into())
+    }
+    fn raw(&mut self, chat: &str, name: &str, arguments: Value) -> Result<Value> {
+        self.rpc(
+            "mcpServer/tool/call",
+            json!({"threadId":chat,"server":"firefox","tool":name,"arguments":arguments}),
+        )
+    }
+    fn ok(&mut self, chat: &str, name: &str, arguments: Value) -> Result<Value> {
+        let result = self.raw(chat, name, arguments)?;
+        ensure!(result["isError"] != true, "Codex {name}: {result}");
+        Ok(serde_json::from_str(
+            result["content"][0]["text"]
+                .as_str()
+                .context("Codex tool content")?,
+        )?)
+    }
+}
+fn codex_app_server_roundtrip(home: &Path, fixture: &Fixture, browser: &Browser) -> Result<()> {
+    let artifacts = PathBuf::from(env::var("FIREFOX_NATIVE_ARTIFACTS")?);
+    fs::create_dir_all(&artifacts)?;
+    let mut app = AppServer::start(home)?;
+    let a = app.chat(home)?;
+    let b = app.chat(home)?;
+    let tools = app.rpc(
+        "mcpServerStatus/list",
+        json!({"threadId":a,"serverName":"firefox"}),
+    )?;
+    fs::write(
+        artifacts.join("codex-app-server-tools.json"),
+        serde_json::to_vec_pretty(&tools)?,
+    )?;
+    let status = app.ok(&a, "firefox_status", json!({}))?;
+    ensure!(
+        status["connected"] == true,
+        "Codex package connection: {status}"
+    );
+    let url = format!("{}/codex-package", fixture.url);
+    let tab = app.ok(&a, "firefox_open_tab", json!({"url":url}))?["tabId"].clone();
+    let deadline = Instant::now() + Duration::from_secs(15);
+    let snapshot = loop {
+        let result = app.raw(&a, "firefox_snapshot", json!({}))?;
+        if result["isError"] != true {
+            let value: Value = serde_json::from_str(
+                result["content"][0]["text"]
+                    .as_str()
+                    .context("Codex snapshot")?,
+            )?;
+            if value["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("Observation code"))
+            {
+                break value;
+            }
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Codex package snapshot unavailable: {result}"
+        );
+        thread::sleep(Duration::from_millis(100));
+    };
+    app.ok(&a, "firefox_click", action(&snapshot, "Count 0")?)?;
+    let snapshot = app.ok(&a, "firefox_snapshot", json!({}))?;
+    let mut typing = action(&snapshot, "Message")?;
+    typing["text"] = json!("Codex app-server Linux package");
+    app.ok(&a, "firefox_type", typing)?;
+    let handles: Value = browser
+        .driver
+        .client
+        .get(format!(
+            "{}/session/{}/window/handles",
+            browser.driver.base, browser.driver.session
+        ))
+        .send()?
+        .json()?;
+    let mut verified = false;
+    for handle in handles["value"]
+        .as_array()
+        .context("Codex Firefox handles")?
+    {
+        browser.driver.call("/window", json!({"handle":handle}))?;
+        if browser.driver.script("return location.href;", json!([]))? == url {
+            let dom = browser.driver.script("return {count:document.querySelector('#count').textContent,message:document.querySelector('#message').value};", json!([]))?;
+            ensure!(
+                dom["count"] == "Count 1" && dom["message"] == "Codex app-server Linux package",
+                "Codex DOM readback: {dom}"
+            );
+            capture_native(&browser.driver, &artifacts, 40, "codex-app-server-actions")?;
+            verified = true;
+        }
+    }
+    ensure!(verified, "Codex package work tab missing");
+    ensure!(
+        app.raw(&b, "firefox_select_tab", json!({"tabId":tab}))?["isError"] == true,
+        "Codex package chat isolation failed"
+    );
+    app.ok(&a, "firefox_revoke", json!({}))?;
+    ensure!(
+        app.raw(&a, "firefox_snapshot", json!({}))?["isError"] == true,
+        "Codex package revoke failed"
+    );
+    fs::write(
+        artifacts.join("codex-app-server-result.json"),
+        serde_json::to_vec_pretty(
+            &json!({"actualCodexProcess":true,"actualFirefox":true,"packageManagedBinary":env::var_os("FIREFOX_SETUP_PACKAGE").is_some(),"systemNativeManifest":env::var_os("FIREFOX_SETUP_PACKAGE").is_some(),"read":true,"click":true,"type":true,"independentDomReadback":true,"chatIsolation":true,"revoke":true,"desktopUi":false,"llmDispatch":false}),
+        )?,
+    )?;
+    Ok(())
+}
+
 fn codex_workflow(home: &Path, browser: &Browser, fixture: &Fixture) -> Result<()> {
     let Some(binary) = env::var_os("FIREFOX_NATIVE_CODEX_E2E") else {
         return Ok(());
@@ -746,7 +956,7 @@ fn codex_workflow(home: &Path, browser: &Browser, fixture: &Fixture) -> Result<(
     let url = format!("{}/codex-native", fixture.url);
     let config = format!(
         "mcp_servers.firefox={{command={},args=[\"--extension\"],env={{HOME={}}},required=true}}",
-        serde_json::to_string(&home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp"))?,
+        serde_json::to_string(&installed_binary(home))?,
         serde_json::to_string(home)?
     );
     let prompt=format!("Authorized integration test on a disposable local Firefox fixture. Use only firefox MCP tools; no shell, files, other tools or external sites. Open {url} as your own work tab. Read the random Observation code from rendered body text. Click Count 0 exactly once; then take a fresh snapshot and verify status Count updated to 1. Type the exact observed code into Message. Read a new snapshot, scroll down 600 pixels, read again. Use fresh snapshot and element IDs. Retry stale BEFORE-dispatch errors at most twice, never unknown outcomes. Finally call firefox_revoke and confirm firefox_snapshot is rejected. Report the code and result.");

@@ -5,6 +5,10 @@ use sha2::{Digest, Sha256};
 use std::{collections::HashSet, env, fs, path::Path, process::Command};
 
 #[cfg(unix)]
+#[path = "package/linux.rs"]
+mod linux;
+
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
 const RUNTIME_FILES: &[&str] = &[
@@ -48,7 +52,32 @@ fn copy_directory(source: &Path, target: &Path) -> Result<()> {
 }
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
-    ensure!(args.len() == 3, "Usage: package BINARY OUTPUT_DIRECTORY");
+    ensure!(
+        args.len() >= 3,
+        "Usage: package BINARY OUTPUT_DIRECTORY [--linux-packages] [--package-release NUMBER]"
+    );
+    let mut linux_packages = false;
+    let mut package_release = "1";
+    let mut options = args[3..].iter();
+    while let Some(option) = options.next() {
+        match option.as_str() {
+            "--linux-packages" => linux_packages = true,
+            "--package-release" => {
+                package_release = options.next().context("Missing package release number")?;
+                ensure!(
+                    !package_release.is_empty()
+                        && package_release.len() <= 9
+                        && package_release.bytes().all(|c| c.is_ascii_digit()),
+                    "Package release must contain one to nine decimal digits"
+                );
+            }
+            _ => anyhow::bail!("Unknown packaging option: {option}"),
+        }
+    }
+    ensure!(
+        !linux_packages || cfg!(target_os = "linux"),
+        "RPM/DEB packages must be built on Linux"
+    );
     let binary = Path::new(&args[1]).canonicalize()?;
     let out = Path::new(&args[2]);
     fs::create_dir_all(out)?;
@@ -297,6 +326,24 @@ fn main() -> Result<()> {
         Sha256::digest(fs::read(xpi)?),
         Sha256::digest(fs::read(signed)?)
     );
+    #[cfg(unix)]
+    let mut sums = sums;
+    #[cfg(unix)]
+    if linux_packages {
+        for package in linux::build(&stage, out, package_release)? {
+            sums.push_str(&format!(
+                "{:x}  {}\n",
+                Sha256::digest(fs::read(&package)?),
+                package
+                    .file_name()
+                    .context("Missing package filename")?
+                    .to_string_lossy()
+            ));
+            println!("{}", package.display());
+        }
+    }
+    #[cfg(windows)]
+    let _ = package_release;
     fs::write(out.join("SHA256SUMS"), sums)?;
     println!("{}", archive_path.display());
     Ok(())

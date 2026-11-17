@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.3 — Linux RPM and DEB delivery — 2026-11-17
+
+- Make RPM and DEB the primary Linux downloads and retain tar.gz as a user-local fallback.
+- Use the system-managed executable directly; Connect Codex registers only the current account and migrates unchanged receipt-owned portable files.
+- Fence running helpers to a trusted package generation so upgrade, reinstall and removal release old work-tab access without terminating Firefox.
+- Separate per-user Disconnect from system package removal, preserve Firefox profiles/logins and user edits, and support cleanup after package erasure.
+- Edit only the Firefox MCP TOML table, preserving unrelated settings including explicit empty argument arrays.
+- Include the unchanged Mozilla-signed English extension 0.4.2. Keep the published Windows 0.5.0-beta.3 preview unchanged.
+- No APT/DNF repository or automatic update channel is added. Main development version is 0.5.0-beta.4; this Linux stable release uses its own version-pinned branch.
+
 ## 0.5.0-beta.3 — Firefox management Windows preview — 2026-11-17
 
 - Use ordinary Firefox and its extension for day-to-day management, without extra application-menu launchers or a separate browser profile.

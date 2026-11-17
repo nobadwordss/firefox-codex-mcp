@@ -233,6 +233,7 @@ impl State {
         Ok(())
     }
     async fn execute(&mut self, owner_id: &str, name: &str, args: Value) -> Result<Value> {
+        crate::installation_guard::chat()?;
         validate(name, &args)?;
         ensure!(self.owners.contains_key(owner_id), "MCP connection ended");
         if name == "firefox_revoke" {
@@ -408,8 +409,13 @@ pub async fn broker() -> Result<()> {
         owners: HashMap::new(),
     }));
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    let mut connection = tokio::time::interval(Duration::from_millis(500));
     loop {
         let incoming = tokio::select! {
+            _ = connection.tick() => {
+                if crate::installation_guard::chat().is_ok() { continue; }
+                None
+            },
             result = timeout(Duration::from_secs(10), listener.accept()) => Some(result),
             _ = terminate.recv() => None,
             _ = tokio::signal::ctrl_c() => None,

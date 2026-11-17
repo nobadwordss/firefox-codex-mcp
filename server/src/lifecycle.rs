@@ -1,5 +1,5 @@
 //! Transactional, user-level install/update/remove. Never stops user applications.
-use crate::{onboarding as o, setup};
+use crate::{onboarding as o, package_install, setup};
 use anyhow::{bail, ensure, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
 };
+use toml_edit::{value, Array, DocumentMut, Item, Table};
 
 const PREF_START: &str = "// firefox-codex-mcp:start";
 const PREF_END: &str = "// firefox-codex-mcp:end";
@@ -54,17 +55,36 @@ struct Receipt {
     codex_home: PathBuf,
     files: Vec<Managed>,
     executable_hash: String,
+    #[serde(default = "portable_delivery")]
+    delivery: String,
+    #[serde(default)]
+    executable: Option<PathBuf>,
+    #[serde(default)]
+    connection_generation: Option<String>,
 }
 
 fn legacy_mode() -> String {
     "bidi".into()
 }
+fn portable_delivery() -> String {
+    "portable".into()
+}
+impl Receipt {
+    fn executable(&self, home: &Path) -> PathBuf {
+        self.executable
+            .clone()
+            .unwrap_or_else(|| user_executable(home))
+    }
+}
+fn user_executable(home: &Path) -> PathBuf {
+    home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp")
+}
 
 struct Layout {
     home: PathBuf,
     root: PathBuf,
-    directory: PathBuf,
     executable: PathBuf,
+    package: Option<package_install::Installation>,
     receipt: PathBuf,
     pending: PathBuf,
     _lock: File,
@@ -73,8 +93,13 @@ impl Layout {
     fn open() -> Result<Self> {
         let home = o::home()?;
         ensure!(home.is_absolute(), "HOME must be absolute");
-        let root = o::codex_home(&home);
+        let root = connection_codex_home(&home)?;
         ensure!(root.is_absolute(), "CODEX_HOME must be absolute");
+        let package = package_install::installed()?;
+        let executable = package
+            .as_ref()
+            .map(|installation| installation.executable().to_owned())
+            .unwrap_or_else(|| user_executable(&home));
         let directory = home.join(".local/state/firefox-codex-mcp");
         setup::private_dir(&directory)?;
         let lock = OpenOptions::new()
@@ -89,12 +114,12 @@ impl Layout {
             "Another installation, update or removal is running. Try again after it finishes.",
         )?;
         Ok(Self {
-            executable: home.join(".local/lib/firefox-codex-mcp/firefox-codex-mcp"),
+            executable,
+            package,
             receipt: directory.join("install.json"),
             pending: directory.join("transaction.json"),
             home,
             root,
-            directory,
             _lock: lock,
         })
     }
@@ -142,6 +167,38 @@ fn snapshot(path: &Path) -> Result<Option<Snapshot>> {
             )
         }),
     }
+}
+/// Firefox may not inherit a custom CODEX_HOME used by the connecting shell.
+/// Follow that user's trusted receipt when no explicit override was supplied.
+pub fn connection_codex_home(home: &Path) -> Result<PathBuf> {
+    connection_codex_home_with_override(home, std::env::var_os("CODEX_HOME"))
+}
+fn connection_codex_home_with_override(
+    home: &Path,
+    explicit: Option<std::ffi::OsString>,
+) -> Result<PathBuf> {
+    let root = if let Some(root) = explicit {
+        PathBuf::from(root)
+    } else if let Some(snapshot) =
+        snapshot(&home.join(".local/state/firefox-codex-mcp/install.json"))?
+    {
+        serde_json::from_slice::<Receipt>(&snapshot.bytes)
+            .context("Cannot read the existing installation record")?
+            .codex_home
+    } else {
+        o::codex_home(home)
+    };
+    ensure!(root.is_absolute(), "CODEX_HOME must be absolute");
+    match fs::symlink_metadata(&root) {
+        Ok(metadata) => ensure!(
+            metadata.is_dir() && metadata.uid() == unsafe { libc::geteuid() },
+            "The Codex configuration directory is not owned by this user or is a symbolic link: {}",
+            root.display()
+        ),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    Ok(root)
 }
 fn put(path: &Path, value: &Option<Snapshot>) -> Result<()> {
     match value {
@@ -260,6 +317,63 @@ fn generated(path: PathBuf, bytes: Vec<u8>, mode: u32) -> Result<Change> {
         after: Some(Snapshot { bytes, mode }),
     })
 }
+fn user_manifest(home: &Path) -> PathBuf {
+    home.join(".mozilla/native-messaging-hosts")
+        .join(format!("{}.json", crate::native::HOST))
+}
+fn user_wrapper(home: &Path) -> PathBuf {
+    home.join(".local/lib/firefox-codex-mcp/native-host")
+}
+fn check_receipt_executable(home: &Path, receipt: &Receipt) -> Result<()> {
+    let path = receipt.executable(home);
+    ensure!(
+        path == user_executable(home) || path == Path::new(package_install::EXECUTABLE),
+        "The installation record has an unknown executable path; existing settings were preserved"
+    );
+    Ok(())
+}
+fn retire_user_binary(
+    home: &Path,
+    receipt: &Receipt,
+    preserved: &mut Vec<String>,
+) -> Result<Option<Change>> {
+    // A receipt never grants permission to remove system package payloads.
+    if receipt.delivery != "portable" || receipt.executable(home) != user_executable(home) {
+        return Ok(None);
+    }
+    let path = user_executable(home);
+    let before = snapshot(&path)?;
+    if before
+        .as_ref()
+        .is_some_and(|s| digest(&s.bytes) == receipt.executable_hash)
+    {
+        Ok(Some(Change {
+            path,
+            before,
+            after: None,
+        }))
+    } else {
+        if before.is_some() {
+            preserved.push(path.display().to_string());
+        }
+        Ok(None)
+    }
+}
+fn reset_connection() -> bool {
+    // /proc/self/exe also works after a portable installation removed its own
+    // pathname. It runs only our existing reset command, never a shell.
+    let executable = if cfg!(target_os = "linux") {
+        Ok(PathBuf::from("/proc/self/exe"))
+    } else {
+        std::env::current_exe()
+    };
+    executable.is_ok_and(|executable| {
+        Command::new(executable)
+            .arg("--extension-reset")
+            .output()
+            .is_ok_and(|output| output.status.success())
+    })
+}
 fn strip_marked(value: &str, start: &str, end: &str) -> Result<String> {
     match (value.find(start), value.find(end)) {
         (None, None) => Ok(value.into()),
@@ -271,8 +385,35 @@ fn strip_marked(value: &str, start: &str, end: &str) -> Result<String> {
         _ => bail!("Managed configuration markers are incomplete. Existing content was preserved."),
     }
 }
-// Run the official CLI against a staging config. The live config changes only
-// together with the rest of the transaction, after a compare-before-write check.
+// Edit only this connection. Asking the Codex CLI to reserialize the complete
+// config removes unrelated settings such as explicitly empty argument arrays.
+fn config_document(before: &Option<Snapshot>) -> Result<DocumentMut> {
+    text(before)?
+        .parse::<DocumentMut>()
+        .context("Cannot parse Codex config.toml; existing settings were preserved")
+}
+fn registration(document: &DocumentMut) -> Option<&Item> {
+    document.get("mcp_servers")?.get("firefox")
+}
+fn registration_owned(layout: &Layout, prior: Option<&Receipt>) -> Result<bool> {
+    let document = config_document(&snapshot(&layout.root.join("config.toml"))?)?;
+    let Some(server) = registration(&document) else {
+        return Ok(false);
+    };
+    let command = server.get("command").and_then(Item::as_str);
+    let current = command == layout.executable.to_str();
+    let previous =
+        prior.is_some_and(|receipt| command == receipt.executable(&layout.home).to_str());
+    let args = server.get("args").and_then(Item::as_array);
+    Ok((current || previous)
+        && args.is_some_and(|args| {
+            args.len() == 1
+                && args
+                    .get(0)
+                    .and_then(toml_edit::Value::as_str)
+                    .is_some_and(|arg| arg == "--bidi" || arg == "--extension")
+        }))
+}
 fn prepare_config(
     layout: &Layout,
     profile: &Path,
@@ -281,70 +422,77 @@ fn prepare_config(
 ) -> Result<Change> {
     let path = layout.root.join("config.toml");
     let before = snapshot(&path)?;
-    let stage = layout
-        .directory
-        .join(format!("stage-{}", crate::random_hex(8)?));
-    setup::private_dir(&stage)?;
-    let result = (|| {
-        if let Some(value) = &before {
-            setup::write_atomic(&stage.join("config.toml"), &value.bytes, 0o600)?;
+    let mut document = config_document(&before)?;
+    if remove {
+        if let Some(servers) = document.get_mut("mcp_servers") {
+            servers
+                .as_table_like_mut()
+                .context("Invalid mcp_servers table; existing settings were preserved")?
+                .remove("firefox");
         }
-        let binary = o::codex()?;
-        let mut command = Command::new(binary);
-        command
-            .current_dir(&stage)
-            .env("CODEX_HOME", &stage)
-            .args(["mcp"]);
-        if remove {
-            command.args(["remove", "firefox"]);
-        } else if extension {
-            command
-                .args(["add", "firefox", "--"])
-                .arg(&layout.executable)
-                .arg("--extension");
-        } else {
-            command
-                .args(["add", "firefox", "--env"])
-                .arg(format!("FIREFOX_MCP_PROFILE={}", profile.display()))
-                .arg("--")
-                .arg(&layout.executable)
-                .arg("--bidi");
+    } else {
+        if !document.contains_key("mcp_servers") {
+            document.insert("mcp_servers", Item::Table(Table::new()));
         }
-        let output = command.output()?;
-        ensure!(
-            output.status.success(),
-            "Could not prepare Codex settings: {}",
-            String::from_utf8_lossy(&output.stderr)
+        let servers = document["mcp_servers"]
+            .as_table_like_mut()
+            .context("Invalid mcp_servers table; existing settings were preserved")?;
+        if !servers.contains_key("firefox") {
+            servers.insert("firefox", Item::Table(Table::new()));
+        }
+        let server = servers
+            .get_mut("firefox")
+            .and_then(Item::as_table_like_mut)
+            .context("Invalid Firefox MCP table; existing settings were preserved")?;
+        server.insert(
+            "command",
+            value(
+                layout
+                    .executable
+                    .to_str()
+                    .context("Installation path must be UTF-8")?,
+            ),
         );
-        let mut after = snapshot(&stage.join("config.toml"))?;
-        if let (Some(old), Some(new)) = (&before, &mut after) {
-            new.mode = old.mode;
+        let mut args = Array::new();
+        args.push(if extension { "--extension" } else { "--bidi" });
+        server.insert("args", value(args));
+        if server.get("enabled").and_then(Item::as_bool) == Some(false) {
+            server.insert("enabled", value(true));
         }
-        Ok(Change {
-            path,
-            before,
-            after,
-        })
-    })();
-    let _ = fs::remove_dir_all(stage);
-    result
-}
-fn owned_registration(layout: &Layout) -> Result<bool> {
-    if !layout.root.exists() {
-        return Ok(false);
+        if extension {
+            if let Some(env) = server.get_mut("env").and_then(Item::as_table_like_mut) {
+                env.remove("FIREFOX_MCP_PROFILE");
+            }
+        } else {
+            if !server.contains_key("env") {
+                server.insert("env", Item::Table(Table::new()));
+            }
+            server
+                .get_mut("env")
+                .and_then(Item::as_table_like_mut)
+                .context("Invalid Firefox MCP environment; existing settings were preserved")?
+                .insert(
+                    "FIREFOX_MCP_PROFILE",
+                    value(profile.to_str().context("Profile path must be UTF-8")?),
+                );
+        }
     }
-    Ok(o::configured(&o::codex()?, &layout.root)?.is_some_and(|v| {
-        v["transport"]["command"].as_str() == layout.executable.to_str()
-            && (v["transport"]["args"] == json!(["--bidi"])
-                || v["transport"]["args"] == json!(["--extension"]))
-    }))
+    let after = Some(Snapshot {
+        bytes: document.to_string().into_bytes(),
+        mode: before.as_ref().map_or(0o600, |s| s.mode),
+    });
+    Ok(Change {
+        path,
+        before,
+        after,
+    })
 }
 pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
     let layout = Layout::open()?;
     recover(&layout)?;
     let prior = layout.receipt()?;
     ensure!(
-        !update_only || prior.is_some() || layout.executable.exists(),
+        !update_only || prior.is_some(),
         "The connection is not installed. Choose Install connection first."
     );
     let extension =
@@ -361,6 +509,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         }
     };
     if let Some(prior) = &prior {
+        check_receipt_executable(&layout.home, prior)?;
         ensure!(
             prior.codex_home == layout.root,
             "Use the CODEX_HOME from the original installation."
@@ -371,18 +520,24 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         );
     }
     fs::create_dir_all(&layout.root)?;
-    if o::configured(&o::codex()?, &layout.root)?.is_some() {
+    if registration(&config_document(&snapshot(
+        &layout.root.join("config.toml"),
+    )?)?)
+    .is_some()
+    {
         ensure!(
-            owned_registration(&layout)?,
+            registration_owned(&layout, prior.as_ref())?,
             "Another Firefox MCP configuration was preserved. Review the existing connection first."
         );
     }
-    setup::private_dir(
-        layout
-            .executable
-            .parent()
-            .context("Missing install directory")?,
-    )?;
+    if layout.package.is_none() {
+        setup::private_dir(
+            layout
+                .executable
+                .parent()
+                .context("Missing install directory")?,
+        )?;
+    }
     let mut changes = vec![prepare_config(&layout, &profile, extension, false)?];
     let mut files = Vec::new();
     let mut preserved = Vec::new();
@@ -407,7 +562,26 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         ),
     ];
     let mut has_existing_pref = false;
-    if extension {
+    if extension && layout.package.is_some() {
+        // Firefox checks per-user registrations before system registrations.
+        // Only remove a receipt-owned, unchanged registration with no previous
+        // foreign baseline; otherwise report the conflict before committing.
+        let manifest = user_manifest(&layout.home);
+        if let Some(current) = snapshot(&manifest)? {
+            let old = prior
+                .as_ref()
+                .and_then(|prior| prior.files.iter().find(|file| file.path == manifest));
+            ensure!(
+                old.is_some_and(|old| old.installed == current && old.before.is_none()),
+                "A custom Native Messaging registration masks the system package and was preserved: {}. Review or move it before connecting.",
+                manifest.display()
+            );
+        }
+        ensure!(
+            layout.package.as_ref().is_some_and(|package| package.native_host_registered()),
+            "The package Native Messaging registration is missing or invalid. Reinstall the RPM or DEB package."
+        );
+    } else if extension {
         let wrapper = layout
             .executable
             .parent()
@@ -422,10 +596,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             format!("#!/bin/sh\nexec {quoted} --native-host \"$@\"\n").into_bytes(),
             None,
         ));
-        let manifest = layout
-            .home
-            .join(".mozilla/native-messaging-hosts")
-            .join(format!("{}.json", crate::native::HOST));
+        let manifest = user_manifest(&layout.home);
         let bytes = serde_json::to_vec_pretty(
             &json!({"name":crate::native::HOST,"description":"Firefox Codex local connection","path":wrapper,"type":"stdio","allowed_extensions":[crate::native::EXTENSION_ID]}),
         )?;
@@ -523,7 +694,7 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         }
         // Adopt only recognizable files from the pre-receipt development installer.
         // Otherwise removal would restore the old integration instead of removing it.
-        if prior.is_none() && owned_registration(&layout)? {
+        if prior.is_none() && registration_owned(&layout, prior.as_ref())? {
             if path.ends_with("AGENTS.md") && text(&before)?.contains(o::START) {
                 let clean = strip_marked(&text(&before)?, o::START, o::END)?;
                 original = (!clean.trim().is_empty()).then(|| Snapshot {
@@ -553,6 +724,9 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
         for old in &prior.files {
             if !files.iter().any(|f| f.path == old.path) {
                 if legacy_launcher(&layout.home, &old.path)
+                    || layout.package.is_some()
+                        && (old.path == user_manifest(&layout.home)
+                            || old.path == user_wrapper(&layout.home))
                     || extension
                         && old.path.ends_with("user.js")
                         && old.block.as_deref() == Some(PREF_BLOCK)
@@ -566,30 +740,51 @@ pub fn install(explicit: Option<&str>, update_only: bool) -> Result<Value> {
             }
         }
     }
-    let bytes = fs::read(std::env::current_exe()?)?;
+    let (version, executable_hash, delivery) = if let Some(package) = &layout.package {
+        package.validate()?;
+        if let Some(prior) = &prior {
+            if let Some(change) = retire_user_binary(&layout.home, prior, &mut preserved)? {
+                changes.push(change);
+            }
+        }
+        (
+            package.version().to_owned(),
+            package.executable_hash().to_owned(),
+            "package",
+        )
+    } else {
+        let bytes = fs::read(std::env::current_exe()?)?;
+        let hash = digest(&bytes);
+        changes.push(generated(layout.executable.clone(), bytes, 0o700)?);
+        (env!("CARGO_PKG_VERSION").to_owned(), hash, "portable")
+    };
     let receipt = Receipt {
-        version: env!("CARGO_PKG_VERSION").into(),
+        version,
         mode: if extension { "extension" } else { "bidi" }.into(),
         profile: profile.clone(),
         codex_home: layout.root.clone(),
         files,
-        executable_hash: digest(&bytes),
+        executable_hash,
+        delivery: delivery.into(),
+        executable: Some(layout.executable.clone()),
+        // Connect/update creates a new permission lifetime independently of
+        // the OS package lifetime. A fast Disconnect/Reconnect must never let
+        // old MCP or BiDi processes regain their previous browser authority.
+        connection_generation: layout
+            .package
+            .as_ref()
+            .map(|_| crate::random_hex(32))
+            .transpose()?,
     };
-    changes.push(generated(layout.executable.clone(), bytes, 0o700)?);
     changes.push(generated(
         layout.receipt.clone(),
         serde_json::to_vec_pretty(&receipt)?,
         0o600,
     )?);
     transact(&layout, changes)?;
-    let restart_required = extension
-        && prior.is_some()
-        && !Command::new(&layout.executable)
-            .arg("--extension-reset")
-            .output()
-            .is_ok_and(|o| o.status.success());
+    let restart_required = extension && prior.is_some() && !reset_connection();
     Ok(
-        json!({"restartRequired":restart_required,"installed":true,"version":receipt.version,"mode":receipt.mode,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":if extension {"Connection installed. Add Codex Work Tabs to Firefox, then use ordinary Firefox and request a browser task in a new Codex chat. No separate Firefox launcher, code, token or profile path is needed. Updates revoke previous work-tab access and keep Firefox running. Remove the extension separately in Firefox Add-ons."} else {"Advanced debugging connection installed. No app-menu launcher was created. If ordinary Firefox is running, save your work and close it before using --launch-firefox PROFILE. Use --doctor or --uninstall for diagnosis or removal."}}),
+        json!({"restartRequired":restart_required,"installed":true,"version":receipt.version,"delivery":receipt.delivery,"packageManaged":layout.package.is_some(),"mode":receipt.mode,"profile":profile,"preservedModifiedFiles":preserved,"nextStep":if extension && layout.package.is_some() {"Connected to Codex. Add Codex Work Tabs to Firefox, then request a browser task in a new Codex chat using ordinary Firefox. Update or remove the helper with your system package manager. Disconnect in extension Settings to remove only this user's Codex connection. Firefox profiles and logins are preserved."} else if extension {"Connection installed. Add Codex Work Tabs to Firefox, then use ordinary Firefox and request a browser task in a new Codex chat. No separate Firefox launcher, code, token or profile path is needed. Updates revoke previous work-tab access and keep Firefox running. Remove the extension separately in Firefox Add-ons."} else {"Advanced debugging connection installed. No app-menu launcher was created. If ordinary Firefox is running, save your work and close it before using --launch-firefox PROFILE. Use --doctor or --uninstall for diagnosis or removal."}}),
     )
 }
 pub fn uninstall() -> Result<Value> {
@@ -604,9 +799,10 @@ pub fn uninstall() -> Result<Value> {
         receipt.codex_home == layout.root,
         "Use the CODEX_HOME from the original installation."
     );
+    check_receipt_executable(&layout.home, &receipt)?;
     let mut changes = Vec::new();
     let mut preserved = Vec::new();
-    if owned_registration(&layout)? {
+    if registration_owned(&layout, Some(&receipt))? {
         changes.push(prepare_config(
             &layout,
             &receipt.profile,
@@ -621,18 +817,8 @@ pub fn uninstall() -> Result<Value> {
             changes.push(change);
         }
     }
-    let executable = snapshot(&layout.executable)?;
-    if executable
-        .as_ref()
-        .is_some_and(|s| digest(&s.bytes) == receipt.executable_hash)
-    {
-        changes.push(Change {
-            path: layout.executable.clone(),
-            before: executable,
-            after: None,
-        });
-    } else {
-        preserved.push(layout.executable.display().to_string());
+    if let Some(change) = retire_user_binary(&layout.home, &receipt, &mut preserved)? {
+        changes.push(change);
     }
     changes.push(Change {
         path: layout.receipt.clone(),
@@ -640,8 +826,9 @@ pub fn uninstall() -> Result<Value> {
         after: None,
     });
     transact(&layout, changes)?;
+    let restart_required = receipt.mode == "extension" && !reset_connection();
     Ok(
-        json!({"removed":true,"preservedModifiedFiles":preserved,"nextStep":"Connection removed. Firefox profiles, logins and result tabs were preserved. Close existing Codex chats to end their running tool connections. Firefox launch options and in-memory preferences change on its next normal restart."}),
+        json!({"removed":true,"restartRequired":restart_required,"packageManaged":layout.package.is_some(),"preservedModifiedFiles":preserved,"nextStep":if layout.package.is_some() {"Disconnected this user from Codex. The system helper remains installed; remove it with your package manager if desired. Firefox profiles, logins and tabs were preserved. Remove the extension separately in Firefox Add-ons."} else {"Connection removed. Firefox profiles, logins and result tabs were preserved. Close existing Codex chats to end their running tool connections. Firefox launch options and in-memory preferences change on its next normal restart."}}),
     )
 }
 pub fn repair() -> Result<Value> {
@@ -652,9 +839,68 @@ pub fn repair() -> Result<Value> {
 pub fn installed_version() -> Option<String> {
     let home = o::home().ok()?;
     let data = fs::read(home.join(".local/state/firefox-codex-mcp/install.json")).ok()?;
+    let receipt = serde_json::from_slice::<Receipt>(&data).ok()?;
+    if receipt.delivery == "package" {
+        package_install::installed()
+            .ok()
+            .flatten()
+            .map(|installation| installation.version().to_owned())
+    } else {
+        Some(receipt.version)
+    }
+}
+pub fn installed_delivery() -> Option<String> {
+    let home = o::home().ok()?;
+    let data = fs::read(home.join(".local/state/firefox-codex-mcp/install.json")).ok()?;
     serde_json::from_slice::<Receipt>(&data)
         .ok()
-        .map(|r| r.version)
+        .map(|r| r.delivery)
+}
+/// A process binds its first chat to this generation and must require the same
+/// value before each later dispatch. A receipt recreated by Reconnect has a new
+/// identity even if the process missed the interval without a receipt.
+pub fn connection_identity() -> Result<Option<String>> {
+    connection_identity_at(&o::home()?)
+}
+fn connection_identity_at(home: &Path) -> Result<Option<String>> {
+    let Some(data) = snapshot(&home.join(".local/state/firefox-codex-mcp/install.json"))? else {
+        return Ok(None);
+    };
+    let receipt: Receipt = serde_json::from_slice(&data.bytes)?;
+    check_receipt_executable(home, &receipt)?;
+    if receipt.delivery != "package"
+        || receipt.executable(home) != Path::new(package_install::EXECUTABLE)
+        || !receipt.codex_home.is_absolute()
+    {
+        return Ok(None);
+    }
+    let Some(generation) = receipt.connection_generation.as_ref().filter(|generation| {
+        generation.len() == 64 && generation.bytes().all(|byte| byte.is_ascii_hexdigit())
+    }) else {
+        return Ok(None);
+    };
+    let expected_argument = match receipt.mode.as_str() {
+        "extension" => "--extension",
+        "bidi" => "--bidi",
+        _ => return Ok(None),
+    };
+    let document = config_document(&snapshot(&receipt.codex_home.join("config.toml"))?)?;
+    let Some(server) = registration(&document) else {
+        return Ok(None);
+    };
+    let registered = server.get("command").and_then(Item::as_str)
+        == Some(package_install::EXECUTABLE)
+        && server
+            .get("enabled")
+            .is_none_or(|enabled| enabled.as_bool() == Some(true))
+        && server
+            .get("args")
+            .and_then(Item::as_array)
+            .is_some_and(|args| {
+                args.len() == 1
+                    && args.get(0).and_then(toml_edit::Value::as_str) == Some(expected_argument)
+            });
+    Ok(registered.then(|| generation.clone()))
 }
 pub fn installed_mode() -> Option<String> {
     let data = fs::read(
@@ -676,16 +922,211 @@ mod tests {
             mode,
         }
     }
+    fn receipt(home: &Path, delivery: &str) -> Receipt {
+        Receipt {
+            version: "test".into(),
+            mode: "extension".into(),
+            profile: PathBuf::new(),
+            codex_home: home.into(),
+            files: Vec::new(),
+            executable_hash: digest(b"payload"),
+            delivery: delivery.into(),
+            executable: Some(if delivery == "package" {
+                PathBuf::from(package_install::EXECUTABLE)
+            } else {
+                user_executable(home)
+            }),
+            connection_generation: (delivery == "package").then(|| "a".repeat(64)),
+        }
+    }
     fn layout(root: &Path) -> Layout {
         Layout {
             home: root.into(),
             root: root.into(),
-            directory: root.into(),
             executable: root.join("binary"),
+            package: None,
             receipt: root.join("install.json"),
             pending: root.join("transaction.json"),
             _lock: File::create(root.join("lock")).unwrap(),
         }
+    }
+    #[test]
+    fn targeted_config_edit_preserves_unrelated_empty_arrays_and_comments() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let layout = layout(temp.path());
+        let original = "# Keep my choices\nmodel = \"example\"\n\n[mcp_servers.node_repl]\ncommand = \"/my/node/tool\"\nargs = [] # explicitly empty\n\n[profiles.personal]\nmodel_reasoning_effort = \"high\"\n";
+        setup::write_atomic(&layout.root.join("config.toml"), original.as_bytes(), 0o640)?;
+        let change = prepare_config(&layout, Path::new(""), true, false)?;
+        let after = change.after.as_ref().context("prepared config")?;
+        assert_eq!(after.mode, 0o640);
+        let after_text = String::from_utf8_lossy(&after.bytes);
+        assert!(after_text.starts_with("# Keep my choices\nmodel = \"example\"\n"));
+        assert!(after_text.contains(
+            "[mcp_servers.node_repl]\ncommand = \"/my/node/tool\"\nargs = [] # explicitly empty\n"
+        ));
+        assert!(after_text.contains("[profiles.personal]\nmodel_reasoning_effort = \"high\"\n"));
+        put(&change.path, &change.after)?;
+        assert!(registration_owned(&layout, None)?);
+        let removed = prepare_config(&layout, Path::new(""), true, true)?;
+        let removed_text = text(&removed.after)?;
+        assert_eq!(removed_text, original);
+        assert!(!removed_text.contains("mcp_servers.firefox"));
+        Ok(())
+    }
+    #[test]
+    fn registration_recognizes_receipt_owned_migration_and_preserves_foreign_entry() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let mut layout = layout(temp.path());
+        let old = receipt(temp.path(), "portable");
+        layout.executable = old.executable(temp.path());
+        let change = prepare_config(&layout, Path::new(""), true, false)?;
+        put(&change.path, &change.after)?;
+        layout.executable = PathBuf::from(package_install::EXECUTABLE);
+        assert!(!registration_owned(&layout, None)?);
+        assert!(registration_owned(&layout, Some(&old))?);
+        let foreign =
+            "[mcp_servers.firefox]\ncommand = \"/other/tool\"\nargs = [\"--extension\"]\n";
+        fs::write(layout.root.join("config.toml"), foreign)?;
+        assert!(!registration_owned(&layout, Some(&old))?);
+        assert_eq!(
+            fs::read_to_string(layout.root.join("config.toml"))?,
+            foreign
+        );
+        Ok(())
+    }
+    #[test]
+    fn removal_never_touches_package_payload_or_modified_portable_binary() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let package = receipt(temp.path(), "package");
+        let mut preserved = Vec::new();
+        assert!(retire_user_binary(temp.path(), &package, &mut preserved)?.is_none());
+        assert!(preserved.is_empty());
+        let portable = receipt(temp.path(), "portable");
+        let path = user_executable(temp.path());
+        fs::create_dir_all(path.parent().context("binary directory")?)?;
+        fs::write(&path, b"user modified payload")?;
+        assert!(retire_user_binary(temp.path(), &portable, &mut preserved)?.is_none());
+        assert_eq!(fs::read(&path)?, b"user modified payload");
+        assert_eq!(preserved, [path.display().to_string()]);
+        fs::write(&path, b"payload")?;
+        let change = retire_user_binary(temp.path(), &portable, &mut preserved)?
+            .context("retired binary")?;
+        assert_eq!(change.path, path);
+        assert!(change.after.is_none());
+        Ok(())
+    }
+    #[test]
+    fn legacy_receipt_defaults_to_user_managed_binary() -> Result<()> {
+        let receipt: Receipt = serde_json::from_value(json!({
+            "version":"0.4.2","mode":"extension","profile":"",
+            "codex_home":"/example/.codex","files":[],"executable_hash":"hash"
+        }))?;
+        assert_eq!(receipt.delivery, "portable");
+        assert!(receipt.connection_generation.is_none());
+        assert_eq!(
+            receipt.executable(Path::new("/example")),
+            user_executable(Path::new("/example"))
+        );
+        Ok(())
+    }
+    #[test]
+    fn firefox_settings_reuses_receipt_codex_home_without_overriding_explicit_environment(
+    ) -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let custom = temp.path().join("custom-codex");
+        fs::create_dir(&custom)?;
+        let mut receipt = receipt(temp.path(), "package");
+        receipt.codex_home = custom.clone();
+        let path = temp
+            .path()
+            .join(".local/state/firefox-codex-mcp/install.json");
+        fs::create_dir_all(path.parent().context("receipt directory")?)?;
+        setup::write_atomic(&path, &serde_json::to_vec(&receipt)?, 0o600)?;
+        assert_eq!(
+            connection_codex_home_with_override(temp.path(), None)?,
+            custom
+        );
+        let explicit = temp.path().join("explicit-codex");
+        assert_eq!(
+            connection_codex_home_with_override(
+                temp.path(),
+                Some(explicit.clone().into_os_string())
+            )?,
+            explicit
+        );
+        let link = temp.path().join("linked-codex");
+        std::os::unix::fs::symlink(&custom, &link)?;
+        assert!(
+            connection_codex_home_with_override(temp.path(), Some(link.into_os_string())).is_err()
+        );
+        receipt.codex_home = PathBuf::from("relative-codex");
+        setup::write_atomic(&path, &serde_json::to_vec(&receipt)?, 0o600)?;
+        assert!(connection_codex_home_with_override(temp.path(), None).is_err());
+        Ok(())
+    }
+    #[test]
+    fn disconnect_and_disabled_registration_revoke_packaged_connections() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let mut layout = layout(temp.path());
+        layout.executable = PathBuf::from(package_install::EXECUTABLE);
+        let receipt = receipt(temp.path(), "package");
+        let receipt_path = temp
+            .path()
+            .join(".local/state/firefox-codex-mcp/install.json");
+        fs::create_dir_all(receipt_path.parent().context("receipt directory")?)?;
+        setup::write_atomic(&receipt_path, &serde_json::to_vec(&receipt)?, 0o600)?;
+        let change = prepare_config(&layout, Path::new(""), true, false)?;
+        put(&change.path, &change.after)?;
+        assert!(connection_identity_at(temp.path())?.is_some());
+        let mut document = config_document(&snapshot(&change.path)?)?;
+        document["mcp_servers"]["firefox"]["enabled"] = value(false);
+        fs::write(&change.path, document.to_string())?;
+        assert!(connection_identity_at(temp.path())?.is_none());
+        put(&change.path, &change.after)?;
+        fs::remove_file(&receipt_path)?;
+        assert!(connection_identity_at(temp.path())?.is_none());
+        let mut bidi = receipt;
+        bidi.mode = "bidi".into();
+        setup::write_atomic(&receipt_path, &serde_json::to_vec(&bidi)?, 0o600)?;
+        assert!(connection_identity_at(temp.path())?.is_none());
+        let change = prepare_config(&layout, Path::new("/example/profile"), false, false)?;
+        put(&change.path, &change.after)?;
+        assert!(connection_identity_at(temp.path())?.is_some());
+        Ok(())
+    }
+    #[test]
+    fn reconnect_changes_permission_identity_even_when_receipt_gap_is_not_observed() -> Result<()> {
+        for extension in [true, false] {
+            let temp = tempfile::tempdir()?;
+            let mut layout = layout(temp.path());
+            layout.executable = PathBuf::from(package_install::EXECUTABLE);
+            let mut receipt = receipt(temp.path(), "package");
+            receipt.mode = if extension { "extension" } else { "bidi" }.into();
+            let path = temp
+                .path()
+                .join(".local/state/firefox-codex-mcp/install.json");
+            fs::create_dir_all(path.parent().context("receipt directory")?)?;
+            setup::write_atomic(&path, &serde_json::to_vec(&receipt)?, 0o600)?;
+            let config = prepare_config(&layout, Path::new("/example/profile"), extension, false)?;
+            put(&config.path, &config.after)?;
+            let original = connection_identity_at(temp.path())?.context("first connection")?;
+
+            // No intermediate read observes Disconnect. A presence-only check
+            // would allow the old process to regain authority after Reconnect.
+            fs::remove_file(&path)?;
+            receipt.connection_generation = Some(crate::random_hex(32)?);
+            setup::write_atomic(&path, &serde_json::to_vec(&receipt)?, 0o600)?;
+            let reconnected = connection_identity_at(temp.path())?.context("reconnected")?;
+            assert_ne!(original, reconnected);
+
+            receipt.connection_generation = None;
+            setup::write_atomic(&path, &serde_json::to_vec(&receipt)?, 0o600)?;
+            assert!(connection_identity_at(temp.path())?.is_none());
+            receipt.connection_generation = Some("invalid generation".into());
+            setup::write_atomic(&path, &serde_json::to_vec(&receipt)?, 0o600)?;
+            assert!(connection_identity_at(temp.path())?.is_none());
+        }
+        Ok(())
     }
     #[test]
     fn interrupted_install_recovers_and_preserves_concurrent_edits() {

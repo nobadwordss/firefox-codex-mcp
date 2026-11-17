@@ -7,6 +7,7 @@ permissions:
 jobs:
   package:
     runs-on: ubuntu-22.04
+    timeout-minutes: 50
     permissions:
       contents: read
       id-token: write
@@ -14,17 +15,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install official Codex CLI for isolated setup test
-        run: npm install --global @openai/codex
+      - name: Install package tools and official Codex CLI on disposable runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes rpm podman libgtk-3-0 libdbus-glib-1-2 libasound2 libxt6 libx11-xcb1
+          npm install --global @openai/codex
+          mkdir -p "$RUNNER_TEMP/package-inputs" linux-package-evidence
+          chmod o+rx "$RUNNER_TEMP" "$RUNNER_TEMP/package-inputs"
+          CODEX_BINARY=$(find "$(npm root -g)" -type f -path '*/codex/codex' -executable -print -quit)
+          test -n "$CODEX_BINARY"
+          cp "$CODEX_BINARY" "$RUNNER_TEMP/package-inputs/codex"
+          chmod 755 "$RUNNER_TEMP/package-inputs/codex"
+          echo "FIREFOX_SETUP_CODEX_BINARY=$RUNNER_TEMP/package-inputs/codex" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/package-inputs/codex" --version | tee linux-package-evidence/codex-version.txt
       - run: cargo build --release --locked
       - run: cargo fetch --locked
-      - name: First-user install, update, removal and preserved edits
-        run: FIREFOX_SETUP_CODEX_BINARY="$(command -v codex)" cargo test --release --test install_e2e --locked -- --ignored
-      - name: Build archive, license notices and SBOM
-        run: cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist
+      - name: First-user portable install, update, removal and preserved edits
+        run: cargo test --release --test install_e2e --locked -- --ignored
+      - name: Build primary DEB and RPM plus fallback archive, notices and SBOM
+        run: |
+          cargo run --release --locked --bin package -- target/release/firefox-codex-mcp dist --linux-packages
+          cargo run --release --locked --bin package -- target/release/firefox-codex-mcp ci-baseline --linux-packages --package-release 0
       - name: Verify extracted distribution on Ubuntu 22.04
         run: |
           cd dist
@@ -34,16 +51,148 @@ jobs:
           extracted/*/firefox-codex-mcp --version
           extracted/*/install.sh --help
       - name: Install and remove the extracted package outside the repository
-        run: FIREFOX_SETUP_SERVER_BINARY="$(realpath dist/extracted/*/firefox-codex-mcp)" FIREFOX_SETUP_CODEX_BINARY="$(command -v codex)" cargo test --release --test install_e2e --locked -- --ignored
-      # Private-repository attestations depend on the GitHub plan.
+        run: FIREFOX_SETUP_SERVER_BINARY="$(realpath dist/extracted/*/firefox-codex-mcp)" cargo test --release --test install_e2e --locked -- --ignored
+      - name: Fetch pinned published portable 0.4.2 for migration checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.4.2 --repo "$GITHUB_REPOSITORY" --pattern firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz --dir "$RUNNER_TEMP/package-inputs"
+          printf '%s  %s\n' 57f7bb53e5b2f546e6c55b3212f5ddb02e214b5108141ffa2377e8f88fad62e1 "$RUNNER_TEMP/package-inputs/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/package-inputs/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz" -C "$RUNNER_TEMP/package-inputs"
+      - name: Compile opt-in real package lifecycle test
+        run: |
+          cargo test --release --locked --test system_package_e2e --test firefox_e2e --no-run --message-format=json > "$RUNNER_TEMP/package-test-build.jsonl"
+          TEST_BINARY=$(jq -r 'select(.reason == "compiler-artifact" and .target.name == "system_package_e2e" and .profile.test == true) | .executable // empty' "$RUNNER_TEMP/package-test-build.jsonl")
+          test -x "$TEST_BINARY"
+          echo "FIREFOX_PACKAGE_TEST_BINARY=$TEST_BINARY" >> "$GITHUB_ENV"
+          FIREFOX_TEST_BINARY=$(jq -r 'select(.reason == "compiler-artifact" and .target.name == "firefox_e2e" and .profile.test == true) | .executable // empty' "$RUNNER_TEMP/package-test-build.jsonl")
+          test -x "$FIREFOX_TEST_BINARY"
+          echo "FIREFOX_PACKAGE_BROWSER_TEST_BINARY=$FIREFOX_TEST_BINARY" >> "$GITHUB_ENV"
+      - name: DEB install, upgrade, reinstall, remove and purge with two nonroot users
+        run: |
+          sudo env \
+            GITHUB_ACTIONS=true FIREFOX_PACKAGE_TEST_DISPOSABLE=1 FIREFOX_PACKAGE_FORMAT=deb \
+            FIREFOX_PACKAGE_BASELINE="$(realpath ci-baseline/*.deb)" \
+            FIREFOX_PACKAGE_CANDIDATE="$(realpath dist/*.deb)" \
+            FIREFOX_PACKAGE_PORTABLE_BINARY="$PWD/target/release/firefox-codex-mcp" \
+            FIREFOX_PACKAGE_LEGACY_BINARY="$RUNNER_TEMP/package-inputs/firefox-codex-mcp-0.4.2-linux-x86_64/firefox-codex-mcp" \
+            FIREFOX_PACKAGE_CODEX_BINARY="$FIREFOX_SETUP_CODEX_BINARY" \
+            FIREFOX_PACKAGE_ARTIFACTS="$PWD/linux-package-evidence/ubuntu" \
+            "$FIREFOX_PACKAGE_TEST_BINARY" --ignored --nocapture --test-threads=1 \
+            2>&1 | tee linux-package-evidence/deb-lifecycle.log
+      - name: DEB lifecycle with real dpkg in disposable Debian 12 container
+        run: |
+          sudo podman run --rm \
+            --volume "$PWD:/workspace:rw" --workdir /workspace \
+            --volume "$RUNNER_TEMP/package-inputs:/test-inputs:ro" \
+            --env FIREFOX_PACKAGE_TEST_DISPOSABLE=1 --env FIREFOX_PACKAGE_FORMAT=deb \
+            --env FIREFOX_PACKAGE_BASELINE="/workspace/ci-baseline/$(basename "$(realpath ci-baseline/*.deb)")" \
+            --env FIREFOX_PACKAGE_CANDIDATE="/workspace/dist/$(basename "$(realpath dist/*.deb)")" \
+            --env FIREFOX_PACKAGE_PORTABLE_BINARY=/workspace/target/release/firefox-codex-mcp \
+            --env FIREFOX_PACKAGE_LEGACY_BINARY=/test-inputs/firefox-codex-mcp-0.4.2-linux-x86_64/firefox-codex-mcp \
+            --env FIREFOX_PACKAGE_CODEX_BINARY=/test-inputs/codex \
+            --env FIREFOX_PACKAGE_ARTIFACTS=/workspace/linux-package-evidence/debian \
+            --env FIREFOX_PACKAGE_TEST_BINARY="/workspace/$(realpath --relative-to="$PWD" "$FIREFOX_PACKAGE_TEST_BINARY")" \
+            docker.io/library/debian:12 /bin/bash -euc \
+            'apt-get update; apt-get install --yes --no-install-recommends passwd util-linux coreutils; exec "$FIREFOX_PACKAGE_TEST_BINARY" --ignored --nocapture --test-threads=1' \
+            2>&1 | tee linux-package-evidence/debian-lifecycle.log
+      - name: RPM lifecycle with real DNF in disposable Fedora 45 container
+        run: |
+          sudo podman run --rm \
+            --volume "$PWD:/workspace:rw" --workdir /workspace \
+            --volume "$RUNNER_TEMP/package-inputs:/test-inputs:ro" \
+            --env FIREFOX_PACKAGE_TEST_DISPOSABLE=1 --env FIREFOX_PACKAGE_FORMAT=rpm \
+            --env FIREFOX_PACKAGE_BASELINE="/workspace/ci-baseline/$(basename "$(realpath ci-baseline/*.rpm)")" \
+            --env FIREFOX_PACKAGE_CANDIDATE="/workspace/dist/$(basename "$(realpath dist/*.rpm)")" \
+            --env FIREFOX_PACKAGE_PORTABLE_BINARY=/workspace/target/release/firefox-codex-mcp \
+            --env FIREFOX_PACKAGE_LEGACY_BINARY=/test-inputs/firefox-codex-mcp-0.4.2-linux-x86_64/firefox-codex-mcp \
+            --env FIREFOX_PACKAGE_CODEX_BINARY=/test-inputs/codex \
+            --env FIREFOX_PACKAGE_ARTIFACTS=/workspace/linux-package-evidence/fedora \
+            --env FIREFOX_PACKAGE_TEST_BINARY="/workspace/$(realpath --relative-to="$PWD" "$FIREFOX_PACKAGE_TEST_BINARY")" \
+            registry.fedoraproject.org/fedora:45 /bin/bash -euc \
+            'dnf --assumeyes install shadow-utils util-linux coreutils glibc-langpack-en; exec "$FIREFOX_PACKAGE_TEST_BINARY" --ignored --nocapture --test-threads=1' \
+            2>&1 | tee linux-package-evidence/rpm-lifecycle.log
+      - name: Install official Firefox and geckodriver for installed-DEB browser checks
+        run: |
+          curl --fail --location 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US' --output "$RUNNER_TEMP/firefox.tar.xz"
+          sudo tar -xJf "$RUNNER_TEMP/firefox.tar.xz" -C /opt
+          sudo ln -sf /opt/firefox/firefox /usr/local/bin/firefox
+          GECKO_URL=$(curl --fail --silent https://api.github.com/repos/mozilla/geckodriver/releases/latest | jq -r '.assets[] | select(.name | endswith("linux64.tar.gz")) | .browser_download_url')
+          test -n "$GECKO_URL"
+          curl --fail --location "$GECKO_URL" --output "$RUNNER_TEMP/geckodriver.tar.gz"
+          tar -xzf "$RUNNER_TEMP/geckodriver.tar.gz" -C "$RUNNER_TEMP/package-inputs"
+          echo "FIREFOX_GECKODRIVER=$RUNNER_TEMP/package-inputs/geckodriver" >> "$GITHUB_ENV"
+          /opt/firefox/firefox --version | tee linux-package-evidence/firefox-version.txt
+          "$RUNNER_TEMP/package-inputs/geckodriver" --version | tee linux-package-evidence/geckodriver-version.txt
+          sudo dpkg --install dist/*.deb
+      - name: Installed-DEB first web task, signed extension, settings and real Codex app-server
+        timeout-minutes: 8
+        env:
+          FIREFOX_SETUP_PACKAGE: "1"
+          FIREFOX_SETUP_SERVER_BINARY: /usr/libexec/firefox-codex-mcp/firefox-codex-mcp
+          FIREFOX_SIGNED_UI: "1"
+          FIREFOX_NATIVE_APP_SERVER: "1"
+        run: |
+          export FIREFOX_SIGNED_XPI="$PWD/packaging/signed/codex-work-tabs-0.4.2.xpi"
+          export FIREFOX_NATIVE_ARTIFACTS="$PWD/linux-package-evidence/installed-deb-firefox"
+          cargo test --release --locked --test firefox_e2e native_e2e:: -- --ignored --nocapture --test-threads=1 \
+            2>&1 | tee linux-package-evidence/installed-deb-firefox.log
+      - name: Remove CI browser-check package
+        if: always()
+        run: |
+          if dpkg-query --show firefox-codex-mcp >/dev/null 2>&1; then
+            sudo dpkg --purge firefox-codex-mcp
+          fi
+      - name: Installed-RPM first web task with Fedora Firefox and real Codex app-server
+        timeout-minutes: 12
+        run: |
+          RPM_BROWSER_INPUTS="$RUNNER_TEMP/rpm-browser-inputs"
+          mkdir -p "$RPM_BROWSER_INPUTS" linux-package-evidence/installed-rpm-firefox
+          cp "$FIREFOX_PACKAGE_BROWSER_TEST_BINARY" "$RPM_BROWSER_INPUTS/firefox-e2e"
+          cp dist/*.rpm "$RPM_BROWSER_INPUTS/helper.rpm"
+          cp packaging/signed/codex-work-tabs-0.4.2.xpi "$RPM_BROWSER_INPUTS/extension.xpi"
+          cp "$FIREFOX_SETUP_CODEX_BINARY" "$RPM_BROWSER_INPUTS/codex"
+          cp "$FIREFOX_GECKODRIVER" "$RPM_BROWSER_INPUTS/geckodriver"
+          chmod 755 "$RPM_BROWSER_INPUTS/firefox-e2e" "$RPM_BROWSER_INPUTS/codex" "$RPM_BROWSER_INPUTS/geckodriver"
+          sudo podman run --rm \
+            --volume "$RPM_BROWSER_INPUTS:/test-inputs:ro" \
+            --volume "$PWD/linux-package-evidence/installed-rpm-firefox:/evidence:rw" \
+            registry.fedoraproject.org/fedora:45 /bin/bash -euc '
+              dnf --assumeyes install firefox shadow-utils util-linux coreutils glibc-langpack-en /test-inputs/helper.rpm
+              useradd --create-home --shell /bin/sh firefox-ci
+              chown firefox-ci:firefox-ci /evidence
+              cp /etc/os-release /evidence/os-release.txt
+              cp /usr/libexec/firefox-codex-mcp/installation.json /evidence/installation-marker.json
+              runuser --user firefox-ci -- /usr/bin/firefox --version > /evidence/firefox-version.txt
+              runuser --user firefox-ci -- env HOME=/home/firefox-ci CODEX_HOME=/home/firefox-ci/.codex \
+                FIREFOX_SETUP_PACKAGE=1 \
+                FIREFOX_SETUP_SERVER_BINARY=/usr/libexec/firefox-codex-mcp/firefox-codex-mcp \
+                FIREFOX_SETUP_CODEX_BINARY=/test-inputs/codex \
+                FIREFOX_BINARY=/usr/bin/firefox FIREFOX_GECKODRIVER=/test-inputs/geckodriver \
+                FIREFOX_SIGNED_UI=1 FIREFOX_SIGNED_XPI=/test-inputs/extension.xpi \
+                FIREFOX_NATIVE_APP_SERVER=1 FIREFOX_NATIVE_ARTIFACTS=/evidence \
+                /test-inputs/firefox-e2e native_e2e:: --ignored --nocapture --test-threads=1
+              dnf --assumeyes remove firefox-codex-mcp
+            ' 2>&1 | tee linux-package-evidence/installed-rpm-firefox.log
+      # One build provenance binds every published Linux delivery to this source.
       - uses: actions/attest-build-provenance@v2
         if: ${{ !github.event.repository.private }}
         with:
-          subject-path: dist/*.tar.gz
+          subject-path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-package-evidence
+          path: linux-package-evidence/
       - uses: actions/upload-artifact@v4
         with:
           name: firefox-codex-mcp-linux-x86_64
           path: |
+            dist/*.deb
+            dist/*.rpm
             dist/*.tar.gz
             dist/*.xpi
             dist/SHA256SUMS

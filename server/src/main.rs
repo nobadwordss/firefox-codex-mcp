@@ -4,12 +4,15 @@ mod bidi;
 mod continuity;
 #[cfg(unix)]
 mod debug;
+mod installation_guard;
 #[cfg_attr(windows, path = "windows/lifecycle.rs")]
 mod lifecycle;
 mod manager;
 mod mcp;
 mod native;
 mod onboarding;
+#[cfg(unix)]
+mod package_install;
 #[cfg_attr(windows, path = "windows/setup.rs")]
 mod setup;
 mod transport;
@@ -402,6 +405,7 @@ async fn rpc(
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    installation_guard::start()?;
     #[cfg(windows)]
     if !env::args().nth(1).is_some_and(|v| v.starts_with("--"))
         && env::current_exe()?

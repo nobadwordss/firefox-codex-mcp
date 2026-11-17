@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in
+    install|upgrade) rm -f /usr/libexec/firefox-codex-mcp/installation.json ;;
+esac
+exit 0

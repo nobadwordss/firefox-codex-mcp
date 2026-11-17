@@ -6,10 +6,11 @@ Let Codex open and use its own work tabs in your everyday Firefox profile, with
 your existing website logins. A Firefox extension and a small local Rust helper
 connect automatically: no pairing codes, tokens, profile paths, or per-tab setup.
 
-**Linux 0.4.2 stable · Windows 0.5.0-beta.3 preview.** After initial setup, manage
+**Linux 0.4.3 stable · Windows 0.5.0-beta.3 preview.** After initial setup, manage
 the connection from ordinary Firefox using **Codex Work Tabs → Settings**. No extra
-Firefox app-menu entries or separate profiles are installed. The helper needs a
-one-time installation per OS user; the extension cannot install it by itself.
+Firefox app-menu entries or separate profiles are installed. RPM and DEB install
+the helper once for the system; each user connects their own Codex account in
+Settings. The extension cannot install a native helper by itself.
 See the [management guide](docs/firefox-only-management.md). Older release archives
 remain available unchanged.
 
@@ -29,29 +30,45 @@ The package runs without Rust or Node installed. It targets Ubuntu 22.04
 (glibc 2.35) or newer. Windows has a separate preview below. macOS,
 Snap/Flatpak Firefox and Android are not validated.
 
-**0.4.2 is the English Linux stable release.** Setup, extension controls and
-diagnostics use English. [Release notes, checksums and verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.2)
-are available with the download. Windows remains a separate preview.
+**0.4.3 is the English Linux stable release.** RPM and DEB are the recommended
+downloads; tar.gz remains available for installation without administrator rights.
+[Release notes, checksums and verification](https://github.com/nobadwordss/firefox-codex-mcp/releases/tag/v0.4.3)
+accompany the downloads. Windows remains a separate preview.
 
-1. Open Codex and check that you can sign in. Install ordinary desktop Firefox.
-2. [Download the Linux 0.4.2 archive](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.2/firefox-codex-mcp-0.4.2-linux-x86_64.tar.gz) and fully extract it. Open a terminal in the extracted folder and run `./install.sh`. A file manager that supports running scripts can also launch it directly.
-3. In the local manager, choose **Install connection**, then **Continue**. The installer registers MCP and installs the browser skill and guidance automatically.
-4. Choose **Add Codex Work Tabs to Firefox** and confirm Firefox's installation and permission prompts.
+1. Install ordinary desktop Firefox and sign in to the local Codex app or CLI.
+2. Download the package for your distribution and install it with its software manager:
+
+   | Distribution | Download | Terminal alternative, from the download folder |
+   | --- | --- | --- |
+   | Fedora | [RPM, x86_64](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp-0.4.3-1.x86_64.rpm) | `sudo dnf install ./firefox-codex-mcp-0.4.3-1.x86_64.rpm` |
+   | Ubuntu / Debian | [DEB, amd64](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp_0.4.3-1_amd64.deb) | `sudo apt install ./firefox-codex-mcp_0.4.3-1_amd64.deb` |
+
+3. In Firefox, open the [Mozilla-signed Codex Work Tabs extension](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/codex-work-tabs-0.4.2.xpi) and confirm **Continue Installation/Allow → Add**. If Firefox saves the XPI, open Add-ons Manager → gear menu → **Install Add-on From File** and select it.
+4. Click **Codex Work Tabs → Settings → Connect Codex → Continue**. This registers the connection, skill and browser guidance for your account. Use your normal account for this step, without `sudo`.
 5. Start a new Codex chat and ask: `Open https://example.com in the browser, click Learn more, and tell me the destination page title.`
 
-A new Firefox work tab and a successful link click confirm the first connection.
-Review any tool approval request for the task you asked for. If the script opens in
-an editor, use the terminal command above. See the [first-install guide](docs/first-install-linux.md)
-for troubleshooting and the exact fresh-environment verification boundary.
+If the extension is already installed, use its **Settings** button after installing
+the RPM or DEB. You can also run `firefox-codex-mcp --manage` as your normal user
+to open setup and its bundled extension link. No additional application-menu icon
+or Firefox profile is created.
 
-Install the helper once per OS user and the extension in
+Without administrator rights, [download the tar.gz fallback](https://github.com/nobadwordss/firefox-codex-mcp/releases/download/v0.4.3/firefox-codex-mcp-0.4.3-linux-x86_64.tar.gz),
+extract it fully, run `./install.sh` in that folder and choose **Install connection**.
+See the [first-install guide](docs/first-install-linux.md) for the full flow and
+[package ownership, migration and recovery](docs/linux-packages.md).
+
+A new Firefox work tab and a successful link click confirm the first connection.
+Review any tool approval request for the task you asked for. The installation
+checks do not replace this first live web task or a study with first-time users.
+
+Connect each OS user separately and install the extension in
 the Firefox profile you want to use. A single connected profile is selected
 automatically. If several profiles connect, click **Use this Firefox**
 in the intended profile. An offline selected profile never silently falls back to another.
 
 The package includes a Mozilla-signed extension for permanent installation.
 This is an **unlisted, direct distribution**, not an AMO search listing.
-Linux 0.4.2 includes `codex-work-tabs-0.4.2.xpi`. Use the signed XPI bundled with
+Linux 0.4.3 includes `codex-work-tabs-0.4.2.xpi`. Use the signed XPI bundled with
 your package; `*-unsigned.xpi` is only for development/review.
 See [signing and release](packaging/SIGNING.md).
 
@@ -149,19 +166,32 @@ profile differs from the selected profile, open the intended profile yourself.
 
 ## Update and remove
 
-Run the new package's `install.sh` and choose **Update connection**. Firefox stays
-running, but helper replacement releases old work-tab access. Install the matching
-signed XPI to update the extension, then use a fresh Codex chat. Direct-distribution
-XPIs currently have no automatic update channel.
+For RPM/DEB installations, download the newer matching package and install it
+with the same `dnf install ./…rpm` or `apt install ./…deb` command. Codex uses the
+system-managed program directly, so no user-copy update is needed. Updates stop
+old helpers and release previous work-tab access while Firefox and result tabs
+stay open. Start a new Codex chat afterwards. These downloads do **not** add an
+APT/DNF repository, and do not enable automatic updates.
 
-Open **Codex Work Tabs → Settings** in your ordinary Firefox for checks, repair
-and removal. No separate application launcher is needed. If the helper or
-extension is unavailable, reopen setup from the extracted package. See the
-[management and migration guide](docs/firefox-only-management.md).
-Removal targets registered MCP settings, installed files and managed blocks while
-preserving user edits, Firefox profiles, logins and result tabs. Remove the Firefox
-extension separately in Add-ons Manager. Local receipts and recovery state live
-under `~/.local/state/firefox-codex-mcp/`.
+To remove an RPM/DEB installation, first use **Codex Work Tabs → Settings →
+Disconnect Codex** for each connected OS account. This removes that user's owned
+Codex registration, skill and guidance. Then remove the system program:
+
+```sh
+sudo dnf remove firefox-codex-mcp       # Fedora
+sudo apt remove firefox-codex-mcp       # Ubuntu / Debian
+```
+
+Package removal ends its running helpers, including connections from
+other users. It leaves per-user settings in place: the package manager never edits
+users' homes. If you removed the package first, see [recovery](docs/linux-packages.md#removed-the-package-before-disconnecting).
+Remove the extension separately in Firefox Add-ons Manager if desired.
+
+For the tar.gz fallback, run the newer archive's `install.sh` and choose **Update
+connection**; choose **Remove connection** in extension Settings to remove it.
+The following commands apply to that fallback. All paths preserve Firefox profiles,
+logins, result tabs and user edits. Install newer signed XPIs separately; direct
+distribution currently has no automatic extension update channel.
 
 ```bash
 ./install.sh --install          # default extension connection
