@@ -9,6 +9,7 @@ use std::{
     fs::{self, File},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    time::{Duration, Instant},
 };
 use winreg::{enums::*, RegKey};
 
@@ -91,20 +92,48 @@ fn receipt() -> Result<Option<Receipt>> {
         .map(|b| serde_json::from_slice(&b).map_err(Into::into))
         .transpose()
 }
+fn acquire_install_lock(path: &Path, wait: Duration) -> Result<File> {
+    let deadline = Instant::now() + wait;
+    let mut reported = false;
+    loop {
+        w::no_reparse(path)?;
+        // Older cleanup workers use FileShare.None: opening fails before
+        // try_lock can report contention. Both stages belong to acquisition.
+        let attempt = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(path)
+            .and_then(|lock| match lock.try_lock() {
+                Ok(()) => Ok(Some(lock)),
+                Err(fs::TryLockError::WouldBlock) => Ok(None),
+                Err(fs::TryLockError::Error(error)) => Err(error),
+            });
+        match attempt {
+            Ok(Some(lock)) => return Ok(lock),
+            Ok(None) => {}
+            Err(error) if matches!(error.raw_os_error(), Some(32 | 33)) => {}
+            Err(error) => return Err(error).context("Could not acquire the setup lock"),
+        }
+        if !reported && std::env::var_os("FIREFOX_MCP_WINDOWS_E2E").is_some() {
+            eprintln!("Windows setup lock busy; waiting");
+            reported = true;
+        }
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        ensure!(
+            !remaining.is_zero(),
+            "Another installation, update, removal or cleanup is still running. Wait for it to finish, then try again."
+        );
+        std::thread::sleep(remaining.min(Duration::from_millis(50)));
+    }
+}
 impl Layout {
     fn open() -> Result<Self> {
         let root = w::local_root()?;
         setup::private_dir(&root)?;
         let lock_path = root.join("install.lock");
-        w::no_reparse(&lock_path)?;
-        let lock = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(false)
-            .open(lock_path)?;
-        lock.try_lock()
-            .context("Another install/update/removal is running. Try again when it finishes.")?;
+        let lock = acquire_install_lock(&lock_path, Duration::from_secs(10))?;
         let codex = o::codex_home(&o::home()?);
         ensure!(codex.is_absolute(), "CODEX_HOME must be absolute");
         w::no_reparse(&codex)?;
@@ -622,6 +651,7 @@ for($i=0;$i -lt 120;$i++){{
  try {{$guard=[IO.File]::Open((Join-Path $base 'install.lock'),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}}catch{{Trace ('lock: '+$_.Exception.Message);continue}}
  try {{
  if(Test-Path -LiteralPath (Join-Path $base 'install.json')){{Trace 'reinstalled';break}}
+ if(!(Test-Path -LiteralPath (Join-Path $base 'cleanup.json'))){{Trace 'cleanup journal removed; exiting';break}}
  $items=(Get-Content -LiteralPath (Join-Path $base 'cleanup.json') -Encoding UTF8 -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).files;
  foreach($item in $items){{$p=$item.path; if(@('firefox-codex-mcp.exe','firefox-codex-native-host.exe') -notcontains [IO.Path]::GetFileName($p)){{continue}};
   if((Test-Path -LiteralPath $p) -and (SafePath $p)){{try{{
@@ -723,6 +753,47 @@ pub fn doctor() -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn setup_lock_timeout_preserves_exclusive_ownership() -> Result<()> {
+        use std::os::windows::fs::OpenOptionsExt;
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("install.lock");
+        for share_none in [true, false] {
+            let mut options = fs::OpenOptions::new();
+            options.read(true).write(true).create(true).truncate(false);
+            if share_none {
+                options.share_mode(0);
+            }
+            let guard = options.open(&path)?;
+            if !share_none {
+                guard.lock()?;
+            }
+            let error = acquire_install_lock(&path, Duration::from_millis(100))
+                .err()
+                .context("Acquisition stole an active setup lock")?;
+            ensure!(error.to_string().contains("cleanup is still running"));
+            drop(guard);
+            let acquired = acquire_install_lock(&path, Duration::ZERO)?;
+            ensure!(matches!(
+                fs::OpenOptions::new().read(true).share_mode(0).open(&path),
+                Err(error) if error.raw_os_error() == Some(32)
+            ));
+            drop(acquired);
+        }
+        Ok(())
+    }
+    #[test]
+    fn setup_lock_does_not_retry_permanent_open_failures() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("directory");
+        fs::create_dir(&path)?;
+        let error = acquire_install_lock(&path, Duration::ZERO)
+            .err()
+            .context("Opened a directory as a setup lock")?;
+        ensure!(error.to_string() == "Could not acquire the setup lock");
+        ensure!(error.downcast_ref::<std::io::Error>().is_some());
+        Ok(())
+    }
     fn layout(root: &Path) -> Layout {
         Layout {
             root: root.into(),

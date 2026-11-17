@@ -526,6 +526,129 @@ fn action(s: &Value, name: &str) -> Result<Value> {
 }
 
 #[test]
+#[ignore = "disposable Windows runner: actual repair process and Windows setup locks"]
+fn repair_waits_for_cleanup_and_installer_locks() -> Result<()> {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    ensure!(
+        env::var("FIREFOX_MCP_WINDOWS_E2E").as_deref() == Ok("1"),
+        "Requires disposable Windows test account"
+    );
+    let temporary = tempfile::tempdir()?;
+    let binary = env::var_os("FIREFOX_SETUP_SERVER_BINARY")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_BIN_EXE_firefox-codex-mcp")));
+    let mut results = Vec::new();
+    for exclusive_share in [true, false] {
+        let kind = if exclusive_share {
+            "cleanup-exclusive-share"
+        } else {
+            "installer-byte-range"
+        };
+        let root = temporary.path().join(format!("{kind} 한글 user's & space"));
+        fs::create_dir_all(root.join("codex"))?;
+        let helper = install_root(&root)?;
+        fs::create_dir_all(&helper)?;
+        let config = "# Preserve this comment\n[mcp_servers.other]\ncommand = \"other.exe\"\n";
+        let guidance = "Prefer Rust.\n";
+        fs::write(root.join("codex/config.toml"), config)?;
+        fs::write(root.join("codex/AGENTS.md"), guidance)?;
+        let cleanup = helper.join("cleanup.json");
+        fs::write(&cleanup, br#"{"files":[]}"#)?;
+        let lock_path = helper.join("install.lock");
+        fs::write(&lock_path, b"Keep the existing lock file.\n")?;
+        let mut options = fs::OpenOptions::new();
+        options.read(true).write(true);
+        if exclusive_share {
+            // The deferred PowerShell cleanup worker opens this same path with
+            // FileShare.None, so even opening it must be retried by repair.
+            options.share_mode(0);
+        }
+        let guard = options.open(&lock_path)?;
+        if !exclusive_share {
+            // Ordinary setup uses a byte-range lock on a shared-open handle.
+            guard.lock()?;
+        }
+        let mut process = Process(
+            cmd(&binary, &root)
+                .arg("--repair")
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()?,
+        );
+        let mut stdout = process.0.stdout.take().context("repair stdout")?;
+        let stderr = process.0.stderr.take().context("repair stderr")?;
+        let (send_output, output) = mpsc::channel();
+        thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let result = stdout.read_to_end(&mut bytes).map(|_| bytes);
+            let _ = send_output.send(result);
+        });
+        let (send_line, lines) = mpsc::channel();
+        thread::spawn(move || {
+            for line in BufReader::new(stderr).lines() {
+                if send_line.send(line).is_err() {
+                    break;
+                }
+            }
+        });
+        // Wait for the child to actually encounter contention, rather than
+        // sleeping and assuming that Windows has scheduled it by then.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let mut observed = Vec::new();
+        loop {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            let line = lines.recv_timeout(remaining).with_context(|| {
+                format!("Repair never waited on {kind}; stderr: {observed:?}")
+            })??;
+            if line == "Windows setup lock busy; waiting" {
+                break;
+            }
+            observed.push(line);
+        }
+        ensure!(
+            process.0.try_wait()?.is_none(),
+            "Repair exited while {kind} was still held"
+        );
+        ensure!(cleanup.is_file(), "Repair bypassed the held {kind}");
+        ensure!(fs::read_to_string(root.join("codex/config.toml"))? == config);
+        ensure!(fs::read_to_string(root.join("codex/AGENTS.md"))? == guidance);
+        drop(guard);
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let status = loop {
+            if let Some(status) = process.0.try_wait()? {
+                break status;
+            }
+            ensure!(
+                Instant::now() < deadline,
+                "Repair did not resume after {kind}"
+            );
+            thread::sleep(Duration::from_millis(20));
+        };
+        ensure!(status.success(), "Repair failed after {kind}: {status}");
+        let bytes = output.recv_timeout(Duration::from_secs(2))??;
+        let result: Value = serde_json::from_slice(&bytes)?;
+        ensure!(result["repaired"] == true, "Repair result: {result}");
+        ensure!(
+            !cleanup.exists(),
+            "Repair did not finish the pending cleanup"
+        );
+        ensure!(fs::read(&lock_path)? == b"Keep the existing lock file.\n");
+        ensure!(fs::read_to_string(root.join("codex/config.toml"))? == config);
+        ensure!(fs::read_to_string(root.join("codex/AGENTS.md"))? == guidance);
+        results.push(json!({"lock":kind,"contentionObserved":true,"blockedUntilReleased":true,"repairResumed":true,"unrelatedSettingsPreserved":true}));
+    }
+    let artifacts = PathBuf::from(env::var("FIREFOX_WINDOWS_ARTIFACTS")?);
+    fs::create_dir_all(&artifacts)?;
+    fs::write(
+        artifacts.join("repair-lock-result.json"),
+        serde_json::to_vec_pretty(&json!({"cases":results}))?,
+    )?;
+    Ok(())
+}
+
+#[test]
 #[ignore = "disposable Windows runner: actual HKCU install and signed Firefox extension"]
 fn windows_install_update_remove_and_firefox_e2e() -> Result<()> {
     ensure!(
